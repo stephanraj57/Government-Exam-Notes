@@ -2,7 +2,7 @@ services:
   - type: web
     name: govt-exam-notes
     runtime: node
-    plan: starter
+    plan: free
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /
