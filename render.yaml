@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: govt-exam-notes
+    runtime: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: ADMIN_PASSWORD
+        generateValue: true

@@ -1,0 +1,13 @@
+{
+  "name": "govt-exam-notes",
+  "version": "1.0.0",
+  "description": "Image-based revision notes for UPSC, SSC and RRB aspirants.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

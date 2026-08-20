@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Exam Notes Library | UPSC, SSC & RRB</title>
+  <meta name="description" content="A revision library for UPSC, SSC and RRB aspirants.">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#top"><img class="brand-logo" src="assets/ailogo.png" alt="AI Made Preparation Easy logo"><span><b>Exam Notes</b> Library<small>Smart Notes. Clear Concepts. Better Results.</small></span></a>
+    <nav class="main-nav"><a class="active" href="#notes">▣ Notes</a><a href="#bookmarks">♡ Bookmarks</a><a href="#recent">◷ Recently Viewed</a></nav>
+    <div class="header-actions"><button class="theme-button" type="button" aria-label="Light theme">☀</button><button id="admin-login-button" class="profile-button" type="button"><span>AS</span><strong>Admin<small>Viewer</small></strong><i>⌄</i></button></div>
+  </header>
+  <main id="top" class="app-shell">
+    <aside class="sidebar">
+      <p class="side-label">Categories</p>
+      <nav id="category-nav" class="category-nav">
+        <button class="category active" data-category="All Notes"><span>⌂</span>All Notes <b id="all-count">0</b></button>
+        <button class="category" data-category="UPSC"><span>♧</span>UPSC <b>482</b></button><button class="category" data-category="SSC"><span>♙</span>SSC <b>312</b></button><button class="category" data-category="RRB"><span>▣</span>RRB <b>198</b></button>
+        <button class="category" data-category="Polity"><span>▦</span>Polity <b>246</b></button><button class="category" data-category="History"><span>⌛</span>History <b>214</b></button><button class="category" data-category="Geography"><span>◉</span>Geography <b>186</b></button>
+      </nav>
+      <div class="tag-section"><p class="side-label">Tags</p><div class="tags"><button>Indian Polity</button><button>Constitution</button><button>Freedom Struggle</button><button>Ancient India</button><button>Medieval India</button><button>Environment</button><button>Map Based</button><button>Economy</button></div><button class="show-more">+ Show more</button></div>
+    </aside>
+    <section id="notes" class="content">
+      <div class="content-heading"><div><h1 id="page-title">All Notes</h1><p id="note-total">Loading notes…</p></div><div class="admin-actions"><button id="admin-area-button" class="outline-button" type="button">♢ Admin Area</button><button id="open-upload" class="upload-button" type="button">☁ Upload Note</button></div></div>
+      <div class="toolbar"><label class="search"><span>⌕</span><input id="note-search" type="search" placeholder="Search notes by title, subject or topic…"></label><button class="filter-button" type="button">▽ Filters</button><label class="sort-label">Sort by: <select id="sort-notes"><option value="newest">Newest First</option><option value="title">Title A–Z</option></select></label><button class="view-button active" type="button">▦</button><button class="view-button" type="button">☷</button></div>
+      <div class="study-message"><strong>Exam point of view:</strong> Use short notes for final revision. For every image note, solve at least five previous-year questions from that topic.</div>
+      <div id="notes-grid" class="notes-grid" aria-live="polite"></div><div id="empty-notes" class="empty-state" hidden><span>⌕</span><h2>No matching notes</h2><p>Try another subject or search word.</p></div>
+      <div class="pagination"><button class="selected">1</button><button>2</button><button>3</button><button>…</button><button>54</button><button>Next ›</button><span id="showing-count"></span></div>
+    </section>
+  </main>
+  <dialog id="admin-dialog" class="dialog"><form id="admin-login-form" method="dialog"><button class="close-button" type="button" data-close>×</button><p class="eyebrow">Restricted access</p><h2>Admin sign in</h2><p>Only the administrator can publish or remove revision images.</p><label>Password<input id="admin-password" type="password" autocomplete="current-password" required></label><p id="admin-login-message" class="form-message"></p><button class="upload-button full" type="submit">Sign in</button></form></dialog>
+  <dialog id="upload-dialog" class="dialog"><form id="upload-form"><button class="close-button" type="button" data-close>×</button><p class="eyebrow">Admin only</p><h2>Publish a note image</h2><p>Use a sharp JPG page so aspirants can revise comfortably on mobile.</p><label>Topic title<input id="note-title" type="text" maxlength="70" placeholder="Example: Fundamental Rights" required></label><label>Subject<select id="note-subject"><option>UPSC Polity</option><option>SSC History</option><option>RRB General Awareness</option><option>Geography</option><option>Economy</option><option>Current Affairs</option></select></label><label class="file-drop">Choose JPG image<input id="note-file" type="file" accept="image/jpeg,.jpg,.jpeg" required><small>JPG/JPEG, maximum 5 MB</small></label><p id="upload-message" class="form-message"></p><button class="upload-button full" type="submit">Publish note</button></form></dialog>
+  <script src="app.js"></script>
+</body></html>
