@@ -232,7 +232,7 @@ async function start() {
       sendJson(response, 500, { error: error.message || "Server error." });
     }
   });
-  server.listen(PORT, "127.0.0.1", () => {
+  server.listen(PORT, "0.0.0.0", () => {
     console.log(`Exam Alert India is running at http://127.0.0.1:${PORT}`);
     if (!ADMIN_PASSWORD) console.log("Set ADMIN_PASSWORD before enabling admin uploads.");
   });
