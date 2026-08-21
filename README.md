@@ -22,7 +22,7 @@ Image-based revision notes for UPSC, SSC and RRB aspirants.
 
 1. Create a private GitHub repository and upload this project.
 2. In Render, choose **New → Blueprint** and select the repository. Render will read `render.yaml`.
-3. Use the **Starter** plan or higher. This app saves uploaded notes to its server disk, so choose a plan with a persistent disk before sharing it publicly.
+3. Choose the **Free** plan to test the site without a card. Free services pause after inactivity and lose new uploads whenever they restart or redeploy. For a public site where uploads must remain, later move to a paid service with persistent storage or cloud image storage.
 4. In the Render service's **Environment** tab, set `ADMIN_PASSWORD` to your own strong, unique password. Do not use the generated value if you need to remember the password.
 5. Deploy. Confirm the Render URL loads and that the admin upload flow works.
 

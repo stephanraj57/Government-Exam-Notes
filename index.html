@@ -1,38 +1,333 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Exam Notes Library | UPSC, SSC & RRB</title>
-  <meta name="description" content="A revision library for UPSC, SSC and RRB aspirants.">
-  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Exam Notes Library | UPSC, SSC & RRB Revision Notes</title>
+  <meta name="description" content="High-yield image-based revision notes for UPSC, SSC and RRB aspirants.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <!-- Header -->
   <header class="site-header">
-    <a class="brand" href="#top"><img class="brand-logo" src="assets/ailogo.png" alt="AI Made Preparation Easy logo"><span><b>Exam Notes</b> Library<small>Smart Notes. Clear Concepts. Better Results.</small></span></a>
-    <nav class="main-nav"><a class="active" href="#notes">▣ Notes</a><a href="#bookmarks">♡ Bookmarks</a><a href="#recent">◷ Recently Viewed</a></nav>
-    <div class="header-actions"><button class="theme-button" type="button" aria-label="Light theme">☀</button><button id="admin-login-button" class="profile-button" type="button"><span>AS</span><strong>Admin<small>Viewer</small></strong><i>⌄</i></button></div>
+    <a class="brand" href="#top" id="brand-link">
+      <img class="brand-logo" src="assets/ailogo.png" alt="Govt Exam Notes logo" onerror="this.style.display='none'">
+      <span class="brand-text">
+        <strong>Exam Notes</strong> Library
+        <small>Smart Notes · Clear Concepts · Better Revision</small>
+      </span>
+    </a>
+
+    <nav class="main-nav" aria-label="Main Navigation">
+      <button type="button" class="nav-link active" data-view="notes">
+        <span class="nav-icon">▣</span> Notes
+      </button>
+      <button type="button" class="nav-link" data-view="bookmarks">
+        <span class="nav-icon">♡</span> Bookmarks <span id="bookmark-badge" class="badge">0</span>
+      </button>
+      <button type="button" class="nav-link" data-view="recent">
+        <span class="nav-icon">◷</span> Recently Viewed
+      </button>
+    </nav>
+
+    <div class="header-actions">
+      <button id="theme-toggle" class="theme-button" type="button" title="Toggle Theme (Dark / Light)" aria-label="Toggle Dark Mode">
+        <span class="theme-icon">🌙</span>
+      </button>
+
+      <div id="admin-user-container">
+        <button id="admin-login-button" class="profile-button" type="button" title="Admin Portal">
+          <span class="avatar">AS</span>
+          <div class="profile-info">
+            <strong id="admin-status-text">Admin Area</strong>
+            <small id="admin-status-sub">Sign in</small>
+          </div>
+          <i class="caret">⌄</i>
+        </button>
+      </div>
+    </div>
   </header>
+
+  <!-- Mobile Category Scroll Pill Bar -->
+  <div class="mobile-category-strip" aria-label="Quick Category Filter">
+    <div id="mobile-category-nav" class="mobile-category-scroll">
+      <button class="cat-pill active" data-category="All Notes">⌂ All Notes</button>
+      <button class="cat-pill" data-category="UPSC">♧ UPSC</button>
+      <button class="cat-pill" data-category="SSC">♙ SSC</button>
+      <button class="cat-pill" data-category="RRB">▣ RRB</button>
+      <button class="cat-pill" data-category="Polity">▦ Polity</button>
+      <button class="cat-pill" data-category="History">⌛ History</button>
+      <button class="cat-pill" data-category="Geography">◉ Geography</button>
+      <button class="cat-pill" data-category="Economy">◔ Economy</button>
+    </div>
+  </div>
+
+  <!-- App Layout -->
   <main id="top" class="app-shell">
+    <!-- Desktop Sidebar -->
     <aside class="sidebar">
-      <p class="side-label">Categories</p>
-      <nav id="category-nav" class="category-nav">
-        <button class="category active" data-category="All Notes"><span>⌂</span>All Notes <b id="all-count">0</b></button>
-        <button class="category" data-category="UPSC"><span>♧</span>UPSC <b>482</b></button><button class="category" data-category="SSC"><span>♙</span>SSC <b>312</b></button><button class="category" data-category="RRB"><span>▣</span>RRB <b>198</b></button>
-        <button class="category" data-category="Polity"><span>▦</span>Polity <b>246</b></button><button class="category" data-category="History"><span>⌛</span>History <b>214</b></button><button class="category" data-category="Geography"><span>◉</span>Geography <b>186</b></button>
-      </nav>
-      <div class="tag-section"><p class="side-label">Tags</p><div class="tags"><button>Indian Polity</button><button>Constitution</button><button>Freedom Struggle</button><button>Ancient India</button><button>Medieval India</button><button>Environment</button><button>Map Based</button><button>Economy</button></div><button class="show-more">+ Show more</button></div>
+      <div class="sidebar-section">
+        <p class="side-label">Categories</p>
+        <nav id="category-nav" class="category-nav" aria-label="Categories">
+          <button class="category active" data-category="All Notes">
+            <span class="cat-icon">⌂</span>
+            <span class="cat-name">All Notes</span>
+            <b id="all-count" class="cat-count">0</b>
+          </button>
+          <button class="category" data-category="UPSC">
+            <span class="cat-icon upsc">♧</span>
+            <span class="cat-name">UPSC</span>
+            <b class="cat-count" id="upsc-count">0</b>
+          </button>
+          <button class="category" data-category="SSC">
+            <span class="cat-icon ssc">♙</span>
+            <span class="cat-name">SSC</span>
+            <b class="cat-count" id="ssc-count">0</b>
+          </button>
+          <button class="category" data-category="RRB">
+            <span class="cat-icon rrb">▣</span>
+            <span class="cat-name">RRB</span>
+            <b class="cat-count" id="rrb-count">0</b>
+          </button>
+          <button class="category" data-category="Polity">
+            <span class="cat-icon polity">▦</span>
+            <span class="cat-name">Polity</span>
+            <b class="cat-count" id="polity-count">0</b>
+          </button>
+          <button class="category" data-category="History">
+            <span class="cat-icon history">⌛</span>
+            <span class="cat-name">History</span>
+            <b class="cat-count" id="history-count">0</b>
+          </button>
+          <button class="category" data-category="Geography">
+            <span class="cat-icon geography">◉</span>
+            <span class="cat-name">Geography</span>
+            <b class="cat-count" id="geography-count">0</b>
+          </button>
+          <button class="category" data-category="Economy">
+            <span class="cat-icon economy">◔</span>
+            <span class="cat-name">Economy</span>
+            <b class="cat-count" id="economy-count">0</b>
+          </button>
+        </nav>
+      </div>
+
+      <div class="sidebar-section tag-section">
+        <div class="side-header">
+          <p class="side-label">Popular Topics</p>
+          <button id="clear-tags" class="text-btn" hidden>Clear</button>
+        </div>
+        <div id="tags-container" class="tags">
+          <button type="button" data-tag="Polity">Indian Polity</button>
+          <button type="button" data-tag="Constitution">Constitution</button>
+          <button type="button" data-tag="Revolt">Freedom Struggle</button>
+          <button type="button" data-tag="Mauryan">Ancient History</button>
+          <button type="button" data-tag="War">Modern History</button>
+          <button type="button" data-tag="Geography">Physical Geography</button>
+          <button type="button" data-tag="Water">Water Resources</button>
+          <button type="button" data-tag="Economy">Sectors of Economy</button>
+        </div>
+      </div>
+
+      <div class="sidebar-stats">
+        <div class="stat-card">
+          <span class="stat-icon">⚡</span>
+          <div>
+            <strong>Quick Revision</strong>
+            <p>1 Image · 1 Core Concept</p>
+          </div>
+        </div>
+      </div>
     </aside>
+
+    <!-- Main Content Area -->
     <section id="notes" class="content">
-      <div class="content-heading"><div><h1 id="page-title">All Notes</h1><p id="note-total">Loading notes…</p></div><div class="admin-actions"><button id="admin-area-button" class="outline-button" type="button">♢ Admin Area</button><button id="open-upload" class="upload-button" type="button">☁ Upload Note</button></div></div>
-      <div class="toolbar"><label class="search"><span>⌕</span><input id="note-search" type="search" placeholder="Search notes by title, subject or topic…"></label><button class="filter-button" type="button">▽ Filters</button><label class="sort-label">Sort by: <select id="sort-notes"><option value="newest">Newest First</option><option value="title">Title A–Z</option></select></label><button class="view-button active" type="button">▦</button><button class="view-button" type="button">☷</button></div>
-      <div class="study-message"><strong>Exam point of view:</strong> Use short notes for final revision. For every image note, solve at least five previous-year questions from that topic.</div>
-      <div id="notes-grid" class="notes-grid" aria-live="polite"></div><div id="empty-notes" class="empty-state" hidden><span>⌕</span><h2>No matching notes</h2><p>Try another subject or search word.</p></div>
-      <div class="pagination"><button class="selected">1</button><button>2</button><button>3</button><button>…</button><button>54</button><button>Next ›</button><span id="showing-count"></span></div>
+      <div class="content-heading">
+        <div>
+          <div class="heading-row">
+            <h1 id="page-title">All Notes</h1>
+            <span id="active-tag-chip" class="active-tag-chip" hidden></span>
+          </div>
+          <p id="note-total">Loading revision library…</p>
+        </div>
+        <div class="admin-actions">
+          <button id="admin-area-button" class="outline-button" type="button">
+            <span>⚙</span> Admin Sign In
+          </button>
+          <button id="open-upload" class="upload-button" type="button">
+            <span>☁</span> Upload Note
+          </button>
+        </div>
+      </div>
+
+      <!-- Search & Controls Toolbar -->
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="search-icon">⌕</span>
+          <input id="note-search" type="search" placeholder="Search by topic, keyword, or exam (e.g. Polity, 1857)..." aria-label="Search notes">
+          <button id="clear-search" class="clear-search-btn" type="button" title="Clear search" hidden>×</button>
+        </div>
+
+        <div class="toolbar-controls">
+          <label class="sort-label">
+            <span class="sort-text">Sort:</span>
+            <select id="sort-notes" aria-label="Sort notes">
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="title">Title A–Z</option>
+            </select>
+          </label>
+
+          <div class="view-toggle" role="group" aria-label="View switch">
+            <button id="grid-view-btn" class="view-button active" type="button" title="Grid View" aria-label="Grid view">▦</button>
+            <button id="list-view-btn" class="view-button" type="button" title="List View" aria-label="List view">☷</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Revision Tip Banner -->
+      <div class="study-message">
+        <span class="tip-icon">💡</span>
+        <div class="tip-body">
+          <strong>Aspirant's Strategy:</strong> Review the high-yield note diagram first, recall the key timeline/articles from memory, and solve at least 5 previous-year questions.
+        </div>
+      </div>
+
+      <!-- Notes Grid / List Container -->
+      <div id="notes-grid" class="notes-grid" aria-live="polite"></div>
+
+      <!-- Empty State -->
+      <div id="empty-notes" class="empty-state" hidden>
+        <div class="empty-icon">🔍</div>
+        <h2>No matching notes found</h2>
+        <p id="empty-message">Try changing your search query or switching to another category.</p>
+        <button id="reset-filters-btn" class="primary-pill-btn" type="button">Show All Notes</button>
+      </div>
+
+      <!-- Pagination / Footer Info -->
+      <div class="pagination">
+        <span id="showing-count">Showing 0 notes</span>
+      </div>
     </section>
   </main>
-  <dialog id="admin-dialog" class="dialog"><form id="admin-login-form" method="dialog"><button class="close-button" type="button" data-close>×</button><p class="eyebrow">Restricted access</p><h2>Admin sign in</h2><p>Only the administrator can publish or remove revision images.</p><label>Password<input id="admin-password" type="password" autocomplete="current-password" required></label><p id="admin-login-message" class="form-message"></p><button class="upload-button full" type="submit">Sign in</button></form></dialog>
-  <dialog id="upload-dialog" class="dialog"><form id="upload-form"><button class="close-button" type="button" data-close>×</button><p class="eyebrow">Admin only</p><h2>Publish a note image</h2><p>Use a sharp JPG page so aspirants can revise comfortably on mobile.</p><label>Topic title<input id="note-title" type="text" maxlength="70" placeholder="Example: Fundamental Rights" required></label><label>Subject<select id="note-subject"><option>UPSC Polity</option><option>SSC History</option><option>RRB General Awareness</option><option>Geography</option><option>Economy</option><option>Current Affairs</option></select></label><label class="file-drop">Choose JPG image<input id="note-file" type="file" accept="image/jpeg,.jpg,.jpeg" required><small>JPG/JPEG, maximum 5 MB</small></label><p id="upload-message" class="form-message"></p><button class="upload-button full" type="submit">Publish note</button></form></dialog>
+
+  <!-- Mobile Bottom Navigation -->
+  <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
+    <button type="button" class="mobile-nav-btn active" data-view="notes">
+      <span class="mob-icon">▣</span>
+      <span>Notes</span>
+    </button>
+    <button type="button" class="mobile-nav-btn" data-view="bookmarks">
+      <span class="mob-icon">♡</span>
+      <span>Saved</span>
+    </button>
+    <button type="button" class="mobile-nav-btn" data-view="recent">
+      <span class="mob-icon">◷</span>
+      <span>Recent</span>
+    </button>
+    <button type="button" id="mobile-upload-btn" class="mobile-nav-btn" data-action="upload">
+      <span class="mob-icon">☁</span>
+      <span>Upload</span>
+    </button>
+  </nav>
+
+  <!-- Lightbox / Fullscreen Image Viewer Dialog -->
+  <dialog id="lightbox-dialog" class="lightbox-dialog">
+    <div class="lightbox-content">
+      <div class="lightbox-header">
+        <div class="lightbox-title-wrap">
+          <span id="lightbox-badge" class="subject-chip">Subject</span>
+          <h2 id="lightbox-title">Note Title</h2>
+        </div>
+        <div class="lightbox-actions">
+          <button id="lightbox-bookmark-btn" class="icon-action-btn" type="button" title="Save Bookmark">♡</button>
+          <a id="lightbox-download-btn" class="icon-action-btn" download="exam-note.jpg" title="Download Note" target="_blank" rel="noopener">⬇</a>
+          <button id="lightbox-close-btn" class="icon-action-btn close-btn" type="button" title="Close (Esc)">×</button>
+        </div>
+      </div>
+
+      <div class="lightbox-body">
+        <button id="lightbox-prev-btn" class="lightbox-nav-btn prev" type="button" aria-label="Previous Note">‹</button>
+        
+        <div id="lightbox-media-container" class="lightbox-media">
+          <!-- Dynamic high-res image or rich rendered card -->
+        </div>
+
+        <button id="lightbox-next-btn" class="lightbox-nav-btn next" type="button" aria-label="Next Note">›</button>
+      </div>
+
+      <div class="lightbox-footer">
+        <span id="lightbox-meta">Published · 1 Image</span>
+        <div class="lightbox-nav-hints">Use ← / → keys to navigate · Esc to close</div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Admin Sign In Dialog -->
+  <dialog id="admin-dialog" class="dialog">
+    <form id="admin-login-form" method="dialog">
+      <button class="close-button" type="button" data-close title="Close">×</button>
+      <p class="eyebrow">Restricted access</p>
+      <h2>Admin Sign In</h2>
+      <p>Sign in to publish new revision notes or manage existing content.</p>
+      <label>
+        Password
+        <input id="admin-password" type="password" autocomplete="current-password" placeholder="Enter admin password" required>
+      </label>
+      <p id="admin-login-message" class="form-message"></p>
+      <div class="form-btn-group">
+        <button class="upload-button full" type="submit">Sign In</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Upload Note Dialog -->
+  <dialog id="upload-dialog" class="dialog">
+    <form id="upload-form">
+      <button class="close-button" type="button" data-close title="Close">×</button>
+      <p class="eyebrow">Admin Portal</p>
+      <h2>Publish Revision Note</h2>
+      <p>Upload a high-resolution JPG diagram or revision sheet for students.</p>
+      
+      <label>
+        Topic Title
+        <input id="note-title" type="text" maxlength="80" placeholder="e.g. Fundamental Rights (Articles 12-35)" required>
+      </label>
+      
+      <label>
+        Subject Category
+        <select id="note-subject">
+          <option value="UPSC Polity">UPSC Polity</option>
+          <option value="UPSC History">UPSC History</option>
+          <option value="UPSC Geography">UPSC Geography</option>
+          <option value="SSC History">SSC History</option>
+          <option value="SSC Polity">SSC Polity</option>
+          <option value="RRB General Awareness">RRB General Awareness</option>
+          <option value="Geography">Geography</option>
+          <option value="Economy">Economy</option>
+          <option value="Environment & Ecology">Environment & Ecology</option>
+        </select>
+      </label>
+
+      <label class="file-drop" id="file-drop-zone">
+        <span class="file-drop-icon">📁</span>
+        <span class="file-drop-text">Click or drag JPG image here</span>
+        <input id="note-file" type="file" accept="image/jpeg,.jpg,.jpeg" required>
+        <small>JPG / JPEG format, maximum 5 MB</small>
+        <span id="file-name-preview" class="file-preview-name"></span>
+      </label>
+
+      <p id="upload-message" class="form-message"></p>
+      <button id="upload-submit-btn" class="upload-button full" type="submit">Publish Note to Library</button>
+    </form>
+  </dialog>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
   <script src="app.js"></script>
-</body></html>
+</body>
+</html>
