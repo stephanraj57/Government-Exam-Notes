@@ -341,7 +341,6 @@ function render() {
               ${tagsHtml}
               <div class="note-meta">
                 <span>${dateFormatted} · 1 Image</span>
-                ${isAdmin && n.imageUrl ? `<button class="delete-note" data-delete-id="${n.id}" type="button">Delete</button>` : ""}
               </div>
             </div>
           </article>
@@ -868,16 +867,6 @@ function setupEventListeners() {
     const bookmarkBtn = e.target.closest("[data-bookmark]");
     if (bookmarkBtn) {
       toggleBookmark(bookmarkBtn.dataset.bookmark, e);
-      return;
-    }
-
-    const delBtn = e.target.closest("[data-delete-id]");
-    if (delBtn) {
-      e.stopPropagation();
-      const id = delBtn.dataset.deleteId;
-      if (confirm("Are you sure you want to delete this note?")) {
-        deleteNote(id);
-      }
       return;
     }
 

@@ -153,10 +153,15 @@ async function checkAuth() {
 }
 
 function showLogin() {
+  const authContainer = $("#admin-auth-container");
   const authSec = $("#admin-auth-section");
   const dashSec = $("#admin-dashboard-section");
   const logoutBtn = $("#admin-logout-btn");
 
+  if (authContainer) {
+    authContainer.hidden = false;
+    authContainer.style.display = "flex";
+  }
   if (authSec) {
     authSec.hidden = false;
     authSec.style.display = "flex";
@@ -170,17 +175,22 @@ function showLogin() {
 }
 
 function showDashboard() {
+  const authContainer = $("#admin-auth-container");
   const authSec = $("#admin-auth-section");
   const dashSec = $("#admin-dashboard-section");
   const logoutBtn = $("#admin-logout-btn");
 
+  if (authContainer) {
+    authContainer.hidden = true;
+    authContainer.style.display = "none";
+  }
   if (authSec) {
     authSec.hidden = true;
     authSec.style.display = "none";
   }
   if (dashSec) {
     dashSec.hidden = false;
-    dashSec.style.display = "block";
+    dashSec.style.display = "grid";
   }
   if (logoutBtn) logoutBtn.hidden = false;
   loadDashboardData();
@@ -213,30 +223,189 @@ async function loadDashboardData() {
   const deletedSamples = JSON.parse(localStorage.getItem("exam_notes_deleted_sample_ids") || "[]");
   const activeSamples = sampleNotes.filter(s => !deletedSamples.includes(s.id));
 
-  allNotes = [...mergedUploaded, ...activeSamples];
+  allNotes = [...mergedUploaded, ...activeSamples].sort((a, b) => getNoteDateValue(b) - getNoteDateValue(a));
 
-  // Update Metrics
+  // Update Metrics & Sidebar Badges
   $("#metric-total-notes").textContent = allNotes.length;
   $("#metric-uploaded-notes").textContent = mergedUploaded.length;
   $("#metric-visitors-count").textContent = visitsCount;
+  const dashBadge = $("#dash-notes-badge");
+  if (dashBadge) dashBadge.textContent = allNotes.length;
+  const modBadge = $("#modify-notes-badge");
+  if (modBadge) modBadge.textContent = allNotes.length;
 
+  // Calculate Top Category
+  const catCountMap = {};
+  allNotes.forEach(n => {
+    const s = n.subject || "General";
+    catCountMap[s] = (catCountMap[s] || 0) + 1;
+  });
+  let topCat = "Polity";
+  let maxCatCount = 0;
+  for (const [k, v] of Object.entries(catCountMap)) {
+    if (v > maxCatCount) {
+      maxCatCount = v;
+      topCat = k;
+    }
+  }
+  const topCatEl = $("#metric-top-category");
+  if (topCatEl) topCatEl.textContent = topCat;
+  const topCountEl = $("#metric-top-count");
+  if (topCountEl) topCountEl.textContent = `${maxCatCount} Notes Published`;
+
+  renderCategoryChart();
+  renderRecentNotes();
   renderTable();
+}
+
+function renderRecentNotes() {
+  const container = $("#dashboard-recent-notes");
+  if (!container) return;
+  const recents = allNotes.slice(0, 4);
+  if (recents.length === 0) {
+    container.innerHTML = `<p class="empty-hint" style="padding: 16px; color: var(--ink-muted); text-align: center;">No notes published yet.</p>`;
+    return;
+  }
+  container.innerHTML = recents.map(n => {
+    const subjKey = getSubjectKey(n.subject);
+    const dateFormatted = n.date || (n.createdAt ? new Date(n.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short" }) : "Recent");
+    const thumb = n.imageUrl 
+      ? `<img src="${n.imageUrl}" alt="${escapeHtml(n.title)}" class="recent-note-thumb">`
+      : `<div class="recent-note-thumb placeholder">📖</div>`;
+    return `
+      <div class="recent-note-item">
+        <div class="recent-note-left" data-preview-id="${n.id}" title="Click to preview note in popup">
+          ${thumb}
+          <div class="recent-note-info">
+            <strong class="recent-note-title">${escapeHtml(n.title)}</strong>
+            <div class="recent-note-meta">
+              <span class="subject-chip ${subjKey}">${escapeHtml(n.subject)}</span>
+              <span class="recent-note-date">${dateFormatted}</span>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="table-btn edit-btn" data-edit-id="${n.id}" title="Edit Note Details">✏️</button>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderCategoryChart() {
+  const chartGraph = $("#category-bar-chart");
+  const chartBars = $("#category-chart-bars");
+  const chartGrid = $("#category-chart-grid");
+  if (!chartGraph && !chartBars && !chartGrid) return;
+
+  const categories = [
+    { name: "History", icon: "📜", color: "#d97706", key: "history" },
+    { name: "Polity", icon: "⚖️", color: "#2563eb", key: "polity" },
+    { name: "Economy", icon: "📈", color: "#059669", key: "economy" },
+    { name: "Geography", icon: "🌍", color: "#0891b2", key: "geography" },
+    { name: "Art and Culture", icon: "🎨", color: "#7c3aed", key: "art-and-culture" },
+    { name: "Maths", icon: "📐", color: "#ea580c", key: "maths" },
+    { name: "Science", icon: "🔬", color: "#e11d48", key: "science" },
+    { name: "English", icon: "🔤", color: "#0284c7", key: "english" }
+  ];
+
+  const total = allNotes.length || 1;
+  const counts = {};
+  categories.forEach(c => { counts[c.name] = 0; });
+
+  allNotes.forEach(n => {
+    if (counts[n.subject] !== undefined) {
+      counts[n.subject]++;
+    } else {
+      const match = categories.find(c => c.name.toLowerCase() === (n.subject || "").toLowerCase());
+      if (match) counts[match.name]++;
+    }
+  });
+
+  const maxCount = Math.max(...Object.values(counts), 1);
+
+  // 1. Visual Vertical Bar Graph with dynamic heights and count labels
+  if (chartGraph) {
+    chartGraph.innerHTML = categories.map(c => {
+      const count = counts[c.name] || 0;
+      const heightPct = count === 0 ? 6 : Math.max(14, Math.round((count / maxCount) * 100));
+      return `
+        <div class="chart-col-item" data-cat-filter="${c.name}" title="${c.name}: ${count} notes (${Math.round((count / total) * 100)}%)">
+          <span class="chart-col-val" style="color: ${c.color};">${count}</span>
+          <div class="chart-col-bar" style="height: ${heightPct}%; background-color: ${c.color};"></div>
+          <span class="chart-col-label">${c.icon} ${c.name}</span>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // 2. Proportional Segmented Progress Strip
+  if (chartBars) {
+    chartBars.innerHTML = categories.map(c => {
+      const count = counts[c.name] || 0;
+      if (count === 0) return "";
+      const pct = ((count / total) * 100).toFixed(1);
+      return `<div class="chart-segment" style="width: ${pct}%; background-color: ${c.color};" title="${c.name}: ${count} notes (${pct}%)"></div>`;
+    }).join("");
+  }
+
+  // 3. Category Cards with counts and progress bars
+  if (chartGrid) {
+    chartGrid.innerHTML = categories.map(c => {
+      const count = counts[c.name] || 0;
+      const pct = Math.round((count / total) * 100);
+      return `
+        <div class="cat-stat-card" data-cat-filter="${c.name}" title="Click to filter table by ${c.name}">
+          <div class="cat-stat-top">
+            <span class="cat-stat-icon">${c.icon}</span>
+            <span class="cat-stat-name">${c.name}</span>
+            <strong class="cat-stat-count" style="color: ${c.color};">${count}</strong>
+          </div>
+          <div class="cat-stat-bar-track">
+            <div class="cat-stat-bar-fill" style="width: ${Math.max(pct, count > 0 ? 8 : 0)}%; background-color: ${c.color};"></div>
+          </div>
+          <div class="cat-stat-sub">
+            <span>${count} ${count === 1 ? 'note' : 'notes'}</span>
+            <span>${pct}%</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+}
+
+function getNoteDateValue(n) {
+  if (n.createdAt) {
+    const t = Date.parse(n.createdAt);
+    if (!isNaN(t)) return t;
+  }
+  if (n.date) {
+    const t = Date.parse(n.date);
+    if (!isNaN(t)) return t;
+  }
+  return 0;
 }
 
 function renderTable() {
   const tbody = $("#admin-notes-tbody");
   const searchTerm = $("#admin-table-search")?.value.trim().toLowerCase() || "";
+  const filterSubj = $("#admin-table-filter-subject")?.value.trim().toLowerCase() || "";
   const emptyBox = $("#admin-empty-table");
 
   if (!tbody) return;
 
-  const filtered = allNotes.filter(n => {
-    if (!searchTerm) return true;
-    const allText = `${n.title} ${n.subject} ${(n.tags || []).join(" ")}`.toLowerCase();
-    return allText.includes(searchTerm);
-  });
+  // Filter notes and sort descending by date
+  const filtered = allNotes
+    .sort((a, b) => getNoteDateValue(b) - getNoteDateValue(a))
+    .filter(n => {
+      if (filterSubj && (n.subject || "").toLowerCase() !== filterSubj) return false;
+      if (!searchTerm) return true;
+      const allText = `${n.title} ${n.subject} ${(n.tags || []).join(" ")}`.toLowerCase();
+      return allText.includes(searchTerm);
+    });
 
-  if (filtered.length === 0) {
+  // Display all notes in Content Library management view
+  const displayed = filtered;
+
+  if (displayed.length === 0) {
     tbody.innerHTML = "";
     if (emptyBox) emptyBox.hidden = false;
     return;
@@ -244,14 +413,14 @@ function renderTable() {
 
   if (emptyBox) emptyBox.hidden = true;
 
-  tbody.innerHTML = filtered.map(n => {
+  tbody.innerHTML = displayed.map(n => {
     const subjKey = getSubjectKey(n.subject);
     const dateFormatted = n.date || (n.createdAt ? new Date(n.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Recent");
     const isUploaded = Boolean(n.imageUrl);
 
     const thumbHtml = n.imageUrl
-      ? `<img src="${n.imageUrl}" alt="${escapeHtml(n.title)}" class="admin-table-thumb">`
-      : `<div class="admin-table-thumb-placeholder">📖</div>`;
+      ? `<img src="${n.imageUrl}" alt="${escapeHtml(n.title)}" class="admin-table-thumb" data-preview-id="${n.id}" title="Click to view full image">`
+      : `<div class="admin-table-thumb-placeholder" data-preview-id="${n.id}">📖</div>`;
 
     const tagsHtml = (n.tags && n.tags.length > 0)
       ? `<div class="table-tags">${n.tags.map(t => `<span class="table-tag">#${escapeHtml(t)}</span>`).join("")}</div>`
@@ -261,8 +430,8 @@ function renderTable() {
       <tr>
         <td>${thumbHtml}</td>
         <td>
-          <strong>${escapeHtml(n.title)}</strong>
-          ${isUploaded ? '<span class="chip-uploaded">Uploaded</span>' : '<span class="chip-sample">Demo Note</span>'}
+          <strong class="table-note-title" data-preview-id="${n.id}" style="cursor: pointer;" title="Preview Note">${escapeHtml(n.title)}</strong>
+          ${isUploaded ? '<span class="chip-uploaded">Cloud Upload</span>' : '<span class="chip-sample">Core Library</span>'}
           ${tagsHtml}
         </td>
         <td><span class="subject-chip ${subjKey}">${escapeHtml(n.subject)}</span></td>
@@ -455,10 +624,115 @@ function setupEditFileDrop() {
 // ==========================================
 // 7. Event Listeners Setup
 // ==========================================
+let currentAdminView = "dashboard";
+
+function switchAdminView(viewName) {
+  currentAdminView = viewName;
+  const dashView = $("#admin-view-dashboard");
+  const publishView = $("#admin-view-publish");
+  const modifyView = $("#admin-view-modify");
+  const navButtons = $$("[data-admin-view]");
+
+  navButtons.forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.adminView === viewName);
+  });
+
+  if (dashView) {
+    dashView.hidden = (viewName !== "dashboard");
+    dashView.classList.toggle("active", viewName === "dashboard");
+  }
+  if (publishView) {
+    publishView.hidden = (viewName !== "publish");
+    publishView.classList.toggle("active", viewName === "publish");
+  }
+  if (modifyView) {
+    modifyView.hidden = (viewName !== "modify");
+    modifyView.classList.toggle("active", viewName === "modify");
+  }
+
+  const secName = viewName === "dashboard" ? "Dash Board" : (viewName === "publish" ? "Publish Studio" : "Content Library");
+  const secEl = $("#portal-current-section");
+  if (secEl) secEl.textContent = secName;
+  const greetEl = $("#portal-greeting-heading");
+  if (greetEl) {
+    greetEl.textContent = viewName === "dashboard" ? "Welcome back, Stephanraj 👋" : (viewName === "publish" ? "Publish Revision Note ☁" : "Content Library Management ✏️");
+  }
+
+  if (viewName === "dashboard") {
+    renderCategoryChart();
+    renderRecentNotes();
+  } else if (viewName === "modify") {
+    renderTable();
+  }
+}
+
 function setupEventListeners() {
   initTheme();
   setupFileDrop();
   setupEditFileDrop();
+
+  // Admin View Navigation
+  $$("[data-admin-view]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      switchAdminView(btn.dataset.adminView);
+      if (window.innerWidth <= 768 && appShell) {
+        appShell.classList.add("sidebar-hidden");
+        if (showSidebarBtn) showSidebarBtn.hidden = false;
+      }
+    });
+  });
+
+  // Recent notes delegation click to preview or edit
+  $("#dashboard-recent-notes")?.addEventListener("click", e => {
+    const prev = e.target.closest("[data-preview-id]");
+    if (prev) {
+      openLightbox(prev.dataset.previewId);
+      return;
+    }
+    const edit = e.target.closest("[data-edit-id]");
+    if (edit) {
+      openEditModal(edit.dataset.editId);
+      return;
+    }
+  });
+
+  // Table Subject Filter Dropdown
+  $("#admin-table-filter-subject")?.addEventListener("change", renderTable);
+
+  // Clear / Reset filters button
+  $("#reset-search-btn")?.addEventListener("click", () => {
+    const s = $("#admin-table-search");
+    if (s) s.value = "";
+    const f = $("#admin-table-filter-subject");
+    if (f) f.value = "";
+    renderTable();
+  });
+
+  // Sidebar Hide / Show Toggle (Desktop & Mobile Responsive)
+  const appShell = $("#admin-dashboard-section");
+  const hideSidebarBtn = $("#hide-admin-sidebar-btn");
+  const showSidebarBtn = $("#show-admin-sidebar-btn");
+
+  const savedSidebarHidden = localStorage.getItem("exam_admin_sidebar_hidden");
+  const shouldHideSidebar = savedSidebarHidden === "true" || (savedSidebarHidden === null && window.innerWidth <= 768);
+  if (shouldHideSidebar && appShell) {
+    appShell.classList.add("sidebar-hidden");
+    if (showSidebarBtn) showSidebarBtn.hidden = false;
+  }
+
+  hideSidebarBtn?.addEventListener("click", () => {
+    if (!appShell) return;
+    appShell.classList.add("sidebar-hidden");
+    localStorage.setItem("exam_admin_sidebar_hidden", "true");
+    if (showSidebarBtn) showSidebarBtn.hidden = false;
+  });
+
+  showSidebarBtn?.addEventListener("click", () => {
+    if (!appShell) return;
+    appShell.classList.remove("sidebar-hidden");
+    localStorage.setItem("exam_admin_sidebar_hidden", "false");
+    if (showSidebarBtn) showSidebarBtn.hidden = true;
+  });
 
   // Password Visibility Toggle
   const togglePwdBtn = $("#toggle-pwd-visibility");
@@ -513,8 +787,8 @@ function setupEventListeners() {
     }
   });
 
-  // Logout Button
-  $("#admin-logout-btn")?.addEventListener("click", async () => {
+  // Logout Buttons (Header & Sidebar)
+  const handleLogout = async () => {
     if (confirm("Sign out from the Admin session?")) {
       try {
         await api("/api/admin/logout", { method: "POST" });
@@ -523,7 +797,10 @@ function setupEventListeners() {
       showToast("Signed out successfully.", "info");
       showLogin();
     }
-  });
+  };
+
+  $("#admin-logout-btn")?.addEventListener("click", handleLogout);
+  $("#sidebar-signout-btn")?.addEventListener("click", handleLogout);
 
   // Upload Form Submit
   $("#admin-upload-form")?.addEventListener("submit", async e => {
@@ -687,6 +964,28 @@ function setupEventListeners() {
       }
     }
   });
+
+  // Category Chart Card & Bar Graph Click Filter -> Switches to Modify view & filters table
+  const handleCatFilterClick = e => {
+    const card = e.target.closest("[data-cat-filter]");
+    if (card) {
+      const cat = card.dataset.catFilter;
+      switchAdminView("modify");
+      const searchInput = $("#admin-table-search");
+      if (searchInput) {
+        if (searchInput.value.toLowerCase() === cat.toLowerCase()) {
+          searchInput.value = "";
+        } else {
+          searchInput.value = cat;
+        }
+        renderTable();
+        searchInput.focus();
+      }
+    }
+  };
+
+  $("#category-chart-grid")?.addEventListener("click", handleCatFilterClick);
+  $("#category-bar-chart")?.addEventListener("click", handleCatFilterClick);
 
   // Lightbox Zoom & Navigation Actions
   $("#lightbox-zoom-in")?.addEventListener("click", zoomIn);

@@ -16,27 +16,20 @@
     <a class="brand" href="index.html">
       <img class="brand-logo" src="assets/ailogo.png" alt="Logo" onerror="this.style.display='none'">
       <span class="brand-text">
-        <strong>Free AI</strong> Govt Exam Notes
-        <small>Admin Studio & Management</small>
+        <strong>Admin</strong> Studio
+        <small>Portal · Dashboard & Publishing</small>
       </span>
     </a>
 
     <div class="header-actions">
-      <a href="index.html" class="outline-button view-site-btn" title="Go to Public Website">
-        <span>↗</span> Public Site
-      </a>
       <button id="theme-toggle" class="theme-button" type="button" title="Toggle Theme" aria-label="Toggle Dark Mode">
         <span class="theme-icon">🌙</span>
-      </button>
-      <button id="admin-logout-btn" class="outline-button danger-btn" type="button" hidden>
-        <span>⎋</span> Sign Out
       </button>
     </div>
   </header>
 
-  <!-- Main Admin Container -->
-  <main class="admin-container">
-    <!-- Unauthenticated Login View -->
+  <!-- Unauthenticated Login View Container -->
+  <main class="admin-container" id="admin-auth-container">
     <section id="admin-auth-section" class="admin-auth-card">
       <div class="auth-card-modern">
         <div class="auth-photo-frame">
@@ -77,58 +70,259 @@
         </div>
       </div>
     </section>
+  </main>
 
-    <!-- Authenticated Admin Dashboard View -->
-    <section id="admin-dashboard-section" class="admin-dashboard" hidden>
-      <!-- Metrics Row -->
-      <div class="admin-metrics-grid">
-        <div class="metric-card">
-          <div class="metric-icon notes-icon">📚</div>
-          <div class="metric-info">
-            <span class="metric-label">Total Notes in Library</span>
-            <strong id="metric-total-notes" class="metric-value">0</strong>
-          </div>
+  <!-- Authenticated Admin App Shell (Dashboard Portal) -->
+  <main id="admin-dashboard-section" class="app-shell" hidden>
+    <!-- Desktop Left Sidebar: Dashboard Portal Navigation -->
+    <aside class="sidebar portal-sidebar">
+      <!-- Admin Profile Card -->
+      <div class="portal-profile-card">
+        <div class="portal-avatar-wrap">
+          <img src="assets/admin.jpg" alt="Stephanraj" class="portal-avatar-img">
+          <span class="portal-status-dot" title="Administrator Online"></span>
         </div>
-
-        <div class="metric-card">
-          <div class="metric-icon uploads-icon">☁</div>
-          <div class="metric-info">
-            <span class="metric-label">Uploaded Image Notes</span>
-            <strong id="metric-uploaded-notes" class="metric-value">0</strong>
-          </div>
+        <div class="portal-user-meta">
+          <strong class="portal-user-name">Stephanraj</strong>
+          <span class="portal-user-role">Super Administrator</span>
         </div>
+      </div>
 
-        <div class="metric-card">
-          <div class="metric-icon visitors-icon">👁</div>
-          <div class="metric-info">
-            <span class="metric-label">Total Library Visitors</span>
-            <strong id="metric-visitors-count" class="metric-value">0</strong>
+      <!-- Navigation Section: Core Tools -->
+      <div class="sidebar-section">
+        <div class="side-header">
+          <p class="side-label">Admin Menu</p>
+          <button id="hide-admin-sidebar-btn" class="toggle-sidebar-btn" type="button" title="Hide Sidebar">
+            <span>Hide</span> ◂
+          </button>
+        </div>
+        <nav id="admin-category-nav" class="category-nav" aria-label="Admin Portal Navigation">
+          <button class="category active" data-admin-view="dashboard">
+            <span class="cat-icon all">📊</span>
+            <span class="cat-name">Dash Board</span>
+            <b id="dash-notes-badge" class="cat-count">0</b>
+          </button>
+          <button class="category" data-admin-view="publish">
+            <span class="cat-icon polity">☁</span>
+            <span class="cat-name">Publish</span>
+            <b class="cat-count badge-new">Studio</b>
+          </button>
+          <button class="category" data-admin-view="modify">
+            <span class="cat-icon history">✏️</span>
+            <span class="cat-name">Modify</span>
+            <b id="modify-notes-badge" class="cat-count">0</b>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Portal Footer Status & Sign Out -->
+      <div class="portal-sidebar-footer">
+        <div class="portal-system-status">
+          <span class="pulse-dot"></span>
+          <span class="status-text">Server Online · 4173</span>
+        </div>
+        <button id="sidebar-signout-btn" class="portal-signout-btn" type="button" title="Sign Out of Admin Portal">
+          <span>⎋</span> Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <section class="content">
+      <!-- Portal Top Command Bar -->
+      <div class="portal-top-bar">
+        <div class="portal-top-left">
+          <button id="show-admin-sidebar-btn" class="show-sidebar-btn" type="button" title="Show Sidebar" hidden>
+            📂 Menu ▸
+          </button>
+          <div class="portal-welcome-text">
+            <div class="portal-breadcrumb">
+              <span>Admin Studio</span> <span class="bc-sep">/</span> <strong id="portal-current-section">Dash Board</strong>
+            </div>
+            <h1 class="portal-greeting-title" id="portal-greeting-heading">Welcome back, Stephanraj 👋</h1>
           </div>
         </div>
       </div>
 
-      <!-- Main Studio Layout: Left Upload Form, Right Recent Uploads & Table -->
-      <div class="admin-studio-grid">
-        <!-- 1. Upload Studio Panel -->
+      <!-- View 1: Dash Board (Metrics + Chart + Counts + Recent Activity Feed) -->
+      <div id="admin-view-dashboard" class="admin-view-pane active">
+        <!-- 4-Card Professional Metrics Grid -->
+        <div class="admin-metrics-grid four-col">
+          <div class="metric-card">
+            <div class="metric-icon notes-icon">📚</div>
+            <div class="metric-info">
+              <span class="metric-label">Total Notes in Library</span>
+              <strong id="metric-total-notes" class="metric-value">0</strong>
+              <small class="metric-sub-trend positive">↑ 8 Subjects Live</small>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon uploads-icon">☁</div>
+            <div class="metric-info">
+              <span class="metric-label">Uploaded Image Notes</span>
+              <strong id="metric-uploaded-notes" class="metric-value">0</strong>
+              <small class="metric-sub-trend">High-Res JPG Files</small>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon visitors-icon">👁</div>
+            <div class="metric-info">
+              <span class="metric-label">Total Library Visitors</span>
+              <strong id="metric-visitors-count" class="metric-value">0</strong>
+              <small class="metric-sub-trend positive">↑ Active Readers</small>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon status-icon">🏆</div>
+            <div class="metric-info">
+              <span class="metric-label">Top Category</span>
+              <strong id="metric-top-category" class="metric-value">Polity</strong>
+              <small class="metric-sub-trend positive" id="metric-top-count">Active Revision Focus</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard Main Grid: Left Chart + Right Recent Notes -->
+        <div class="dashboard-analytics-grid">
+          <!-- Categories Distribution Chart & Analytics -->
+          <div class="admin-card category-chart-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Visual Analytics</p>
+                <h2>Subject Notes Distribution</h2>
+              </div>
+              <span class="badge live-badge">8 Subjects Active</span>
+            </div>
+
+            <!-- 1. Visual Bar Chart Graph with Counts -->
+            <div class="category-chart-graph-wrap">
+              <div class="category-bar-chart" id="category-bar-chart">
+                <!-- Dynamically populated bar graph columns with counts -->
+              </div>
+            </div>
+
+            <!-- 2. Proportional Segmented Progress Strip -->
+            <div class="category-segmented-strip" id="category-chart-bars" title="Subject Share Distribution">
+              <!-- Dynamically populated -->
+            </div>
+
+            <!-- 3. 8 Category Stat Cards Grid with 1-Click Filter -->
+            <div class="category-stats-grid" id="category-chart-grid">
+              <!-- Dynamically populated with counts for all 8 categories -->
+            </div>
+          </div>
+
+          <!-- Quick Recent Notes Feed -->
+          <div class="admin-card recent-activity-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Recent Notes</p>
+                <h2>Latest Additions</h2>
+              </div>
+              <button id="view-all-notes-btn" type="button" class="text-btn">View All →</button>
+            </div>
+
+            <div class="recent-notes-list" id="dashboard-recent-notes">
+              <!-- Dynamically populated recent notes -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- View 2: Publish (Upload Center Studio) -->
+      <div id="admin-view-publish" class="admin-view-pane" hidden>
         <div class="admin-card upload-studio-card">
           <div class="card-header">
             <div>
-              <p class="eyebrow">Upload Center</p>
-              <h2>Publish Note Image</h2>
+              <p class="eyebrow">Upload Center Studio</p>
+              <h2>Publish Revision Note Image</h2>
             </div>
             <span class="badge live-badge">● Ready to publish</span>
           </div>
 
           <form id="admin-upload-form" class="studio-form">
-            <label class="form-label">
-              Topic Title
-              <input id="studio-note-title" type="text" maxlength="80" placeholder="e.g. Fundamental Rights (Articles 12–35)" required>
-              <small class="field-hint">A clear, descriptive concept title for students.</small>
-            </label>
+            <div class="studio-form-grid">
+              <div class="studio-form-col">
+                <label class="form-label">
+                  Topic Title
+                  <input id="studio-note-title" type="text" maxlength="80" placeholder="e.g. Fundamental Rights (Articles 12–35)" required>
+                  <small class="field-hint">A clear, descriptive concept title for students.</small>
+                </label>
 
-            <label class="form-label">
-              Subject & Category
-              <select id="studio-note-subject" required>
+                <label class="form-label">
+                  Subject & Category
+                  <select id="studio-note-subject" required>
+                    <option value="History">📜 History</option>
+                    <option value="Polity">⚖️ Polity</option>
+                    <option value="Economy">📈 Economy</option>
+                    <option value="Geography">🌍 Geography</option>
+                    <option value="Art and Culture">🎨 Art and Culture</option>
+                    <option value="Maths">📐 Maths</option>
+                    <option value="Science">🔬 Science</option>
+                    <option value="English">🔤 English</option>
+                  </select>
+                </label>
+
+                <label class="form-label">
+                  Multiple Tags (Comma-separated)
+                  <input id="studio-note-tags" type="text" placeholder="e.g. UPSC, Constitution, Articles, Prelims 2025">
+                  <small class="field-hint">Add keywords to help students search & filter this note.</small>
+                </label>
+              </div>
+
+              <div class="studio-form-col">
+                <!-- File Upload Drop Zone with Live Image Preview -->
+                <label class="form-label">Note Image (JPG / JPEG)</label>
+                <div id="studio-dropzone" class="studio-dropzone">
+                  <input id="studio-file-input" type="file" accept="image/jpeg,.jpg,.jpeg" required>
+                  
+                  <div id="dropzone-prompt" class="dropzone-prompt">
+                    <span class="dropzone-icon">📁</span>
+                    <strong>Click to browse or drag & drop image</strong>
+                    <p>High-resolution JPG, maximum 5 MB</p>
+                  </div>
+
+                  <!-- Live Preview Container -->
+                  <div id="dropzone-preview-wrap" class="dropzone-preview-wrap" hidden>
+                    <img id="dropzone-img-preview" class="preview-img" alt="Upload preview">
+                    <div class="preview-details">
+                      <span id="preview-file-name" class="preview-name">image.jpg</span>
+                      <span id="preview-file-size" class="preview-size">0 KB</span>
+                      <button id="remove-preview-btn" type="button" class="text-btn danger">Remove & Replace</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p id="studio-upload-msg" class="form-message"></p>
+
+            <div class="studio-form-actions">
+              <button id="studio-submit-btn" class="upload-button full" type="submit">
+                <span>☁</span> Publish Note to Public Website
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- View 3: Modify (Content Library Management Table) -->
+      <div id="admin-view-modify" class="admin-view-pane" hidden>
+        <div class="admin-card table-card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Content Library Management</p>
+              <h2>Manage & Modify Published Notes</h2>
+            </div>
+            <div class="table-tools-wrap">
+              <div class="table-search">
+                <input id="admin-table-search" type="search" placeholder="Search by title, subject, tags...">
+              </div>
+              <select id="admin-table-filter-subject" class="table-select-filter">
+                <option value="">All Subjects (8)</option>
                 <option value="History">📜 History</option>
                 <option value="Polity">⚖️ Polity</option>
                 <option value="Economy">📈 Economy</option>
@@ -138,53 +332,6 @@
                 <option value="Science">🔬 Science</option>
                 <option value="English">🔤 English</option>
               </select>
-            </label>
-
-            <label class="form-label">
-              Multiple Tags (Comma-separated)
-              <input id="studio-note-tags" type="text" placeholder="e.g. UPSC, Constitution, Articles, Prelims 2025">
-              <small class="field-hint">Add keywords to help students search & filter this note.</small>
-            </label>
-
-            <!-- File Upload Drop Zone with Live Image Preview -->
-            <label class="form-label">Note Image (JPG / JPEG)</label>
-            <div id="studio-dropzone" class="studio-dropzone">
-              <input id="studio-file-input" type="file" accept="image/jpeg,.jpg,.jpeg" required>
-              
-              <div id="dropzone-prompt" class="dropzone-prompt">
-                <span class="dropzone-icon">📁</span>
-                <strong>Click to browse or drag & drop note image</strong>
-                <p>High-resolution JPG, maximum 5 MB</p>
-              </div>
-
-              <!-- Live Preview Container -->
-              <div id="dropzone-preview-wrap" class="dropzone-preview-wrap" hidden>
-                <img id="dropzone-img-preview" class="preview-img" alt="Upload preview">
-                <div class="preview-details">
-                  <span id="preview-file-name" class="preview-name">image.jpg</span>
-                  <span id="preview-file-size" class="preview-size">0 KB</span>
-                  <button id="remove-preview-btn" type="button" class="text-btn danger">Remove & Replace</button>
-                </div>
-              </div>
-            </div>
-
-            <p id="studio-upload-msg" class="form-message"></p>
-
-            <button id="studio-submit-btn" class="upload-button full" type="submit">
-              <span>☁</span> Publish Note to Home Page
-            </button>
-          </form>
-        </div>
-
-        <!-- 2. Notes Management & Published Table -->
-        <div class="admin-card table-card">
-          <div class="card-header">
-            <div>
-              <p class="eyebrow">Content Library</p>
-              <h2>Manage Published Notes</h2>
-            </div>
-            <div class="table-search">
-              <input id="admin-table-search" type="search" placeholder="Filter by title or subject...">
             </div>
           </div>
 
@@ -192,11 +339,11 @@
             <table class="admin-table">
               <thead>
                 <tr>
-                  <th>Thumbnail</th>
-                  <th>Topic Title</th>
+                  <th style="width: 70px;">Thumbnail</th>
+                  <th>Topic Title & Tags</th>
                   <th>Subject</th>
                   <th>Published Date</th>
-                  <th class="text-right">Actions</th>
+                  <th class="text-right" style="width: 140px;">Actions</th>
                 </tr>
               </thead>
               <tbody id="admin-notes-tbody">
@@ -207,6 +354,7 @@
 
           <div id="admin-empty-table" class="empty-state" hidden>
             <p>No notes found matching your search.</p>
+            <button id="reset-search-btn" class="outline-button" type="button" style="margin-top: 10px;">Clear Filters</button>
           </div>
         </div>
       </div>
@@ -320,14 +468,6 @@
       </div>
     </div>
   </dialog>
-
-  <!-- Creator Footer -->
-  <footer class="site-footer">
-    <div class="footer-content">
-      <p class="creator-tag">Created with ❤️ by <strong>Stephanraj</strong></p>
-      <p class="footer-sub">Smart Revision Library · Admin Studio</p>
-    </div>
-  </footer>
 
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
