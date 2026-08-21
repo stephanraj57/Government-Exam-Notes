@@ -440,17 +440,17 @@ function setAdminState(isAdminUser) {
 
   if (isAdminUser) {
     adminBtn?.classList.add("admin-logged-in");
-    if (statusText) statusText.textContent = "Admin (Active)";
-    if (statusSub) statusSub.textContent = "Click to Sign out";
+    if (statusText) statusText.textContent = "Admin Studio";
+    if (statusSub) statusSub.textContent = "Active Session ↗";
     if (adminAreaBtn) {
-      adminAreaBtn.innerHTML = "<span>✓</span> Admin Active";
+      adminAreaBtn.innerHTML = "<span>⚙</span> Admin Studio";
     }
   } else {
     adminBtn?.classList.remove("admin-logged-in");
-    if (statusText) statusText.textContent = "Admin Area";
-    if (statusSub) statusSub.textContent = "Sign in";
+    if (statusText) statusText.textContent = "Admin Studio";
+    if (statusSub) statusSub.textContent = "Upload & Manage";
     if (adminAreaBtn) {
-      adminAreaBtn.innerHTML = "<span>⚙</span> Admin Sign In";
+      adminAreaBtn.innerHTML = "<span>⚙</span> Admin Studio";
     }
   }
 
@@ -680,11 +680,6 @@ function setupEventListeners() {
       if (e.key === "ArrowRight") stepLightbox(1);
     }
   });
-
-  // Admin Triggers
-  $("#admin-login-button")?.addEventListener("click", handleAdminAction);
-  $("#admin-area-button")?.addEventListener("click", handleAdminAction);
-  $("#open-upload")?.addEventListener("click", openUploadDialog);
 
   // Close buttons on dialogs
   $$("[data-close]").forEach(btn => {

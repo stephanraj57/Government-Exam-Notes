@@ -39,14 +39,14 @@
       </button>
 
       <div id="admin-user-container">
-        <button id="admin-login-button" class="profile-button" type="button" title="Admin Portal">
+        <a id="admin-login-button" href="admin.html" class="profile-button" title="Admin Portal & Upload Studio">
           <span class="avatar">AS</span>
           <div class="profile-info">
-            <strong id="admin-status-text">Admin Area</strong>
-            <small id="admin-status-sub">Sign in</small>
+            <strong id="admin-status-text">Admin Studio</strong>
+            <small id="admin-status-sub">Upload & Manage</small>
           </div>
-          <i class="caret">⌄</i>
-        </button>
+          <i class="caret">↗</i>
+        </a>
       </div>
     </div>
   </header>
@@ -154,12 +154,12 @@
           <p id="note-total">Loading revision library…</p>
         </div>
         <div class="admin-actions">
-          <button id="admin-area-button" class="outline-button" type="button">
-            <span>⚙</span> Admin Sign In
-          </button>
-          <button id="open-upload" class="upload-button" type="button">
+          <a id="admin-area-button" href="admin.html" class="outline-button">
+            <span>⚙</span> Admin Studio
+          </a>
+          <a id="open-upload" href="admin.html" class="upload-button">
             <span>☁</span> Upload Note
-          </button>
+          </a>
         </div>
       </div>
 
@@ -228,10 +228,10 @@
       <span class="mob-icon">◷</span>
       <span>Recent</span>
     </button>
-    <button type="button" id="mobile-upload-btn" class="mobile-nav-btn" data-action="upload">
+    <a href="admin.html" id="mobile-upload-btn" class="mobile-nav-btn">
       <span class="mob-icon">☁</span>
       <span>Upload</span>
-    </button>
+    </a>
   </nav>
 
   <!-- Lightbox / Fullscreen Image Viewer Dialog -->

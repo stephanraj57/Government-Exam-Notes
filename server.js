@@ -1,10 +1,35 @@
 import http from "node:http";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
+import fsSync from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
+
+// Automatically load .env file if present
+try {
+  const envPath = path.join(ROOT, ".env");
+  if (fsSync.existsSync(envPath)) {
+    const envContent = fsSync.readFileSync(envPath, "utf8");
+    for (const line of envContent.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eqIdx = trimmed.indexOf("=");
+      if (eqIdx > 0) {
+        const key = trimmed.slice(0, eqIdx).trim();
+        let val = trimmed.slice(eqIdx + 1).trim();
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+          val = val.slice(1, -1);
+        }
+        if (!process.env[key]) {
+          process.env[key] = val;
+        }
+      }
+    }
+  }
+} catch (e) {}
+
 const DATA_DIR = path.join(ROOT, "data");
 const UPLOAD_DIR = path.join(ROOT, "uploads");
 const NOTES_FILE = path.join(DATA_DIR, "notes.json");
@@ -196,7 +221,15 @@ async function handleApi(request, response, url) {
 }
 
 async function serveStatic(response, pathname) {
-  const allowedPublicFiles = new Set(["/", "/index.html", "/styles.css", "/app.js", "/assets/ailogo.png"]);
+  const allowedPublicFiles = new Set([
+    "/",
+    "/index.html",
+    "/admin.html",
+    "/styles.css",
+    "/app.js",
+    "/admin.js",
+    "/assets/ailogo.png"
+  ]);
   const isPublicUpload = /^\/uploads\/[0-9a-f-]+\.jpg$/i.test(pathname);
   if (!allowedPublicFiles.has(pathname) && !isPublicUpload) {
     response.writeHead(404);
