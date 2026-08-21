@@ -160,17 +160,24 @@ function showLogin() {
 
   if (authContainer) {
     authContainer.hidden = false;
-    authContainer.style.display = "flex";
+    authContainer.removeAttribute("hidden");
+    authContainer.style.setProperty("display", "flex", "important");
   }
   if (authSec) {
     authSec.hidden = false;
-    authSec.style.display = "flex";
+    authSec.removeAttribute("hidden");
+    authSec.style.setProperty("display", "flex", "important");
   }
   if (dashSec) {
     dashSec.hidden = true;
-    dashSec.style.display = "none";
+    dashSec.setAttribute("hidden", "");
+    dashSec.style.setProperty("display", "none", "important");
   }
-  if (logoutBtn) logoutBtn.hidden = true;
+  if (logoutBtn) {
+    logoutBtn.hidden = true;
+    logoutBtn.setAttribute("hidden", "");
+    logoutBtn.style.setProperty("display", "none", "important");
+  }
   $("#admin-page-password")?.focus();
 }
 
@@ -182,17 +189,24 @@ function showDashboard() {
 
   if (authContainer) {
     authContainer.hidden = true;
-    authContainer.style.display = "none";
+    authContainer.setAttribute("hidden", "");
+    authContainer.style.setProperty("display", "none", "important");
   }
   if (authSec) {
     authSec.hidden = true;
-    authSec.style.display = "none";
+    authSec.setAttribute("hidden", "");
+    authSec.style.setProperty("display", "none", "important");
   }
   if (dashSec) {
     dashSec.hidden = false;
-    dashSec.style.display = "grid";
+    dashSec.removeAttribute("hidden");
+    dashSec.style.removeProperty("display");
   }
-  if (logoutBtn) logoutBtn.hidden = false;
+  if (logoutBtn) {
+    logoutBtn.hidden = false;
+    logoutBtn.removeAttribute("hidden");
+    logoutBtn.style.removeProperty("display");
+  }
   loadDashboardData();
 }
 
