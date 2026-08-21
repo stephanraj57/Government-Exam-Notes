@@ -667,8 +667,21 @@ function updateLightboxContent(note) {
   }
 
   if (meta) {
-    const dateFormatted = note.date || (note.createdAt ? new Date(note.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Recent");
-    meta.textContent = `${dateFormatted} · 1 Image · High-Resolution Revision Note`;
+    let dateFormatted = "Recent";
+    if (note.createdAt) {
+      const d = new Date(note.createdAt);
+      if (!isNaN(d.getTime())) {
+        dateFormatted = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+      }
+    } else if (note.date) {
+      const d = new Date(note.date);
+      if (!isNaN(d.getTime())) {
+        dateFormatted = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+      } else {
+        dateFormatted = note.date;
+      }
+    }
+    meta.textContent = `📅 ${dateFormatted}`;
   }
 
   if (bookmarkBtn) {

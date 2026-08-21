@@ -13,11 +13,11 @@
 <body class="admin-body">
   <!-- Admin Header -->
   <header class="site-header admin-header">
-    <a class="brand" href="index.html">
+    <a class="brand" id="admin-brand-link" href="index.html" title="Go to Free AI Govt Exam Notes Home">
       <img class="brand-logo" src="assets/ailogo.png" alt="Logo" onerror="this.style.display='none'">
-      <span class="brand-text">
-        <strong>Admin</strong> Studio
-        <small>Portal · Dashboard & Publishing</small>
+      <span class="brand-text" id="admin-brand-text">
+        <strong>Free AI</strong> Govt Exam Notes
+        <small>Smart Notes · Clear Concepts · Better Revision</small>
       </span>
     </a>
 
@@ -26,7 +26,8 @@
         <span class="theme-icon">🌙</span>
       </button>
       <button id="admin-logout-btn" class="header-signout-btn" type="button" title="Sign Out of Admin Portal" hidden>
-        <span>⎋</span> Sign Out
+        <span class="signout-power-icon">⏻</span>
+        <span>Sign Out</span>
       </button>
     </div>
   </header>
@@ -34,6 +35,65 @@
   <!-- Unauthenticated Login View Container -->
   <main class="admin-container" id="admin-auth-container">
     <section id="admin-auth-section" class="admin-auth-card">
+      <!-- Static Study & Exam Themed Icons Framing Login Window (No Floating Drift) -->
+      <div class="auth-floating-elements" aria-hidden="true">
+        <!-- Top Row (Above login window) -->
+        <span class="static-icon size-lg pos-1" title="Smart Brain">🧠</span>
+        <span class="static-icon size-md pos-2" title="Answer Notes">📝</span>
+        <span class="static-icon size-sm pos-3" title="Economy">📈</span>
+        <span class="static-icon size-md pos-4" title="Telescope">🔭</span>
+        <span class="static-icon size-lg pos-5" title="Workstation">🖥️</span>
+        <span class="static-icon size-lg pos-6" title="Current Affairs">🌐</span>
+        <span class="static-icon size-md pos-7" title="Honor Medal">🏅</span>
+        <span class="static-icon size-sm pos-8" title="Concepts">💡</span>
+        <span class="static-icon size-md pos-9" title="Key Pin">📌</span>
+        <span class="static-icon size-lg pos-10" title="Polity & Justice">⚖️</span>
+
+        <!-- Left Wing (Staggered around left of login window) -->
+        <span class="static-icon size-lg pos-11" title="History">🏛️</span>
+        <span class="static-icon size-md pos-12" title="Graduation Cap">🎓</span>
+        <span class="static-icon size-sm pos-13" title="Ruler">📏</span>
+        <span class="static-icon size-md pos-14" title="Fountain Pen">🖋️</span>
+        <span class="static-icon size-sm pos-15" title="Paperclip">📎</span>
+        <span class="static-icon size-md pos-16" title="Timer">⏱️</span>
+        <span class="static-icon size-sm pos-17" title="Map Pin">📍</span>
+        <span class="static-icon size-sm pos-18" title="Ballpoint Pen">🖊️</span>
+        <span class="static-icon size-md pos-19" title="Pencil">✏️</span>
+        <span class="static-icon size-sm pos-20" title="Data Chart">📊</span>
+        <span class="static-icon size-md pos-21" title="Scale">📐</span>
+        <span class="static-icon size-sm pos-22" title="Compass">🧭</span>
+        <span class="static-icon size-lg pos-23" title="Notebook">📓</span>
+        <span class="static-icon size-sm pos-24" title="Sticky Tabs">📑</span>
+
+        <!-- Right Wing (Staggered around right of login window) -->
+        <span class="static-icon size-lg pos-25" title="Geography">🌍</span>
+        <span class="static-icon size-md pos-26" title="Syllabus Scroll">📜</span>
+        <span class="static-icon size-sm pos-27" title="Bookmark Ribbon">🔖</span>
+        <span class="static-icon size-lg pos-28" title="Reading Book">📖</span>
+        <span class="static-icon size-sm pos-29" title="Petri Dish">🧫</span>
+        <span class="static-icon size-md pos-30" title="Research">🔍</span>
+        <span class="static-icon size-sm pos-31" title="Exam Calendar">📅</span>
+        <span class="static-icon size-sm pos-32" title="Central Bank">🏦</span>
+        <span class="static-icon size-lg pos-33" title="Success Trophy">🏆</span>
+        <span class="static-icon size-sm pos-34" title="Service Badge">🎖️</span>
+        <span class="static-icon size-md pos-35" title="Eraser">🧹</span>
+        <span class="static-icon size-sm pos-36" title="Art & Culture">🎨</span>
+        <span class="static-icon size-md pos-37" title="Chemistry Lab">🧪</span>
+        <span class="static-icon size-md pos-38" title="Digital Notes">💻</span>
+
+        <!-- Bottom Row (Below login window) -->
+        <span class="static-icon size-md pos-39" title="Aptitude Abacus">🧮</span>
+        <span class="static-icon size-lg pos-40" title="Study Books">📚</span>
+        <span class="static-icon size-sm pos-41" title="Alarm Clock">⏰</span>
+        <span class="static-icon size-sm pos-42" title="Mobile Learning">📱</span>
+        <span class="static-icon size-md pos-43" title="Biology DNA">🧬</span>
+        <span class="static-icon size-md pos-44" title="Fast Revision">⚡</span>
+        <span class="static-icon size-sm pos-45" title="Economy Graph">📉</span>
+        <span class="static-icon size-sm pos-46" title="1st Rank Gold">🥇</span>
+        <span class="static-icon size-md pos-47" title="Target Exam">🎯</span>
+        <span class="static-icon size-lg pos-48" title="Science Research">🔬</span>
+      </div>
+
       <div class="auth-card-modern">
         <div class="auth-photo-frame">
           <img src="assets/admin.jpg" alt="Stephanraj" class="auth-admin-avatar">
@@ -41,9 +101,9 @@
         </div>
 
         <div class="auth-header-text">
-          <span class="auth-badge">Stephanraj · Administrator</span>
-          <h1>Admin Portal</h1>
-          <p class="auth-desc">Enter your administrator password to manage library notes and publish revision content.</p>
+          <span class="auth-badge">stephanraj</span>
+          <h1>Welcome back</h1>
+          <p class="auth-desc">Please enter your administrator password to access Admin Studio.</p>
         </div>
 
         <form id="admin-page-login-form" class="auth-form-modern">
@@ -75,6 +135,9 @@
     </section>
   </main>
 
+  <!-- Mobile Sidebar Backdrop Overlay -->
+  <div id="admin-sidebar-backdrop" class="sidebar-backdrop" title="Click to close menu"></div>
+
   <!-- Authenticated Admin App Shell (Dashboard Portal) -->
   <main id="admin-dashboard-section" class="app-shell" hidden>
     <!-- Left Sidebar: Dashboard Portal Navigation -->
@@ -86,7 +149,10 @@
           <span class="portal-status-dot" title="Administrator Online"></span>
         </div>
         <div class="portal-user-meta">
-          <strong class="portal-user-name">Stephanraj</strong>
+          <div class="portal-user-name-row">
+            <strong class="portal-user-name">Stephanraj</strong>
+            <span class="portal-verified-badge" title="Verified Super Admin">✓</span>
+          </div>
           <span class="portal-user-role">Super Administrator</span>
         </div>
       </div>
@@ -94,28 +160,49 @@
       <!-- Navigation Section: Core Tools -->
       <div class="sidebar-section">
         <div class="side-header">
-          <p class="side-label">Admin Menu</p>
-          <button id="hide-admin-sidebar-btn" class="toggle-sidebar-btn" type="button" title="Hide Sidebar">
+          <p class="side-label">Admin Navigation</p>
+          <button id="hide-admin-sidebar-btn" class="toggle-sidebar-btn" type="button" title="Collapse Sidebar">
             <span>Hide</span> ◂
           </button>
         </div>
         <nav id="admin-category-nav" class="category-nav" aria-label="Admin Portal Navigation">
-          <button class="category active" data-admin-view="dashboard">
-            <span class="cat-icon all">📊</span>
-            <span class="cat-name">Dash Board</span>
+          <button class="category admin-nav-card active" data-admin-view="dashboard">
+            <span class="nav-icon-box dashboard-box">📊</span>
+            <div class="nav-text-col">
+              <span class="cat-name">Dash Board</span>
+              <small class="nav-sub-desc">Analytics & Activity</small>
+            </div>
             <b id="dash-notes-badge" class="cat-count">0</b>
           </button>
-          <button class="category" data-admin-view="publish">
-            <span class="cat-icon polity">☁</span>
-            <span class="cat-name">Publish</span>
+          <button class="category admin-nav-card" data-admin-view="publish">
+            <span class="nav-icon-box publish-box">☁</span>
+            <div class="nav-text-col">
+              <span class="cat-name">Publish</span>
+              <small class="nav-sub-desc">Upload Note Diagram</small>
+            </div>
             <b class="cat-count badge-new">Studio</b>
           </button>
-          <button class="category" data-admin-view="modify">
-            <span class="cat-icon history">✏️</span>
-            <span class="cat-name">Modify</span>
+          <button class="category admin-nav-card" data-admin-view="modify">
+            <span class="nav-icon-box modify-box">✏️</span>
+            <div class="nav-text-col">
+              <span class="cat-name">Modify</span>
+              <small class="nav-sub-desc">Library & Batch Ops</small>
+            </div>
             <b id="modify-notes-badge" class="cat-count">0</b>
           </button>
         </nav>
+      </div>
+
+      <!-- Quick Actions Section -->
+      <div class="sidebar-section quick-actions-section">
+        <p class="side-label">Quick Links</p>
+        <div class="sidebar-quick-links">
+          <a href="index.html" class="sidebar-quick-link" title="Open Public Student Portal" target="_blank" rel="noopener">
+            <span class="quick-link-icon">🌐</span>
+            <span class="quick-link-text">Public Portal</span>
+            <span class="quick-link-arrow">↗</span>
+          </a>
+        </div>
       </div>
 
       <!-- Portal Footer Status -->
@@ -222,7 +309,6 @@
                 <p class="eyebrow">Recent Notes</p>
                 <h2>Latest Additions</h2>
               </div>
-              <button id="view-all-notes-btn" type="button" class="text-btn">View All →</button>
             </div>
 
             <div class="recent-notes-list" id="dashboard-recent-notes">
@@ -309,7 +395,7 @@
         </div>
       </div>
 
-      <!-- View 3: Modify (Content Library Management Table) -->
+      <!-- View 3: Modify (Content Library Management Table & Grid) -->
       <div id="admin-view-modify" class="admin-view-pane" hidden>
         <div class="admin-card table-card">
           <div class="card-header">
@@ -317,10 +403,13 @@
               <p class="eyebrow">Content Library Management</p>
               <h2>Manage & Modify Published Notes</h2>
             </div>
+            
+            <!-- Smart Toolbar: Search + Filters + View Mode -->
             <div class="table-tools-wrap">
               <div class="table-search">
                 <input id="admin-table-search" type="search" placeholder="Search by title, subject, tags...">
               </div>
+
               <select id="admin-table-filter-subject" class="table-select-filter">
                 <option value="">All Subjects (8)</option>
                 <option value="History">📜 History</option>
@@ -332,18 +421,48 @@
                 <option value="Science">🔬 Science</option>
                 <option value="English">🔤 English</option>
               </select>
+
+              <!-- View Mode Toggle: Table / Grid Cards -->
+              <div class="table-view-toggle">
+                <button type="button" id="admin-view-btn-table" class="view-mode-btn" title="Table View">📋</button>
+                <button type="button" id="admin-view-btn-grid" class="view-mode-btn active" title="Visual Cards Grid View">🎴</button>
+              </div>
             </div>
           </div>
 
-          <div class="table-responsive">
+          <!-- Bulk Selection Action Bar -->
+          <div id="admin-bulk-actions" class="admin-bulk-actions" hidden>
+            <div class="bulk-info">
+              <span class="bulk-count" id="admin-selected-count">0 notes selected</span>
+            </div>
+            <div class="bulk-btns">
+              <button type="button" id="admin-bulk-delete-btn" class="danger-btn bulk-btn">🗑 Delete Selected</button>
+              <button type="button" id="admin-bulk-clear-btn" class="outline-button bulk-btn">Deselect All</button>
+            </div>
+          </div>
+
+          <!-- 1. Table View -->
+          <div id="admin-table-view-wrap" class="table-responsive" hidden>
             <table class="admin-table">
               <thead>
                 <tr>
-                  <th style="width: 70px;">Thumbnail</th>
-                  <th>Topic Title & Tags</th>
-                  <th>Subject</th>
-                  <th>Published Date</th>
-                  <th class="text-right" style="width: 140px;">Actions</th>
+                  <th style="width: 36px; text-align: center;">
+                    <input type="checkbox" id="admin-select-all" title="Select all on this page">
+                  </th>
+                  <th style="width: 60px;">Thumb</th>
+                  <th class="sortable-col" data-sort="title" title="Click to sort by Title">
+                    <span>Topic Title & Tags</span>
+                    <span class="sort-icon" id="sort-icon-title">↕</span>
+                  </th>
+                  <th class="sortable-col" data-sort="subject" style="width: 130px;" title="Click to sort by Subject">
+                    <span>Subject</span>
+                    <span class="sort-icon" id="sort-icon-subject">↕</span>
+                  </th>
+                  <th class="sortable-col" data-sort="date" style="width: 130px;" title="Click to sort by Date">
+                    <span>Published</span>
+                    <span class="sort-icon" id="sort-icon-date">↓</span>
+                  </th>
+                  <th class="text-right" style="width: 130px;">Actions</th>
                 </tr>
               </thead>
               <tbody id="admin-notes-tbody">
@@ -352,9 +471,39 @@
             </table>
           </div>
 
+          <!-- 2. Visual Card Grid View (Default) -->
+          <div id="admin-grid-view-wrap" class="admin-modify-grid">
+            <!-- Dynamically populated when Grid mode is active -->
+          </div>
+
+          <!-- Empty State -->
           <div id="admin-empty-table" class="empty-state" hidden>
-            <p>No notes found matching your search.</p>
+            <p>No notes found matching your search or filters.</p>
             <button id="reset-search-btn" class="outline-button" type="button" style="margin-top: 10px;">Clear Filters</button>
+          </div>
+
+          <!-- Smart Pagination Bar -->
+          <div id="admin-pagination-bar" class="admin-table-pagination">
+            <div class="pagination-info">
+              <span id="admin-pagination-summary">Showing 1–4 of 28 notes</span>
+            </div>
+
+            <div class="pagination-controls-wrap">
+              <div class="pagination-pages" id="admin-pagination-pages">
+                <!-- Page buttons dynamically rendered -->
+              </div>
+            </div>
+
+            <div class="pagination-per-page">
+              <label for="admin-rows-per-page">Show:</label>
+              <select id="admin-rows-per-page" class="per-page-select">
+                <option value="4" selected>4 / page</option>
+                <option value="8">8 / page</option>
+                <option value="12">12 / page</option>
+                <option value="20">20 / page</option>
+                <option value="all">All</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -369,7 +518,7 @@
       <div class="edit-dialog-header">
         <p class="eyebrow">Content Studio</p>
         <h2>Edit Revision Note</h2>
-        <p class="dialog-sub">Update note details or replace the diagram.</p>
+        <p class="dialog-sub">Update topic title, subject, and tags.</p>
       </div>
       
       <input id="edit-note-id" type="hidden">
@@ -397,24 +546,6 @@
         <div class="form-group">
           <label class="form-label-title" for="edit-note-tags">Multiple Tags (Comma-separated)</label>
           <input id="edit-note-tags" class="form-control" type="text" placeholder="e.g. UPSC, Constitution, Articles">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label-title">Revision Note Image (Optional)</label>
-          <div class="edit-preview-row">
-            <div id="edit-thumb-wrap" class="edit-thumb-wrap" title="Current Image">
-              <img id="edit-current-img" src="" alt="Current Note Image" class="edit-thumb-preview">
-              <span id="edit-thumb-placeholder" class="edit-thumb-placeholder">📄</span>
-            </div>
-            <div class="edit-file-input-wrap">
-              <label class="file-drop compact" id="edit-dropzone">
-                <span class="file-drop-icon">📁</span>
-                <span class="file-drop-text">Click or drag JPG to replace image</span>
-                <input id="edit-file-input" type="file" accept="image/jpeg,.jpg,.jpeg">
-                <span id="edit-file-name-preview" class="file-preview-name"></span>
-              </label>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -460,10 +591,7 @@
       </div>
 
       <div class="lightbox-footer">
-        <div class="lightbox-meta-row">
-          <span id="lightbox-meta">Published · 1 Image</span>
-          <div class="lightbox-nav-hints">Use ← / → to navigate · + / - to zoom · Esc to close</div>
-        </div>
+        <span id="lightbox-meta" class="lightbox-meta-date">📅 Date</span>
         <div id="lightbox-tags" class="lightbox-tags"></div>
       </div>
     </div>

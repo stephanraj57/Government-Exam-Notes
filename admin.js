@@ -157,6 +157,16 @@ function showLogin() {
   const authSec = $("#admin-auth-section");
   const dashSec = $("#admin-dashboard-section");
   const logoutBtn = $("#admin-logout-btn");
+  const brandLink = $("#admin-brand-link");
+  const brandText = $("#admin-brand-text");
+
+  if (brandLink) {
+    brandLink.href = "index.html";
+    brandLink.title = "Go to Free AI Govt Exam Notes Home";
+  }
+  if (brandText) {
+    brandText.innerHTML = `<strong>Free AI</strong> Govt Exam Notes<small>Smart Notes · Clear Concepts · Better Revision</small>`;
+  }
 
   if (authContainer) {
     authContainer.hidden = false;
@@ -186,6 +196,16 @@ function showDashboard() {
   const authSec = $("#admin-auth-section");
   const dashSec = $("#admin-dashboard-section");
   const logoutBtn = $("#admin-logout-btn");
+  const brandLink = $("#admin-brand-link");
+  const brandText = $("#admin-brand-text");
+
+  if (brandLink) {
+    brandLink.href = "#dashboard";
+    brandLink.title = "Admin Studio Dashboard";
+  }
+  if (brandText) {
+    brandText.innerHTML = `<strong>Admin</strong> Studio<small>Portal · Dashboard & Publishing</small>`;
+  }
 
   if (authContainer) {
     authContainer.hidden = true;
@@ -239,10 +259,31 @@ async function loadDashboardData() {
 
   allNotes = [...mergedUploaded, ...activeSamples].sort((a, b) => getNoteDateValue(b) - getNoteDateValue(a));
 
-  // Update Metrics & Sidebar Badges
-  $("#metric-total-notes").textContent = allNotes.length;
-  $("#metric-uploaded-notes").textContent = mergedUploaded.length;
-  $("#metric-visitors-count").textContent = visitsCount;
+function animateNumberCounter(el, target, duration = 1400) {
+  if (!el) return;
+  const targetNum = Number(target) || 0;
+  const startNum = 0;
+  const startTime = performance.now();
+
+  const step = (now) => {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+    const current = Math.round(startNum + (targetNum - startNum) * easeOut);
+    el.textContent = current;
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    } else {
+      el.textContent = targetNum;
+    }
+  };
+  requestAnimationFrame(step);
+}
+
+  // Update Metrics with smooth Counter Animation & Sidebar Badges
+  animateNumberCounter($("#metric-total-notes"), allNotes.length, 1400);
+  animateNumberCounter($("#metric-uploaded-notes"), mergedUploaded.length, 1400);
+  animateNumberCounter($("#metric-visitors-count"), visitsCount, 1400);
   const dashBadge = $("#dash-notes-badge");
   if (dashBadge) dashBadge.textContent = allNotes.length;
   const modBadge = $("#modify-notes-badge");
@@ -282,13 +323,26 @@ function renderRecentNotes() {
   }
   container.innerHTML = recents.map(n => {
     const subjKey = getSubjectKey(n.subject);
-    const dateFormatted = n.date || (n.createdAt ? new Date(n.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short" }) : "Recent");
+    let dateFormatted = "Recent";
+    if (n.createdAt) {
+      const d = new Date(n.createdAt);
+      if (!isNaN(d.getTime())) {
+        dateFormatted = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+      }
+    } else if (n.date) {
+      const d = new Date(n.date);
+      if (!isNaN(d.getTime())) {
+        dateFormatted = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+      } else {
+        dateFormatted = n.date;
+      }
+    }
     const thumb = n.imageUrl 
       ? `<img src="${n.imageUrl}" alt="${escapeHtml(n.title)}" class="recent-note-thumb">`
       : `<div class="recent-note-thumb placeholder">📖</div>`;
     return `
-      <div class="recent-note-item">
-        <div class="recent-note-left" data-preview-id="${n.id}" title="Click to preview note in popup">
+      <div class="recent-note-item" data-preview-id="${n.id}" style="cursor: pointer;" title="Click to preview note">
+        <div class="recent-note-left">
           ${thumb}
           <div class="recent-note-info">
             <strong class="recent-note-title">${escapeHtml(n.title)}</strong>
@@ -298,7 +352,6 @@ function renderRecentNotes() {
             </div>
           </div>
         </div>
-        <button type="button" class="table-btn edit-btn" data-edit-id="${n.id}" title="Edit Note Details">✏️</button>
       </div>
     `;
   }).join("");
@@ -398,39 +451,176 @@ function getNoteDateValue(n) {
   return 0;
 }
 
-function renderTable() {
-  const tbody = $("#admin-notes-tbody");
+// ==========================================
+// 4.1 Modify Content Library Management (Smart Table & Grid)
+// ==========================================
+let tableState = {
+  page: 1,
+  rowsPerPage: 4,
+  sortKey: 'date',
+  sortDir: 'desc',
+  viewMode: 'grid',   // 'grid' (default) or 'table'
+  selectedIds: new Set()
+};
+
+function getFilteredAndSortedNotes() {
   const searchTerm = $("#admin-table-search")?.value.trim().toLowerCase() || "";
   const filterSubj = $("#admin-table-filter-subject")?.value.trim().toLowerCase() || "";
+
+  let list = allNotes.filter(n => {
+    // Subject filter
+    if (filterSubj && (n.subject || "").toLowerCase() !== filterSubj) return false;
+    // Search filter
+    if (searchTerm) {
+      const allText = `${n.title} ${n.subject} ${(n.tags || []).join(" ")}`.toLowerCase();
+      if (!allText.includes(searchTerm)) return false;
+    }
+    return true;
+  });
+
+  // Sort
+  list.sort((a, b) => {
+    let comp = 0;
+    if (tableState.sortKey === "date") {
+      comp = getNoteDateValue(a) - getNoteDateValue(b);
+    } else if (tableState.sortKey === "title") {
+      comp = (a.title || "").localeCompare(b.title || "");
+    } else if (tableState.sortKey === "subject") {
+      comp = (a.subject || "").localeCompare(b.subject || "");
+    }
+    return tableState.sortDir === "asc" ? comp : -comp;
+  });
+
+  return list;
+}
+
+function updateBulkActionsUI() {
+  const bulkBar = $("#admin-bulk-actions");
+  const countLabel = $("#admin-selected-count");
+  const count = tableState.selectedIds.size;
+
+  if (!bulkBar) return;
+  if (count > 0) {
+    bulkBar.hidden = false;
+    if (countLabel) countLabel.textContent = `${count} note${count > 1 ? 's' : ''} selected`;
+  } else {
+    bulkBar.hidden = true;
+  }
+}
+
+function renderPagination(totalCount, totalPages, startIndex, endIndex) {
+  const summaryEl = $("#admin-pagination-summary");
+  const pagesContainer = $("#admin-pagination-pages");
+  const perPageSelect = $("#admin-rows-per-page");
+
+  if (summaryEl) {
+    if (totalCount === 0) {
+      summaryEl.textContent = "0 notes";
+    } else {
+      summaryEl.textContent = `Showing ${startIndex + 1}–${endIndex} of ${totalCount} notes`;
+    }
+  }
+
+  if (perPageSelect) {
+    perPageSelect.value = String(tableState.rowsPerPage);
+  }
+
+  if (!pagesContainer) return;
+
+  if (totalPages <= 1) {
+    pagesContainer.innerHTML = "";
+    return;
+  }
+
+  let html = "";
+  // Prev button
+  html += `<button type="button" class="page-nav-btn prev-btn" ${tableState.page <= 1 ? 'disabled' : ''} data-page="${tableState.page - 1}">◀ Prev</button>`;
+
+  // Numeric page buttons (smart range)
+  let pages = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    if (tableState.page <= 4) {
+      pages = [1, 2, 3, 4, 5, "...", totalPages];
+    } else if (tableState.page >= totalPages - 3) {
+      pages = [1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    } else {
+      pages = [1, "...", tableState.page - 1, tableState.page, tableState.page + 1, "...", totalPages];
+    }
+  }
+
+  pages.forEach(p => {
+    if (p === "...") {
+      html += `<span class="page-dots">…</span>`;
+    } else {
+      const active = Number(p) === tableState.page ? "active" : "";
+      html += `<button type="button" class="page-num-btn ${active}" data-page="${p}">${p}</button>`;
+    }
+  });
+
+  // Next button
+  html += `<button type="button" class="page-nav-btn next-btn" ${tableState.page >= totalPages ? 'disabled' : ''} data-page="${tableState.page + 1}">Next ▶</button>`;
+
+  pagesContainer.innerHTML = html;
+}
+
+function renderTable() {
+  const tbody = $("#admin-notes-tbody");
+  const gridWrap = $("#admin-grid-view-wrap");
+  const tableWrap = $("#admin-table-view-wrap");
   const emptyBox = $("#admin-empty-table");
+  const paginationBar = $("#admin-pagination-bar");
+  const selectAllCb = $("#admin-select-all");
 
   if (!tbody) return;
 
-  // Filter notes and sort descending by date
-  const filtered = allNotes
-    .sort((a, b) => getNoteDateValue(b) - getNoteDateValue(a))
-    .filter(n => {
-      if (filterSubj && (n.subject || "").toLowerCase() !== filterSubj) return false;
-      if (!searchTerm) return true;
-      const allText = `${n.title} ${n.subject} ${(n.tags || []).join(" ")}`.toLowerCase();
-      return allText.includes(searchTerm);
-    });
+  const filtered = getFilteredAndSortedNotes();
+  const totalCount = filtered.length;
+  const rowsPerPage = tableState.rowsPerPage === "all" ? (totalCount || 1) : Number(tableState.rowsPerPage) || 10;
+  const totalPages = rowsPerPage > 0 ? Math.max(1, Math.ceil(totalCount / rowsPerPage)) : 1;
 
-  // Display all notes in Content Library management view
-  const displayed = filtered;
+  if (tableState.page > totalPages) tableState.page = totalPages;
+  if (tableState.page < 1) tableState.page = 1;
 
-  if (displayed.length === 0) {
+  const startIndex = (tableState.page - 1) * rowsPerPage;
+  const endIndex = tableState.rowsPerPage === "all" ? totalCount : Math.min(startIndex + rowsPerPage, totalCount);
+  const displayed = filtered.slice(startIndex, endIndex);
+
+  // Update Sort Header Icons
+  ["title", "subject", "date"].forEach(key => {
+    const iconEl = $(`#sort-icon-${key}`);
+    if (iconEl) {
+      if (tableState.sortKey === key) {
+        iconEl.textContent = tableState.sortDir === "asc" ? "↑" : "↓";
+        iconEl.classList.add("active");
+      } else {
+        iconEl.textContent = "↕";
+        iconEl.classList.remove("active");
+      }
+    }
+  });
+
+  // Empty state handling
+  if (totalCount === 0) {
     tbody.innerHTML = "";
+    if (gridWrap) gridWrap.innerHTML = "";
     if (emptyBox) emptyBox.hidden = false;
+    if (paginationBar) paginationBar.hidden = true;
+    updateBulkActionsUI();
+    if (selectAllCb) selectAllCb.checked = false;
     return;
   }
 
   if (emptyBox) emptyBox.hidden = true;
+  if (paginationBar) paginationBar.hidden = false;
 
+  // 1. Render Table Rows
   tbody.innerHTML = displayed.map(n => {
     const subjKey = getSubjectKey(n.subject);
     const dateFormatted = n.date || (n.createdAt ? new Date(n.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Recent");
     const isUploaded = Boolean(n.imageUrl);
+    const isSelected = tableState.selectedIds.has(n.id);
 
     const thumbHtml = n.imageUrl
       ? `<img src="${n.imageUrl}" alt="${escapeHtml(n.title)}" class="admin-table-thumb" data-preview-id="${n.id}" title="Click to view full image">`
@@ -441,7 +631,10 @@ function renderTable() {
       : "";
 
     return `
-      <tr>
+      <tr class="${isSelected ? 'selected-row' : ''}">
+        <td style="text-align: center;">
+          <input type="checkbox" class="admin-row-cb" data-cb-id="${n.id}" ${isSelected ? 'checked' : ''} aria-label="Select note">
+        </td>
         <td>${thumbHtml}</td>
         <td>
           <strong class="table-note-title" data-preview-id="${n.id}" style="cursor: pointer;" title="Preview Note">${escapeHtml(n.title)}</strong>
@@ -460,6 +653,105 @@ function renderTable() {
       </tr>
     `;
   }).join("");
+
+  // 2. Render Grid Cards View
+  if (gridWrap) {
+    gridWrap.innerHTML = displayed.map(n => {
+      const subjKey = getSubjectKey(n.subject);
+      const dateFormatted = n.date || (n.createdAt ? new Date(n.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Recent");
+      const isUploaded = Boolean(n.imageUrl);
+      const isSelected = tableState.selectedIds.has(n.id);
+      const thumb = n.imageUrl
+        ? `<img src="${n.imageUrl}" alt="${escapeHtml(n.title)}" class="grid-card-img" data-preview-id="${n.id}">`
+        : `<div class="grid-card-img placeholder" data-preview-id="${n.id}">📖</div>`;
+
+      const tagsHtml = (n.tags && n.tags.length > 0)
+        ? `<div class="grid-card-tags">${n.tags.map(t => `<span class="grid-tag">#${escapeHtml(t)}</span>`).join("")}</div>`
+        : "";
+
+      return `
+        <div class="modify-grid-card ${isSelected ? 'selected' : ''}">
+          <div class="grid-card-top">
+            <label class="grid-cb-wrap">
+              <input type="checkbox" class="admin-row-cb" data-cb-id="${n.id}" ${isSelected ? 'checked' : ''} aria-label="Select note">
+            </label>
+            <span class="subject-chip ${subjKey}">${escapeHtml(n.subject)}</span>
+            ${isUploaded ? '<span class="chip-uploaded">Upload</span>' : '<span class="chip-sample">Core</span>'}
+          </div>
+          <div class="grid-card-media" data-preview-id="${n.id}">
+            ${thumb}
+          </div>
+          <div class="grid-card-body">
+            <strong class="grid-card-title" data-preview-id="${n.id}">${escapeHtml(n.title)}</strong>
+            <small class="grid-card-date">${dateFormatted}</small>
+            ${tagsHtml}
+          </div>
+          <div class="grid-card-footer">
+            <button type="button" class="grid-act-btn preview" data-preview-id="${n.id}" title="Preview">👁</button>
+            <button type="button" class="grid-act-btn edit" data-edit-id="${n.id}" title="Edit">✏️ Edit</button>
+            <button type="button" class="grid-act-btn delete" data-delete-id="${n.id}" title="Delete">🗑</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // Toggle View Modes
+  if (tableState.viewMode === "grid") {
+    if (tableWrap) tableWrap.hidden = true;
+    if (gridWrap) gridWrap.hidden = false;
+    $("#admin-view-btn-table")?.classList.remove("active");
+    $("#admin-view-btn-grid")?.classList.add("active");
+  } else {
+    if (tableWrap) tableWrap.hidden = false;
+    if (gridWrap) gridWrap.hidden = true;
+    $("#admin-view-btn-table")?.classList.add("active");
+    $("#admin-view-btn-grid")?.classList.remove("active");
+  }
+
+  // Select All Checkbox state on current page
+  if (selectAllCb) {
+    const allCurrentPageSelected = displayed.length > 0 && displayed.every(n => tableState.selectedIds.has(n.id));
+    selectAllCb.checked = allCurrentPageSelected;
+  }
+
+  // Update Bulk Actions Toolbar
+  updateBulkActionsUI();
+
+  // Update Pagination Controls
+  renderPagination(totalCount, totalPages, startIndex, endIndex);
+}
+
+async function deleteNotesByIds(ids) {
+  if (!ids || ids.length === 0) return;
+  const count = ids.length;
+  const confirmMsg = count === 1 
+    ? "Are you sure you want to permanently delete this note?"
+    : `Are you sure you want to permanently delete ${count} selected notes?`;
+
+  if (!confirm(confirmMsg)) return;
+
+  for (const id of ids) {
+    try {
+      await api("/api/admin/notes/" + id, { method: "DELETE" });
+    } catch {}
+
+    const existingLocal = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
+    const filteredLocal = existingLocal.filter(x => x.id !== id);
+    localStorage.setItem("exam_notes_custom_uploads", JSON.stringify(filteredLocal));
+
+    const deletedSamples = JSON.parse(localStorage.getItem("exam_notes_deleted_sample_ids") || "[]");
+    if (!deletedSamples.includes(id)) {
+      deletedSamples.push(id);
+      localStorage.setItem("exam_notes_deleted_sample_ids", JSON.stringify(deletedSamples));
+    }
+
+    sampleNotes = sampleNotes.filter(x => x.id !== id);
+    tableState.selectedIds.delete(id);
+  }
+
+  showToast(`✓ ${count} note${count > 1 ? 's' : ''} deleted from library.`, "success");
+  await loadDashboardData();
 }
 
 // ==========================================
@@ -552,7 +844,6 @@ function openEditModal(noteId) {
   const note = allNotes.find(n => n.id === noteId);
   if (!note) return;
 
-  editImageData = null;
   $("#edit-note-id").value = note.id;
   $("#edit-note-title").value = note.title;
   $("#edit-note-subject").value = note.subject;
@@ -562,77 +853,14 @@ function openEditModal(noteId) {
     tagsInput.value = (note.tags || []).join(", ");
   }
 
-  const currentImg = $("#edit-current-img");
-  const placeholder = $("#edit-thumb-placeholder");
-  const fileNamePrev = $("#edit-file-name-preview");
   const msg = $("#edit-form-msg");
-  const fileInput = $("#edit-file-input");
-
-  if (fileInput) fileInput.value = "";
-  if (fileNamePrev) fileNamePrev.textContent = "";
   if (msg) {
     msg.textContent = "";
     msg.className = "form-message";
   }
 
-  if (note.imageUrl) {
-    if (currentImg) {
-      currentImg.src = note.imageUrl;
-      currentImg.style.display = "block";
-    }
-    if (placeholder) placeholder.style.display = "none";
-  } else {
-    if (currentImg) {
-      currentImg.src = "";
-      currentImg.style.display = "none";
-    }
-    if (placeholder) placeholder.style.display = "block";
-  }
-
   const dialog = $("#admin-edit-dialog");
   if (dialog) dialog.showModal();
-}
-
-function setupEditFileDrop() {
-  const fileInput = $("#edit-file-input");
-  const fileNamePrev = $("#edit-file-name-preview");
-  const currentImg = $("#edit-current-img");
-  const placeholder = $("#edit-thumb-placeholder");
-  const msg = $("#edit-form-msg");
-
-  fileInput?.addEventListener("change", () => {
-    const file = fileInput.files && fileInput.files[0];
-    if (!file) return;
-
-    if (!file.type.match(/^image\/jpeg$/) && !/\.jpe?g$/i.test(file.name)) {
-      if (msg) {
-        msg.textContent = "Please select a JPG or JPEG image.";
-        msg.className = "form-message error";
-      }
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      if (msg) {
-        msg.textContent = "File size exceeds 5 MB.";
-        msg.className = "form-message error";
-      }
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = e => {
-      editImageData = e.target.result;
-      if (currentImg) {
-        currentImg.src = editImageData;
-        currentImg.style.display = "block";
-      }
-      if (placeholder) placeholder.style.display = "none";
-      if (fileNamePrev) fileNamePrev.textContent = `New: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-      if (msg) msg.textContent = "";
-    };
-    reader.readAsDataURL(file);
-  });
 }
 
 // ==========================================
@@ -683,30 +911,77 @@ function switchAdminView(viewName) {
 function setupEventListeners() {
   initTheme();
   setupFileDrop();
-  setupEditFileDrop();
 
-  // Admin View Navigation
+  // Sidebar Hide / View Toggle (Desktop Collapsible & Mobile Off-Canvas Drawer)
+  const appShell = $("#admin-dashboard-section");
+  const backdrop = $("#admin-sidebar-backdrop");
+  const hideSidebarBtn = $("#hide-admin-sidebar-btn");
+  const showSidebarBtn = $("#show-admin-sidebar-btn");
+
+  const isMobile = () => window.innerWidth <= 768;
+
+  const hideSidebar = () => {
+    if (!appShell) return;
+    if (isMobile()) {
+      appShell.classList.remove("sidebar-mobile-open");
+      if (backdrop) backdrop.classList.remove("active");
+    } else {
+      appShell.classList.add("sidebar-hidden");
+      localStorage.setItem("exam_admin_sidebar_hidden", "true");
+    }
+  };
+
+  const showSidebar = () => {
+    if (!appShell) return;
+    if (isMobile()) {
+      appShell.classList.add("sidebar-mobile-open");
+      if (backdrop) backdrop.classList.add("active");
+    } else {
+      appShell.classList.remove("sidebar-hidden");
+      localStorage.setItem("exam_admin_sidebar_hidden", "false");
+    }
+  };
+
+  // Restore saved desktop preference (without hiding on mobile unless toggled)
+  if (!isMobile()) {
+    const savedHidden = localStorage.getItem("exam_admin_sidebar_hidden");
+    if (savedHidden === "true") {
+      appShell?.classList.add("sidebar-hidden");
+    } else {
+      appShell?.classList.remove("sidebar-hidden");
+    }
+  }
+
+  showSidebarBtn?.addEventListener("click", showSidebar);
+  hideSidebarBtn?.addEventListener("click", hideSidebar);
+  backdrop?.addEventListener("click", hideSidebar);
+
+  // Header Brand Logo / Label click
+  $("#admin-brand-link")?.addEventListener("click", e => {
+    if (sessionStorage.getItem("exam_admin_local_session") === "true") {
+      e.preventDefault();
+      switchAdminView("dashboard");
+      if (isMobile()) {
+        hideSidebar();
+      }
+    }
+  });
+
+  // Admin View Navigation Click (switches view and auto-closes mobile drawer)
   $$("[data-admin-view]").forEach(btn => {
     btn.addEventListener("click", () => {
       switchAdminView(btn.dataset.adminView);
-      if (window.innerWidth <= 768 && appShell) {
-        appShell.classList.add("sidebar-hidden");
-        if (showSidebarBtn) showSidebarBtn.hidden = false;
+      if (isMobile()) {
+        hideSidebar();
       }
     });
   });
 
-  // Recent notes delegation click to preview or edit
+  // Recent notes delegation click to preview
   $("#dashboard-recent-notes")?.addEventListener("click", e => {
     const prev = e.target.closest("[data-preview-id]");
     if (prev) {
       openLightbox(prev.dataset.previewId);
-      return;
-    }
-    const edit = e.target.closest("[data-edit-id]");
-    if (edit) {
-      openEditModal(edit.dataset.editId);
-      return;
     }
   });
 
@@ -721,36 +996,6 @@ function setupEventListeners() {
     if (f) f.value = "";
     renderTable();
   });
-
-  // Sidebar Hide / View Toggle (Desktop & Mobile Responsive)
-  const appShell = $("#admin-dashboard-section");
-  const hideSidebarBtn = $("#hide-admin-sidebar-btn");
-  const showSidebarBtn = $("#show-admin-sidebar-btn");
-
-  const hideSidebar = () => {
-    if (!appShell) return;
-    appShell.classList.add("sidebar-hidden");
-    localStorage.setItem("exam_admin_sidebar_hidden", "true");
-    if (showSidebarBtn) showSidebarBtn.hidden = false;
-  };
-
-  const showSidebar = () => {
-    if (!appShell) return;
-    appShell.classList.remove("sidebar-hidden");
-    localStorage.setItem("exam_admin_sidebar_hidden", "false");
-    if (showSidebarBtn) showSidebarBtn.hidden = true;
-  };
-
-  const savedSidebarHidden = localStorage.getItem("exam_admin_sidebar_hidden");
-  const shouldHideSidebar = savedSidebarHidden === "true" || (savedSidebarHidden === null && window.innerWidth <= 768);
-  if (shouldHideSidebar && appShell) {
-    hideSidebar();
-  } else if (appShell) {
-    showSidebar();
-  }
-
-  showSidebarBtn?.addEventListener("click", showSidebar);
-  hideSidebarBtn?.addEventListener("click", hideSidebar);
 
   // Password Visibility Toggle
   const togglePwdBtn = $("#toggle-pwd-visibility");
@@ -938,13 +1183,104 @@ function setupEventListeners() {
     }
   });
 
-  // Table Search Filter
-  $("#admin-table-search")?.addEventListener("input", renderTable);
+  // Table Search Filter (Resets to page 1 on input)
+  $("#admin-table-search")?.addEventListener("input", () => {
+    tableState.page = 1;
+    renderTable();
+  });
 
-  // Table Actions Delegation (Preview Popup, Edit & Delete for ALL Notes)
-  $("#admin-notes-tbody")?.addEventListener("click", async e => {
+  // View Mode Buttons (Table vs Grid)
+  $("#admin-view-btn-table")?.addEventListener("click", () => {
+    tableState.viewMode = "table";
+    renderTable();
+  });
+
+  $("#admin-view-btn-grid")?.addEventListener("click", () => {
+    tableState.viewMode = "grid";
+    renderTable();
+  });
+
+  // Column Sort Headers
+  $$(".sortable-col").forEach(th => {
+    th.addEventListener("click", () => {
+      const key = th.dataset.sort;
+      if (!key) return;
+      if (tableState.sortKey === key) {
+        tableState.sortDir = tableState.sortDir === "asc" ? "desc" : "asc";
+      } else {
+        tableState.sortKey = key;
+        tableState.sortDir = key === "date" ? "desc" : "asc";
+      }
+      renderTable();
+    });
+  });
+
+  // Select All Checkbox
+  $("#admin-select-all")?.addEventListener("change", e => {
+    const checked = e.target.checked;
+    const filtered = getFilteredAndSortedNotes();
+    const rowsPerPage = tableState.rowsPerPage === "all" ? filtered.length : Number(tableState.rowsPerPage) || 10;
+    const startIndex = (tableState.page - 1) * rowsPerPage;
+    const endIndex = tableState.rowsPerPage === "all" ? filtered.length : Math.min(startIndex + rowsPerPage, filtered.length);
+    const displayed = filtered.slice(startIndex, endIndex);
+
+    displayed.forEach(n => {
+      if (checked) {
+        tableState.selectedIds.add(n.id);
+      } else {
+        tableState.selectedIds.delete(n.id);
+      }
+    });
+    renderTable();
+  });
+
+  // Checkbox Selection on Rows & Grid Cards
+  $("#admin-view-modify")?.addEventListener("change", e => {
+    const cb = e.target.closest(".admin-row-cb");
+    if (cb) {
+      const id = cb.dataset.cbId;
+      if (cb.checked) {
+        tableState.selectedIds.add(id);
+      } else {
+        tableState.selectedIds.delete(id);
+      }
+      renderTable();
+    }
+  });
+
+  // Bulk Actions: Delete Selected & Clear Selection
+  $("#admin-bulk-delete-btn")?.addEventListener("click", () => {
+    deleteNotesByIds(Array.from(tableState.selectedIds));
+  });
+
+  $("#admin-bulk-clear-btn")?.addEventListener("click", () => {
+    tableState.selectedIds.clear();
+    renderTable();
+  });
+
+  // Pagination Pages Navigation
+  $("#admin-pagination-pages")?.addEventListener("click", e => {
+    const btn = e.target.closest("[data-page]");
+    if (btn && !btn.disabled) {
+      tableState.page = Number(btn.dataset.page) || 1;
+      renderTable();
+      $("#admin-table-view-wrap")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  });
+
+  // Rows Per Page Selector
+  $("#admin-rows-per-page")?.addEventListener("change", e => {
+    tableState.rowsPerPage = e.target.value;
+    tableState.page = 1;
+    renderTable();
+  });
+
+  // Table & Grid Actions Delegation (Preview Popup, Edit & Delete)
+  const handleModifyActionClick = async e => {
+    if (e.target.closest(".admin-row-cb")) return;
+
     const prevBtn = e.target.closest("[data-preview-id]");
-    if (prevBtn) {
+    if (prevBtn && !e.target.closest("[data-edit-id]") && !e.target.closest("[data-delete-id]")) {
       openLightbox(prevBtn.dataset.previewId);
       return;
     }
@@ -957,31 +1293,13 @@ function setupEventListeners() {
 
     const delBtn = e.target.closest("[data-delete-id]");
     if (delBtn) {
-      const id = delBtn.dataset.deleteId;
-      if (confirm("Are you sure you want to permanently delete this note?")) {
-        try {
-          await api("/api/admin/notes/" + id, { method: "DELETE" });
-        } catch {}
-
-        // Remove from local custom uploads if present
-        const existingLocal = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
-        const filteredLocal = existingLocal.filter(x => x.id !== id);
-        localStorage.setItem("exam_notes_custom_uploads", JSON.stringify(filteredLocal));
-
-        // Track deleted sample IDs so deleted demo notes disappear permanently
-        const deletedSamples = JSON.parse(localStorage.getItem("exam_notes_deleted_sample_ids") || "[]");
-        if (!deletedSamples.includes(id)) {
-          deletedSamples.push(id);
-          localStorage.setItem("exam_notes_deleted_sample_ids", JSON.stringify(deletedSamples));
-        }
-
-        sampleNotes = sampleNotes.filter(x => x.id !== id);
-
-        showToast("Note deleted from library.", "success");
-        await loadDashboardData();
-      }
+      deleteNotesByIds([delBtn.dataset.deleteId]);
+      return;
     }
-  });
+  };
+
+  $("#admin-notes-tbody")?.addEventListener("click", handleModifyActionClick);
+  $("#admin-grid-view-wrap")?.addEventListener("click", handleModifyActionClick);
 
   // Category Chart Card & Bar Graph Click Filter -> Switches to Modify view & filters table
   const handleCatFilterClick = e => {
@@ -1223,8 +1541,21 @@ function updateLightboxContent(note) {
   }
 
   if (meta) {
-    const dateFormatted = note.date || (note.createdAt ? new Date(note.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Recent");
-    meta.textContent = `${dateFormatted} · 1 Image · High-Resolution Revision Note`;
+    let dateFormatted = "Recent";
+    if (note.createdAt) {
+      const d = new Date(note.createdAt);
+      if (!isNaN(d.getTime())) {
+        dateFormatted = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+      }
+    } else if (note.date) {
+      const d = new Date(note.date);
+      if (!isNaN(d.getTime())) {
+        dateFormatted = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+      } else {
+        dateFormatted = note.date;
+      }
+    }
+    meta.textContent = `📅 ${dateFormatted}`;
   }
 
   if (downloadBtn) {
