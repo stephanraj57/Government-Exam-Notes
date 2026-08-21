@@ -708,31 +708,35 @@ function setupEventListeners() {
     renderTable();
   });
 
-  // Sidebar Hide / Show Toggle (Desktop & Mobile Responsive)
+  // Sidebar Hide / View Toggle (Desktop & Mobile Responsive)
   const appShell = $("#admin-dashboard-section");
   const hideSidebarBtn = $("#hide-admin-sidebar-btn");
   const showSidebarBtn = $("#show-admin-sidebar-btn");
 
-  const savedSidebarHidden = localStorage.getItem("exam_admin_sidebar_hidden");
-  const shouldHideSidebar = savedSidebarHidden === "true" || (savedSidebarHidden === null && window.innerWidth <= 768);
-  if (shouldHideSidebar && appShell) {
-    appShell.classList.add("sidebar-hidden");
-    if (showSidebarBtn) showSidebarBtn.hidden = false;
-  }
-
-  hideSidebarBtn?.addEventListener("click", () => {
+  const hideSidebar = () => {
     if (!appShell) return;
     appShell.classList.add("sidebar-hidden");
     localStorage.setItem("exam_admin_sidebar_hidden", "true");
     if (showSidebarBtn) showSidebarBtn.hidden = false;
-  });
+  };
 
-  showSidebarBtn?.addEventListener("click", () => {
+  const showSidebar = () => {
     if (!appShell) return;
     appShell.classList.remove("sidebar-hidden");
     localStorage.setItem("exam_admin_sidebar_hidden", "false");
     if (showSidebarBtn) showSidebarBtn.hidden = true;
-  });
+  };
+
+  const savedSidebarHidden = localStorage.getItem("exam_admin_sidebar_hidden");
+  const shouldHideSidebar = savedSidebarHidden === "true" || (savedSidebarHidden === null && window.innerWidth <= 768);
+  if (shouldHideSidebar && appShell) {
+    hideSidebar();
+  } else if (appShell) {
+    showSidebar();
+  }
+
+  showSidebarBtn?.addEventListener("click", showSidebar);
+  hideSidebarBtn?.addEventListener("click", hideSidebar);
 
   // Password Visibility Toggle
   const togglePwdBtn = $("#toggle-pwd-visibility");

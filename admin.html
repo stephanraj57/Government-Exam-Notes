@@ -25,6 +25,9 @@
       <button id="theme-toggle" class="theme-button" type="button" title="Toggle Theme" aria-label="Toggle Dark Mode">
         <span class="theme-icon">🌙</span>
       </button>
+      <button id="admin-logout-btn" class="header-signout-btn" type="button" title="Sign Out of Admin Portal" hidden>
+        <span>⎋</span> Sign Out
+      </button>
     </div>
   </header>
 
@@ -74,8 +77,8 @@
 
   <!-- Authenticated Admin App Shell (Dashboard Portal) -->
   <main id="admin-dashboard-section" class="app-shell" hidden>
-    <!-- Desktop Left Sidebar: Dashboard Portal Navigation -->
-    <aside class="sidebar portal-sidebar">
+    <!-- Left Sidebar: Dashboard Portal Navigation -->
+    <aside id="portal-sidebar" class="sidebar portal-sidebar">
       <!-- Admin Profile Card -->
       <div class="portal-profile-card">
         <div class="portal-avatar-wrap">
@@ -115,15 +118,12 @@
         </nav>
       </div>
 
-      <!-- Portal Footer Status & Sign Out -->
+      <!-- Portal Footer Status -->
       <div class="portal-sidebar-footer">
         <div class="portal-system-status">
           <span class="pulse-dot"></span>
           <span class="status-text">Server Online · 4173</span>
         </div>
-        <button id="sidebar-signout-btn" class="portal-signout-btn" type="button" title="Sign Out of Admin Portal">
-          <span>⎋</span> Sign Out
-        </button>
       </div>
     </aside>
 
@@ -132,8 +132,8 @@
       <!-- Portal Top Command Bar -->
       <div class="portal-top-bar">
         <div class="portal-top-left">
-          <button id="show-admin-sidebar-btn" class="show-sidebar-btn" type="button" title="Show Sidebar" hidden>
-            📂 Menu ▸
+          <button id="show-admin-sidebar-btn" class="show-sidebar-btn" type="button" title="Open Full Sidebar Menu">
+            <span>☰</span> Menu
           </button>
           <div class="portal-welcome-text">
             <div class="portal-breadcrumb">
