@@ -10,18 +10,27 @@ const $$ = s => document.querySelectorAll(s);
 
 let allNotes = [];
 let sampleNotes = [
-  { id: "sample0", title: "Preamble of the Constitution", subject: "Polity", tags: ["UPSC", "Constitution", "Preamble", "Prelims 2025"], date: "20 May 2024", isSample: true },
-  { id: "sample1", title: "Fundamental Rights – Articles 12 to 35", subject: "Polity", tags: ["Polity", "Articles", "Fundamental Rights", "SSC CGL"], date: "19 May 2024", isSample: true },
-  { id: "sample2", title: "Revolt of 1857 – Causes & Leaders", subject: "History", tags: ["Modern History", "Freedom Struggle", "1857", "SSC"], date: "18 May 2024", isSample: true },
-  { id: "sample3", title: "Mauryan Administration & Edicts", subject: "History", tags: ["Ancient History", "Ashoka", "Edicts", "UPSC"], date: "17 May 2024", isSample: true },
-  { id: "sample4", title: "Physical Divisions & Mountain Passes", subject: "Geography", tags: ["Himalayas", "Passes", "Map Work", "Geography"], date: "16 May 2024", isSample: true },
-  { id: "sample5", title: "River Systems & Water Resources", subject: "Geography", tags: ["Rivers", "Dams", "Drainage System", "SSC"], date: "15 May 2024", isSample: true },
-  { id: "sample6", title: "Sectors of Indian Economy & GDP", subject: "Economy", tags: ["GDP", "Sectors", "Banking", "Economy"], date: "14 May 2024", isSample: true },
-  { id: "sample7", title: "Classical Dance Forms & Traditions", subject: "Art and Culture", tags: ["Dance", "Classical", "Traditions", "Culture"], date: "13 May 2024", isSample: true },
-  { id: "sample8", title: "Speed, Distance & Time Formulas", subject: "Maths", tags: ["Maths Shortcuts", "Speed & Time", "Aptitude", "SSC"], date: "12 May 2024", isSample: true },
-  { id: "sample9", title: "Human Digestive System & Enzymes", subject: "Science", tags: ["Biology", "Enzymes", "Digestive System", "Science"], date: "11 May 2024", isSample: true },
-  { id: "sample10", title: "English Grammar – Subject-Verb Agreement", subject: "English", tags: ["English", "Grammar", "Rules", "SSC CGL"], date: "10 May 2024", isSample: true },
-  { id: "sample11", title: "Idioms, Phrases & One-Word Substitutions", subject: "English", tags: ["Vocabulary", "Idioms", "English", "Banking"], date: "09 May 2024", isSample: true }
+  { id: "sample0", title: "Indian Constitution – Fundamental Rights & Preamble", subject: "Polity", tags: ["UPSC", "Constitution", "Preamble", "Prelims 2025"], date: "20 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000002.jpg", isSample: true },
+  { id: "sample1", title: "Directive Principles of State Policy (DPSP – 36 to 51)", subject: "Polity", tags: ["Polity", "Articles", "Fundamental Rights", "SSC CGL"], date: "19 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000002.jpg", isSample: true },
+  { id: "sample2", title: "American Civil War & Emancipation (1861–1865)", subject: "History", tags: ["World History", "American War", "Lincoln", "SSC", "UPSC"], date: "18 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000001.jpg", isSample: true },
+  { id: "sample3", title: "American War of Independence (1775–1783)", subject: "History", tags: ["World History", "Independence", "Revolutions", "UPSC"], date: "17 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000002.jpg", isSample: true },
+  { id: "sample4", title: "Battle of Buxar & Plassey (1757–1764)", subject: "History", tags: ["Modern History", "East India Company", "Battles", "SSC"], date: "16 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000003.jpg", isSample: true },
+  { id: "sample5", title: "Chauri Chaura Incident & Non-Cooperation (1922)", subject: "History", tags: ["Freedom Struggle", "Non-Cooperation", "Gandhian Era", "UPSC"], date: "15 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000005.jpg", isSample: true },
+  { id: "sample6", title: "French Revolution & Declaration of Rights (1789)", subject: "History", tags: ["World History", "Bastille", "Revolutions", "UPSC"], date: "14 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000006.jpg", isSample: true },
+  { id: "sample7", title: "India's Independence & Partition Plan (1947)", subject: "History", tags: ["Freedom Struggle", "Mountbatten Plan", "Partition", "Modern History"], date: "13 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000007.jpg", isSample: true },
+  { id: "sample8", title: "Jallianwala Bagh Massacre & Rowlatt Act (1919)", subject: "History", tags: ["Freedom Struggle", "Rowlatt Act", "Amritsar", "Modern History"], date: "12 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000008.jpg", isSample: true },
+  { id: "sample9", title: "Physical Divisions & Mountain Passes of India", subject: "Geography", tags: ["Himalayas", "Passes", "Map Work", "Geography"], date: "11 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000004.jpg", isSample: true },
+  { id: "sample10", title: "River Systems & Water Resources of India", subject: "Geography", tags: ["Rivers", "Dams", "Drainage System", "SSC"], date: "10 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000004.jpg", isSample: true },
+  { id: "sample11", title: "Sectors of Indian Economy & GDP Breakdown", subject: "Economy", tags: ["GDP", "Sectors", "Banking", "Economy"], date: "09 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000003.jpg", isSample: true },
+  { id: "sample12", title: "Monetary Policy & RBI Quantitative Tools", subject: "Economy", tags: ["RBI", "Repo Rate", "Inflation", "Banking"], date: "08 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000003.jpg", isSample: true },
+  { id: "sample13", title: "Classical Dance Forms & Traditions", subject: "Art and Culture", tags: ["Dance", "Classical", "Traditions", "Culture"], date: "07 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000005.jpg", isSample: true },
+  { id: "sample14", title: "Temple Architecture – Nagara, Dravida & Vesara", subject: "Art and Culture", tags: ["Architecture", "Temples", "Art & Culture"], date: "06 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000005.jpg", isSample: true },
+  { id: "sample15", title: "Speed, Distance & Time – Shortcut Formulas", subject: "Maths", tags: ["Maths Shortcuts", "Speed & Time", "Aptitude", "SSC"], date: "05 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000006.jpg", isSample: true },
+  { id: "sample16", title: "Percentage & Profit-Loss Calculations", subject: "Maths", tags: ["Profit & Loss", "Percentages", "Arithmetic", "RRB"], date: "04 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000006.jpg", isSample: true },
+  { id: "sample17", title: "Human Digestive System & Enzyme Action", subject: "Science", tags: ["Biology", "Enzymes", "Digestive System", "Science"], date: "03 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000007.jpg", isSample: true },
+  { id: "sample18", title: "Newton’s Laws of Motion & Gravitation", subject: "Science", tags: ["Physics", "Mechanics", "Gravitation", "SSC"], date: "02 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000007.jpg", isSample: true },
+  { id: "sample19", title: "English Grammar – Subject-Verb Agreement Rules", subject: "English", tags: ["English", "Grammar", "Rules", "SSC CGL"], date: "01 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000008.jpg", isSample: true },
+  { id: "sample20", title: "Idioms, Phrases & One-Word Substitutions", subject: "English", tags: ["Vocabulary", "Idioms", "English", "Banking"], date: "30 Apr 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000008.jpg", isSample: true }
 ];
 
 let selectedImageData = null;
@@ -690,42 +699,95 @@ function setupEventListeners() {
     $("#lightbox-dialog")?.close();
   });
 
-  // Mouse Wheel Zoom & Drag-to-Pan inside Lightbox
+  // Mouse Wheel Zoom & Drag-to-Pan inside Lightbox (Zero Scroll)
   const mediaBox = $("#lightbox-media-container");
   if (mediaBox) {
     mediaBox.addEventListener("wheel", e => {
       const dialog = $("#lightbox-dialog");
       if (dialog && dialog.open) {
         e.preventDefault();
-        if (e.deltaY < 0) zoomIn();
-        else zoomOut();
+        e.stopPropagation();
+        const delta = e.deltaY < 0 ? 0.2 : -0.2;
+        setZoom(currentZoom + delta);
       }
     }, { passive: false });
 
+    // Mouse Drag to Pan
     mediaBox.addEventListener("mousedown", e => {
       if (currentZoom <= 1.05) return;
+      e.preventDefault();
       isDragging = true;
+      dragStartX = e.clientX - panX;
+      dragStartY = e.clientY - panY;
       mediaBox.classList.add("is-dragging");
-      startX = e.pageX - mediaBox.offsetLeft;
-      startY = e.pageY - mediaBox.offsetTop;
-      scrollLeftPos = mediaBox.scrollLeft;
-      scrollTopPos = mediaBox.scrollTop;
-    });
-
-    window.addEventListener("mouseup", () => {
-      isDragging = false;
-      mediaBox.classList.remove("is-dragging");
     });
 
     window.addEventListener("mousemove", e => {
       if (!isDragging) return;
       e.preventDefault();
-      const x = e.pageX - mediaBox.offsetLeft;
-      const y = e.pageY - mediaBox.offsetTop;
-      const walkX = (x - startX) * 1.5;
-      const walkY = (y - startY) * 1.5;
-      mediaBox.scrollLeft = scrollLeftPos - walkX;
-      mediaBox.scrollTop = scrollTopPos - walkY;
+      panX = e.clientX - dragStartX;
+      panY = e.clientY - dragStartY;
+      applyZoomTransform();
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (isDragging) {
+        isDragging = false;
+        mediaBox.classList.remove("is-dragging");
+      }
+    });
+
+    // Touch Pinch-to-Zoom & Touch Pan
+    let touchStartDist = 0;
+    let initialZoom = 1.0;
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    mediaBox.addEventListener("touchstart", e => {
+      if (e.touches.length === 1 && currentZoom > 1.05) {
+        isDragging = true;
+        touchStartX = e.touches[0].clientX - panX;
+        touchStartY = e.touches[0].clientY - panY;
+      } else if (e.touches.length === 2) {
+        isDragging = false;
+        touchStartDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        initialZoom = currentZoom;
+      }
+    }, { passive: true });
+
+    mediaBox.addEventListener("touchmove", e => {
+      if (e.touches.length === 1 && isDragging && currentZoom > 1.05) {
+        e.preventDefault();
+        panX = e.touches[0].clientX - touchStartX;
+        panY = e.touches[0].clientY - touchStartY;
+        applyZoomTransform();
+      } else if (e.touches.length === 2 && touchStartDist > 0) {
+        e.preventDefault();
+        const dist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        const scale = (dist / touchStartDist) * initialZoom;
+        setZoom(scale);
+      }
+    }, { passive: false });
+
+    mediaBox.addEventListener("touchend", () => {
+      isDragging = false;
+      touchStartDist = 0;
+    });
+
+    // Double-click to toggle 200% zoom / reset
+    mediaBox.addEventListener("dblclick", e => {
+      e.preventDefault();
+      if (currentZoom > 1.05) {
+        resetZoom();
+      } else {
+        setZoom(2.0);
+      }
     });
   }
 
@@ -748,39 +810,49 @@ function setupEventListeners() {
 }
 
 // ==========================================
-// 8. Admin Lightbox Preview Engine
+// 8. Admin Lightbox Preview Engine (Zero Scroll)
 // ==========================================
 let currentLightboxIndex = -1;
 let currentZoom = 1.0;
+let panX = 0;
+let panY = 0;
 let isDragging = false;
-let startX = 0, startY = 0;
-let scrollLeftPos = 0, scrollTopPos = 0;
+let dragStartX = 0;
+let dragStartY = 0;
 
-function setZoom(scale) {
-  currentZoom = Math.min(Math.max(scale, 0.5), 3.0);
+function applyZoomTransform() {
+  const layer = $("#lightbox-media-container .lightbox-img-transform-layer");
+  const container = $("#lightbox-media-container");
   const zoomText = $("#lightbox-zoom-level");
+
   if (zoomText) zoomText.textContent = `${Math.round(currentZoom * 100)}%`;
 
-  const img = $("#lightbox-media-container img, #lightbox-media-container .preview");
-  const container = $("#lightbox-media-container");
-
-  if (img) {
-    img.style.transform = `scale(${currentZoom})`;
+  if (layer) {
+    if (currentZoom <= 1.05) {
+      panX = 0;
+      panY = 0;
+    }
+    layer.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
   }
+
   if (container) {
     container.classList.toggle("is-zoomed", currentZoom > 1.05);
   }
 }
 
+function setZoom(scale) {
+  currentZoom = Math.min(Math.max(scale, 0.6), 3.5);
+  applyZoomTransform();
+}
+
 function zoomIn() { setZoom(currentZoom + 0.25); }
 function zoomOut() { setZoom(currentZoom - 0.25); }
+
 function resetZoom() {
-  setZoom(1.0);
-  const container = $("#lightbox-media-container");
-  if (container) {
-    container.scrollLeft = 0;
-    container.scrollTop = 0;
-  }
+  currentZoom = 1.0;
+  panX = 0;
+  panY = 0;
+  applyZoomTransform();
 }
 
 function openLightbox(noteIdOrIdx) {
@@ -795,8 +867,8 @@ function openLightbox(noteIdOrIdx) {
   currentLightboxIndex = idx;
   const note = allNotes[idx];
 
-  resetZoom();
   updateLightboxContent(note);
+  resetZoom();
   const dialog = $("#lightbox-dialog");
   if (dialog) dialog.showModal();
 }
@@ -819,9 +891,17 @@ function updateLightboxContent(note) {
 
   if (mediaContainer) {
     if (note.imageUrl) {
-      mediaContainer.innerHTML = `<img src="${note.imageUrl}" alt="${escapeHtml(note.title)}" class="lightbox-img">`;
+      mediaContainer.innerHTML = `
+        <div class="lightbox-img-transform-layer">
+          <img src="${note.imageUrl}" alt="${escapeHtml(note.title)}" class="lightbox-img" decoding="sync">
+        </div>
+      `;
     } else {
-      mediaContainer.innerHTML = `<div class="lightbox-preview-card"><div class="card-media"><div class="preview"><h3>${escapeHtml(note.title)}</h3><p>${escapeHtml(note.subject)}</p><div class='diagram'>📖</div></div></div></div>`;
+      mediaContainer.innerHTML = `
+        <div class="lightbox-img-transform-layer">
+          <div class="lightbox-preview-card"><div class="card-media"><div class="preview"><h3>${escapeHtml(note.title)}</h3><p>${escapeHtml(note.subject)}</p><div class='diagram'>📖</div></div></div></div>
+        </div>
+      `;
     }
   }
 
@@ -842,8 +922,6 @@ function updateLightboxContent(note) {
       tagsContainer.innerHTML = "";
     }
   }
-
-  setZoom(1.0);
 }
 
 function nextLightbox() {
