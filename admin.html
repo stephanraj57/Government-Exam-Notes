@@ -1,10 +1,10 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Admin Portal | Exam Notes Library</title>
-  <meta name="description" content="Admin Upload Center and Content Management for Govt Exam Notes.">
+  <title>Admin Portal | Free AI Govt Exam Notes</title>
+  <meta name="description" content="Admin Upload Center and Content Management for Free AI Govt Exam Notes.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
@@ -16,8 +16,8 @@
     <a class="brand" href="index.html">
       <img class="brand-logo" src="assets/ailogo.png" alt="Logo" onerror="this.style.display='none'">
       <span class="brand-text">
-        <strong>Admin Studio</strong>
-        <small>Govt Exam Notes Management</small>
+        <strong>Free AI</strong> Govt Exam Notes
+        <small>Admin Studio & Management</small>
       </span>
     </a>
 
@@ -38,29 +38,42 @@
   <main class="admin-container">
     <!-- Unauthenticated Login View -->
     <section id="admin-auth-section" class="admin-auth-card">
-      <div class="auth-box">
-        <div class="auth-icon-wrap">🔒</div>
-        <p class="eyebrow">Restricted Admin Area</p>
-        <h1>Admin Sign In</h1>
-        <p class="auth-desc">Enter your administrative password to upload revision notes and manage library content.</p>
+      <div class="auth-card-modern">
+        <div class="auth-photo-frame">
+          <img src="assets/admin.jpg" alt="Stephanraj" class="auth-admin-avatar">
+          <span class="online-status-dot" title="Administrator"></span>
+        </div>
 
-        <form id="admin-page-login-form">
-          <label class="form-label">
-            Admin Password
-            <div class="input-with-icon">
-              <input id="admin-page-password" type="password" autocomplete="current-password" placeholder="Enter administrator password" required>
+        <div class="auth-header-text">
+          <span class="auth-badge">Stephanraj · Administrator</span>
+          <h1>Admin Portal</h1>
+          <p class="auth-desc">Enter your administrator password to manage library notes and publish revision content.</p>
+        </div>
+
+        <form id="admin-page-login-form" class="auth-form-modern">
+          <div class="auth-input-group">
+            <label for="admin-page-password" class="auth-input-label">Admin Password</label>
+            <div class="password-field-wrap">
+              <span class="field-icon-left">🔒</span>
+              <input id="admin-page-password" type="password" autocomplete="current-password" placeholder="Enter administrator password..." required>
+              <button id="toggle-pwd-visibility" class="toggle-pwd-btn" type="button" title="Show/Hide Password" aria-label="Toggle password visibility">
+                <span class="pwd-eye-icon">👁️</span>
+              </button>
             </div>
-          </label>
+          </div>
 
           <p id="admin-page-login-msg" class="form-message"></p>
 
-          <button id="admin-page-login-submit" class="upload-button full" type="submit">
-            <span>🔐</span> Authenticate & Enter Dashboard
+          <button id="admin-page-login-submit" class="auth-submit-btn" type="submit">
+            <span>Sign In to Dashboard</span>
+            <span class="btn-arrow">→</span>
           </button>
         </form>
 
-        <div class="auth-footer">
-          <a href="index.html">← Return to Public Library</a>
+        <div class="auth-card-footer">
+          <a href="index.html" class="back-link">
+            <span>←</span> Back to Public Website
+          </a>
         </div>
       </div>
     </section>
@@ -116,16 +129,21 @@
             <label class="form-label">
               Subject & Category
               <select id="studio-note-subject" required>
-                <option value="UPSC Polity">UPSC Polity</option>
-                <option value="UPSC History">UPSC History</option>
-                <option value="UPSC Geography">UPSC Geography</option>
-                <option value="SSC History">SSC History</option>
-                <option value="SSC Polity">SSC Polity</option>
-                <option value="RRB General Awareness">RRB General Awareness</option>
-                <option value="Geography">Physical Geography</option>
-                <option value="Economy">Indian Economy</option>
-                <option value="Environment & Ecology">Environment & Ecology</option>
+                <option value="History">📜 History</option>
+                <option value="Polity">⚖️ Polity</option>
+                <option value="Economy">📈 Economy</option>
+                <option value="Geography">🌍 Geography</option>
+                <option value="Art and Culture">🎨 Art and Culture</option>
+                <option value="Maths">📐 Maths</option>
+                <option value="Science">🔬 Science</option>
+                <option value="English">🔤 English</option>
               </select>
+            </label>
+
+            <label class="form-label">
+              Multiple Tags (Comma-separated)
+              <input id="studio-note-tags" type="text" placeholder="e.g. UPSC, Constitution, Articles, Prelims 2025">
+              <small class="field-hint">Add keywords to help students search & filter this note.</small>
             </label>
 
             <!-- File Upload Drop Zone with Live Image Preview -->
@@ -194,6 +212,122 @@
       </div>
     </section>
   </main>
+
+  <!-- Edit Note Modal Dialog -->
+  <dialog id="admin-edit-dialog" class="dialog edit-note-dialog">
+    <form id="admin-edit-form" class="edit-dialog-form">
+      <button class="close-button" type="button" data-close title="Close">×</button>
+      
+      <div class="edit-dialog-header">
+        <p class="eyebrow">Content Studio</p>
+        <h2>Edit Revision Note</h2>
+        <p class="dialog-sub">Update note details or replace the diagram.</p>
+      </div>
+      
+      <input id="edit-note-id" type="hidden">
+
+      <div class="edit-fields-grid">
+        <div class="form-group">
+          <label class="form-label-title" for="edit-note-title">Topic Title</label>
+          <input id="edit-note-title" class="form-control" type="text" maxlength="80" placeholder="e.g. Fundamental Rights" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label-title" for="edit-note-subject">Subject & Category</label>
+          <select id="edit-note-subject" class="form-control" required>
+            <option value="History">📜 History</option>
+            <option value="Polity">⚖️ Polity</option>
+            <option value="Economy">📈 Economy</option>
+            <option value="Geography">🌍 Geography</option>
+            <option value="Art and Culture">🎨 Art and Culture</option>
+            <option value="Maths">📐 Maths</option>
+            <option value="Science">🔬 Science</option>
+            <option value="English">🔤 English</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label-title" for="edit-note-tags">Multiple Tags (Comma-separated)</label>
+          <input id="edit-note-tags" class="form-control" type="text" placeholder="e.g. UPSC, Constitution, Articles">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label-title">Revision Note Image (Optional)</label>
+          <div class="edit-preview-row">
+            <div id="edit-thumb-wrap" class="edit-thumb-wrap" title="Current Image">
+              <img id="edit-current-img" src="" alt="Current Note Image" class="edit-thumb-preview">
+              <span id="edit-thumb-placeholder" class="edit-thumb-placeholder">📄</span>
+            </div>
+            <div class="edit-file-input-wrap">
+              <label class="file-drop compact" id="edit-dropzone">
+                <span class="file-drop-icon">📁</span>
+                <span class="file-drop-text">Click or drag JPG to replace image</span>
+                <input id="edit-file-input" type="file" accept="image/jpeg,.jpg,.jpeg">
+                <span id="edit-file-name-preview" class="file-preview-name"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p id="edit-form-msg" class="form-message"></p>
+
+      <div class="modal-btn-row">
+        <button class="outline-button" type="button" data-close>Cancel</button>
+        <button id="edit-submit-btn" class="upload-button" type="submit">
+          <span>✓</span> Save Changes
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Lightbox / High-Res Note Preview Popup Window -->
+  <dialog id="lightbox-dialog" class="lightbox-dialog">
+    <div class="lightbox-content">
+      <div class="lightbox-header">
+        <div class="lightbox-title-wrap">
+          <span id="lightbox-badge" class="subject-chip">Subject</span>
+          <h2 id="lightbox-title">Note Title</h2>
+        </div>
+        <div class="lightbox-actions">
+          <div class="zoom-controls" role="group" aria-label="Image Zoom">
+            <button id="lightbox-zoom-out" class="icon-action-btn" type="button" title="Zoom Out (-)">−</button>
+            <span id="lightbox-zoom-level" class="zoom-level-text">100%</span>
+            <button id="lightbox-zoom-in" class="icon-action-btn" type="button" title="Zoom In (+)">+</button>
+            <button id="lightbox-zoom-reset" class="icon-action-btn" type="button" title="Reset Zoom (0)">↺</button>
+          </div>
+          <a id="lightbox-download-btn" class="icon-action-btn" download="exam-note.jpg" title="Download Note" target="_blank" rel="noopener">⬇</a>
+          <button id="lightbox-close-btn" class="icon-action-btn close-btn" type="button" title="Close (Esc)">×</button>
+        </div>
+      </div>
+
+      <div class="lightbox-body">
+        <button id="lightbox-prev-btn" class="lightbox-nav-btn prev" type="button" aria-label="Previous Note">‹</button>
+        
+        <div id="lightbox-media-container" class="lightbox-media">
+          <!-- Dynamic high-res image -->
+        </div>
+
+        <button id="lightbox-next-btn" class="lightbox-nav-btn next" type="button" aria-label="Next Note">›</button>
+      </div>
+
+      <div class="lightbox-footer">
+        <div class="lightbox-meta-row">
+          <span id="lightbox-meta">Published · 1 Image</span>
+          <div class="lightbox-nav-hints">Use ← / → to navigate · + / - to zoom · Esc to close</div>
+        </div>
+        <div id="lightbox-tags" class="lightbox-tags"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Creator Footer -->
+  <footer class="site-footer">
+    <div class="footer-content">
+      <p class="creator-tag">Created with ❤️ by <strong>Stephanraj</strong></p>
+      <p class="footer-sub">Smart Revision Library · Admin Studio</p>
+    </div>
+  </footer>
 
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>

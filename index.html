@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Exam Notes Library | UPSC, SSC & RRB Revision Notes</title>
-  <meta name="description" content="High-yield image-based revision notes for UPSC, SSC and RRB aspirants.">
+  <title>Free AI Govt Exam Notes | Smart Revision Notes</title>
+  <meta name="description" content="Free AI Govt Exam Notes - High-yield image-based revision notes for History, Polity, Economy, Geography, Art and Culture, Maths and Science.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
@@ -16,7 +16,7 @@
     <a class="brand" href="#top" id="brand-link">
       <img class="brand-logo" src="assets/ailogo.png" alt="Govt Exam Notes logo" onerror="this.style.display='none'">
       <span class="brand-text">
-        <strong>Exam Notes</strong> Library
+        <strong>Free AI</strong> Govt Exam Notes
         <small>Smart Notes · Clear Concepts · Better Revision</small>
       </span>
     </a>
@@ -40,7 +40,7 @@
 
       <div id="admin-user-container">
         <a id="admin-login-button" href="admin.html" class="profile-button" title="Admin Portal & Upload Studio">
-          <span class="avatar">AS</span>
+          <span class="avatar"><img src="assets/admin.jpg" alt="Stephanraj" class="avatar-img" onerror="this.parentElement.textContent='AS'"></span>
           <div class="profile-info">
             <strong id="admin-status-text">Admin Studio</strong>
             <small id="admin-status-sub">Upload & Manage</small>
@@ -51,17 +51,33 @@
     </div>
   </header>
 
+  <!-- Running News Ticker Banner Just Below Header -->
+  <div class="news-ticker-bar" aria-label="Announcements">
+    <div class="ticker-inner">
+      <div class="ticker-badge">
+        <span class="ticker-live-dot"></span>
+        <span>LATEST</span>
+      </div>
+      <div class="ticker-track">
+        <div class="ticker-marquee">
+          <span>⚡ AI Generated Notes for Goverment Exams &nbsp;•&nbsp; 📖 100% Free AI Smart Revision Library &nbsp;•&nbsp; 🎯 High-Yield Notes for UPSC, SSC, Banking, Railways & State PSC &nbsp;•&nbsp; ⚡ AI Generated Notes for Goverment Exams &nbsp;•&nbsp; 📖 100% Free AI Smart Revision Library &nbsp;•&nbsp; 🎯 High-Yield Notes for UPSC, SSC, Banking, Railways & State PSC</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Mobile Category Scroll Pill Bar -->
   <div class="mobile-category-strip" aria-label="Quick Category Filter">
     <div id="mobile-category-nav" class="mobile-category-scroll">
       <button class="cat-pill active" data-category="All Notes">⌂ All Notes</button>
-      <button class="cat-pill" data-category="UPSC">♧ UPSC</button>
-      <button class="cat-pill" data-category="SSC">♙ SSC</button>
-      <button class="cat-pill" data-category="RRB">▣ RRB</button>
-      <button class="cat-pill" data-category="Polity">▦ Polity</button>
-      <button class="cat-pill" data-category="History">⌛ History</button>
-      <button class="cat-pill" data-category="Geography">◉ Geography</button>
-      <button class="cat-pill" data-category="Economy">◔ Economy</button>
+      <button class="cat-pill" data-category="History">📜 History</button>
+      <button class="cat-pill" data-category="Polity">⚖️ Polity</button>
+      <button class="cat-pill" data-category="Economy">📈 Economy</button>
+      <button class="cat-pill" data-category="Geography">🌍 Geography</button>
+      <button class="cat-pill" data-category="Art and Culture">🎨 Art and Culture</button>
+      <button class="cat-pill" data-category="Maths">📐 Maths</button>
+      <button class="cat-pill" data-category="Science">🔬 Science</button>
+      <button class="cat-pill" data-category="English">🔤 English</button>
     </div>
   </div>
 
@@ -70,104 +86,80 @@
     <!-- Desktop Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-section">
-        <p class="side-label">Categories</p>
+        <div class="side-header">
+          <p class="side-label">Categories</p>
+          <button id="hide-categories-btn" class="toggle-sidebar-btn" type="button" title="Hide Categories Sidebar">
+            <span>Hide</span> ◂
+          </button>
+        </div>
         <nav id="category-nav" class="category-nav" aria-label="Categories">
           <button class="category active" data-category="All Notes">
-            <span class="cat-icon">⌂</span>
+            <span class="cat-icon all">⌂</span>
             <span class="cat-name">All Notes</span>
             <b id="all-count" class="cat-count">0</b>
           </button>
-          <button class="category" data-category="UPSC">
-            <span class="cat-icon upsc">♧</span>
-            <span class="cat-name">UPSC</span>
-            <b class="cat-count" id="upsc-count">0</b>
-          </button>
-          <button class="category" data-category="SSC">
-            <span class="cat-icon ssc">♙</span>
-            <span class="cat-name">SSC</span>
-            <b class="cat-count" id="ssc-count">0</b>
-          </button>
-          <button class="category" data-category="RRB">
-            <span class="cat-icon rrb">▣</span>
-            <span class="cat-name">RRB</span>
-            <b class="cat-count" id="rrb-count">0</b>
-          </button>
-          <button class="category" data-category="Polity">
-            <span class="cat-icon polity">▦</span>
-            <span class="cat-name">Polity</span>
-            <b class="cat-count" id="polity-count">0</b>
-          </button>
           <button class="category" data-category="History">
-            <span class="cat-icon history">⌛</span>
+            <span class="cat-icon history">📜</span>
             <span class="cat-name">History</span>
             <b class="cat-count" id="history-count">0</b>
           </button>
-          <button class="category" data-category="Geography">
-            <span class="cat-icon geography">◉</span>
-            <span class="cat-name">Geography</span>
-            <b class="cat-count" id="geography-count">0</b>
+          <button class="category" data-category="Polity">
+            <span class="cat-icon polity">⚖️</span>
+            <span class="cat-name">Polity</span>
+            <b class="cat-count" id="polity-count">0</b>
           </button>
           <button class="category" data-category="Economy">
-            <span class="cat-icon economy">◔</span>
+            <span class="cat-icon economy">📈</span>
             <span class="cat-name">Economy</span>
             <b class="cat-count" id="economy-count">0</b>
           </button>
+          <button class="category" data-category="Geography">
+            <span class="cat-icon geography">🌍</span>
+            <span class="cat-name">Geography</span>
+            <b class="cat-count" id="geography-count">0</b>
+          </button>
+          <button class="category" data-category="Art and Culture">
+            <span class="cat-icon art-culture">🎨</span>
+            <span class="cat-name">Art and Culture</span>
+            <b class="cat-count" id="art-culture-count">0</b>
+          </button>
+          <button class="category" data-category="Maths">
+            <span class="cat-icon maths">📐</span>
+            <span class="cat-name">Maths</span>
+            <b class="cat-count" id="maths-count">0</b>
+          </button>
+          <button class="category" data-category="Science">
+            <span class="cat-icon science">🔬</span>
+            <span class="cat-name">Science</span>
+            <b class="cat-count" id="science-count">0</b>
+          </button>
+          <button class="category" data-category="English">
+            <span class="cat-icon english">🔤</span>
+            <span class="cat-name">English</span>
+            <b class="cat-count" id="english-count">0</b>
+          </button>
         </nav>
-      </div>
-
-      <div class="sidebar-section tag-section">
-        <div class="side-header">
-          <p class="side-label">Popular Topics</p>
-          <button id="clear-tags" class="text-btn" hidden>Clear</button>
-        </div>
-        <div id="tags-container" class="tags">
-          <button type="button" data-tag="Polity">Indian Polity</button>
-          <button type="button" data-tag="Constitution">Constitution</button>
-          <button type="button" data-tag="Revolt">Freedom Struggle</button>
-          <button type="button" data-tag="Mauryan">Ancient History</button>
-          <button type="button" data-tag="War">Modern History</button>
-          <button type="button" data-tag="Geography">Physical Geography</button>
-          <button type="button" data-tag="Water">Water Resources</button>
-          <button type="button" data-tag="Economy">Sectors of Economy</button>
-        </div>
-      </div>
-
-      <div class="sidebar-stats">
-        <div class="stat-card">
-          <span class="stat-icon">⚡</span>
-          <div>
-            <strong>Quick Revision</strong>
-            <p>1 Image · 1 Core Concept</p>
-          </div>
-        </div>
       </div>
     </aside>
 
     <!-- Main Content Area -->
     <section id="notes" class="content">
       <div class="content-heading">
-        <div>
-          <div class="heading-row">
-            <h1 id="page-title">All Notes</h1>
-            <span id="active-tag-chip" class="active-tag-chip" hidden></span>
-          </div>
-          <p id="note-total">Loading revision library…</p>
+        <div class="heading-row">
+          <h1 id="page-title">All Notes</h1>
+          <span id="active-tag-chip" class="active-tag-chip" hidden></span>
         </div>
-        <div class="admin-actions">
-          <a id="admin-area-button" href="admin.html" class="outline-button">
-            <span>⚙</span> Admin Studio
-          </a>
-          <a id="open-upload" href="admin.html" class="upload-button">
-            <span>☁</span> Upload Note
-          </a>
-        </div>
+        <p id="note-total">Loading revision library…</p>
       </div>
 
       <!-- Search & Controls Toolbar -->
       <div class="toolbar">
+        <button id="show-categories-btn" class="show-sidebar-btn" type="button" title="Show Categories Sidebar" hidden>
+          📂 Categories ▸
+        </button>
         <div class="search-box">
           <span class="search-icon">⌕</span>
-          <input id="note-search" type="search" placeholder="Search by topic, keyword, or exam (e.g. Polity, 1857)..." aria-label="Search notes">
+          <input id="note-search" type="search" placeholder="Search by topic, subject, or keyword (e.g. Polity, 1857, Maths, English)..." aria-label="Search notes">
           <button id="clear-search" class="clear-search-btn" type="button" title="Clear search" hidden>×</button>
         </div>
 
@@ -188,15 +180,7 @@
         </div>
       </div>
 
-      <!-- Revision Tip Banner -->
-      <div class="study-message">
-        <span class="tip-icon">💡</span>
-        <div class="tip-body">
-          <strong>Aspirant's Strategy:</strong> Review the high-yield note diagram first, recall the key timeline/articles from memory, and solve at least 5 previous-year questions.
-        </div>
-      </div>
-
-      <!-- Notes Grid / List Container -->
+      <!-- Notes Grid / List Container (6 per page) -->
       <div id="notes-grid" class="notes-grid" aria-live="polite"></div>
 
       <!-- Empty State -->
@@ -207,9 +191,12 @@
         <button id="reset-filters-btn" class="primary-pill-btn" type="button">Show All Notes</button>
       </div>
 
-      <!-- Pagination / Footer Info -->
-      <div class="pagination">
-        <span id="showing-count">Showing 0 notes</span>
+      <!-- Pagination Controls (6 items per page) -->
+      <div id="pagination-wrapper" class="pagination-wrapper">
+        <div id="pagination-controls" class="pagination-controls">
+          <!-- Dynamic buttons generated by app.js -->
+        </div>
+        <span id="showing-count" class="pagination-info"></span>
       </div>
     </section>
   </main>
@@ -228,10 +215,6 @@
       <span class="mob-icon">◷</span>
       <span>Recent</span>
     </button>
-    <a href="admin.html" id="mobile-upload-btn" class="mobile-nav-btn">
-      <span class="mob-icon">☁</span>
-      <span>Upload</span>
-    </a>
   </nav>
 
   <!-- Lightbox / Fullscreen Image Viewer Dialog -->
@@ -243,6 +226,12 @@
           <h2 id="lightbox-title">Note Title</h2>
         </div>
         <div class="lightbox-actions">
+          <div class="zoom-controls" role="group" aria-label="Image Zoom">
+            <button id="lightbox-zoom-out" class="icon-action-btn" type="button" title="Zoom Out (-)">−</button>
+            <span id="lightbox-zoom-level" class="zoom-level-text">100%</span>
+            <button id="lightbox-zoom-in" class="icon-action-btn" type="button" title="Zoom In (+)">+</button>
+            <button id="lightbox-zoom-reset" class="icon-action-btn" type="button" title="Reset Zoom (0)">↺</button>
+          </div>
           <button id="lightbox-bookmark-btn" class="icon-action-btn" type="button" title="Save Bookmark">♡</button>
           <a id="lightbox-download-btn" class="icon-action-btn" download="exam-note.jpg" title="Download Note" target="_blank" rel="noopener">⬇</a>
           <button id="lightbox-close-btn" class="icon-action-btn close-btn" type="button" title="Close (Esc)">×</button>
@@ -260,70 +249,22 @@
       </div>
 
       <div class="lightbox-footer">
-        <span id="lightbox-meta">Published · 1 Image</span>
-        <div class="lightbox-nav-hints">Use ← / → keys to navigate · Esc to close</div>
+        <div class="lightbox-meta-row">
+          <span id="lightbox-meta">Published · 1 Image</span>
+          <div class="lightbox-nav-hints">Use ← / → keys to navigate · Esc to close</div>
+        </div>
+        <div id="lightbox-tags" class="lightbox-tags"></div>
       </div>
     </div>
   </dialog>
 
-  <!-- Admin Sign In Dialog -->
-  <dialog id="admin-dialog" class="dialog">
-    <form id="admin-login-form" method="dialog">
-      <button class="close-button" type="button" data-close title="Close">×</button>
-      <p class="eyebrow">Restricted access</p>
-      <h2>Admin Sign In</h2>
-      <p>Sign in to publish new revision notes or manage existing content.</p>
-      <label>
-        Password
-        <input id="admin-password" type="password" autocomplete="current-password" placeholder="Enter admin password" required>
-      </label>
-      <p id="admin-login-message" class="form-message"></p>
-      <div class="form-btn-group">
-        <button class="upload-button full" type="submit">Sign In</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- Upload Note Dialog -->
-  <dialog id="upload-dialog" class="dialog">
-    <form id="upload-form">
-      <button class="close-button" type="button" data-close title="Close">×</button>
-      <p class="eyebrow">Admin Portal</p>
-      <h2>Publish Revision Note</h2>
-      <p>Upload a high-resolution JPG diagram or revision sheet for students.</p>
-      
-      <label>
-        Topic Title
-        <input id="note-title" type="text" maxlength="80" placeholder="e.g. Fundamental Rights (Articles 12-35)" required>
-      </label>
-      
-      <label>
-        Subject Category
-        <select id="note-subject">
-          <option value="UPSC Polity">UPSC Polity</option>
-          <option value="UPSC History">UPSC History</option>
-          <option value="UPSC Geography">UPSC Geography</option>
-          <option value="SSC History">SSC History</option>
-          <option value="SSC Polity">SSC Polity</option>
-          <option value="RRB General Awareness">RRB General Awareness</option>
-          <option value="Geography">Geography</option>
-          <option value="Economy">Economy</option>
-          <option value="Environment & Ecology">Environment & Ecology</option>
-        </select>
-      </label>
-
-      <label class="file-drop" id="file-drop-zone">
-        <span class="file-drop-icon">📁</span>
-        <span class="file-drop-text">Click or drag JPG image here</span>
-        <input id="note-file" type="file" accept="image/jpeg,.jpg,.jpeg" required>
-        <small>JPG / JPEG format, maximum 5 MB</small>
-        <span id="file-name-preview" class="file-preview-name"></span>
-      </label>
-
-      <p id="upload-message" class="form-message"></p>
-      <button id="upload-submit-btn" class="upload-button full" type="submit">Publish Note to Library</button>
-    </form>
-  </dialog>
+  <!-- Creator Footer -->
+  <footer class="site-footer">
+    <div class="footer-content">
+      <p class="creator-tag">Created with ❤️ by <strong>Stephanraj</strong></p>
+      <p class="footer-sub">Smart Revision Library for Competitive Exam Aspirants</p>
+    </div>
+  </footer>
 
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>

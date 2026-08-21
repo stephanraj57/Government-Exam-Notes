@@ -179,8 +179,11 @@ async function handleApi(request, response, url) {
   if (request.method === "POST" && url.pathname === "/api/admin/notes") {
     if (!isAdmin(request)) return sendUnauthorized(response), true;
     const body = await readBody(request);
-    const title = String(body.title || "").trim().slice(0, 70);
+    const title = String(body.title || "").trim().slice(0, 80);
     const subject = String(body.subject || "").trim().slice(0, 50);
+    const tags = Array.isArray(body.tags)
+      ? body.tags.map(t => String(t).trim().replace(/^#/, "")).filter(Boolean).slice(0, 10)
+      : String(body.tags || "").split(",").map(t => t.trim().replace(/^#/, "")).filter(Boolean).slice(0, 10);
     const imageMatch = String(body.imageData || "").match(/^data:image\/jpeg;base64,([a-zA-Z0-9+/=]+)$/);
     if (!title || !subject || !imageMatch) {
       sendJson(response, 400, { error: "A title, subject, and JPG image are required." });
@@ -195,10 +198,57 @@ async function handleApi(request, response, url) {
     const fileName = `${id}.jpg`;
     await fs.writeFile(path.join(UPLOAD_DIR, fileName), image);
     const notes = await readJson(NOTES_FILE);
-    const note = { id, title, subject, imageUrl: `/uploads/${fileName}`, createdAt: new Date().toISOString() };
+    const note = { id, title, subject, tags, imageUrl: `/uploads/${fileName}`, createdAt: new Date().toISOString() };
     notes.unshift(note);
     await writeJson(NOTES_FILE, notes);
     sendJson(response, 201, { note });
+    return true;
+  }
+
+  if (request.method === "PUT" && url.pathname.startsWith("/api/admin/notes/")) {
+    if (!isAdmin(request)) return sendUnauthorized(response), true;
+    const id = url.pathname.split("/").pop();
+    const body = await readBody(request);
+    const title = String(body.title || "").trim().slice(0, 80);
+    const subject = String(body.subject || "").trim().slice(0, 50);
+    if (!title || !subject) {
+      sendJson(response, 400, { error: "A title and subject are required." });
+      return true;
+    }
+
+    const notes = await readJson(NOTES_FILE);
+    const noteIndex = notes.findIndex((item) => item.id === id);
+    if (noteIndex === -1) {
+      sendJson(response, 404, { error: "Note not found." });
+      return true;
+    }
+
+    const note = notes[noteIndex];
+    note.title = title;
+    note.subject = subject;
+
+    if (body.tags !== undefined) {
+      note.tags = Array.isArray(body.tags)
+        ? body.tags.map(t => String(t).trim().replace(/^#/, "")).filter(Boolean).slice(0, 10)
+        : String(body.tags || "").split(",").map(t => t.trim().replace(/^#/, "")).filter(Boolean).slice(0, 10);
+    }
+
+    if (body.imageData) {
+      const imageMatch = String(body.imageData).match(/^data:image\/jpeg;base64,([a-zA-Z0-9+/=]+)$/);
+      if (imageMatch) {
+        const image = Buffer.from(imageMatch[1], "base64");
+        if (image.length <= 5 * 1024 * 1024 && image.length >= 4 && image[0] === 0xff && image[1] === 0xd8 && image[2] === 0xff) {
+          const fileName = note.imageUrl ? path.basename(note.imageUrl) : `${id}.jpg`;
+          await fs.writeFile(path.join(UPLOAD_DIR, fileName), image);
+          note.imageUrl = `/uploads/${fileName}`;
+        }
+      }
+    }
+
+    note.updatedAt = new Date().toISOString();
+    notes[noteIndex] = note;
+    await writeJson(NOTES_FILE, notes);
+    sendJson(response, 200, { note });
     return true;
   }
 
@@ -228,10 +278,12 @@ async function serveStatic(response, pathname) {
     "/styles.css",
     "/app.js",
     "/admin.js",
-    "/assets/ailogo.png"
+    "/assets/ailogo.png",
+    "/assets/admin.jpg"
   ]);
   const isPublicUpload = /^\/uploads\/[0-9a-f-]+\.jpg$/i.test(pathname);
-  if (!allowedPublicFiles.has(pathname) && !isPublicUpload) {
+  const isPublicAsset = pathname.startsWith("/assets/");
+  if (!allowedPublicFiles.has(pathname) && !isPublicUpload && !isPublicAsset) {
     response.writeHead(404);
     response.end("Not found");
     return;
