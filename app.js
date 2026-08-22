@@ -147,6 +147,12 @@ async function loadNotes() {
 
   notes = [...mergedUploaded, ...activeSamples];
 
+  // Track genuine student visit once per session
+  if (!sessionStorage.getItem("exam_student_session_visit")) {
+    sessionStorage.setItem("exam_student_session_visit", "true");
+    fetch("/api/visits/track", { method: "POST" }).catch(() => {});
+  }
+
   updateAdminState();
   updatePopularTags();
   render();
@@ -316,7 +322,7 @@ function render() {
     }
 
     if (pagedList.length > 0) {
-      trackInteraction("impression", { noteIds: pagedList.map(n => n.id) });
+      trackSeenNotes(pagedList.map(n => n.id));
     }
   }
 
@@ -536,6 +542,19 @@ function selectCategory(catName) {
 // ==========================================
 // 8.1 Real-Time Interaction Telemetry Tracker
 // ==========================================
+const sessionSeenNotes = new Set(JSON.parse(sessionStorage.getItem("exam_session_seen_notes") || "[]"));
+
+function trackSeenNotes(noteIds = []) {
+  const newNotes = noteIds.filter(id => id && !sessionSeenNotes.has(id));
+  if (newNotes.length > 0) {
+    newNotes.forEach(id => sessionSeenNotes.add(id));
+    try {
+      sessionStorage.setItem("exam_session_seen_notes", JSON.stringify([...sessionSeenNotes]));
+    } catch (e) {}
+    trackInteraction("impression", { noteIds: newNotes });
+  }
+}
+
 async function trackInteraction(type, payload = {}) {
   try {
     fetch("/api/interactions/track", {

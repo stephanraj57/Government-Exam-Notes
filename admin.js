@@ -264,16 +264,18 @@ let liveInteractions = {
 async function loadDashboardData() {
   let uploaded = [];
   let visitsCount = 0;
+  let todayVisits = 0;
 
   try {
     const [notesData, visitsData, interData] = await Promise.all([
       api("/api/notes"),
-      api("/api/visits").catch(() => ({ count: 0 })),
+      api("/api/visits").catch(() => ({ count: 0, today: 0 })),
       api("/api/interactions").catch(() => null)
     ]);
 
     uploaded = notesData.notes || [];
     visitsCount = visitsData.count || 0;
+    todayVisits = visitsData.today || 0;
     if (interData && interData.totalLikes !== undefined) {
       liveInteractions = interData;
     } else {
@@ -283,6 +285,7 @@ async function loadDashboardData() {
     isLocalClientMode = true;
     uploaded = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
     visitsCount = Number(localStorage.getItem("exam_notes_local_visits") || "0");
+    todayVisits = Number(localStorage.getItem("exam_notes_local_visits_today") || "0");
     liveInteractions = JSON.parse(localStorage.getItem("exam_notes_interactions_data") || '{"totalLikes":0,"totalDownloads":0,"totalSearches":0,"totalImpressions":0,"notes":{},"searches":{}}');
   }
 
@@ -296,7 +299,7 @@ async function loadDashboardData() {
 
   // Update Metrics with smooth Counter Animation & Sidebar Badges
   animateNumberCounter($("#metric-total-notes"), allNotes.length, 1400);
-  animateNumberCounter($("#metric-uploaded-notes"), mergedUploaded.length, 1400);
+  animateNumberCounter($("#metric-visitors-today"), todayVisits, 1400);
   animateNumberCounter($("#metric-visitors-count"), visitsCount, 1400);
   const dashBadge = $("#dash-notes-badge");
   if (dashBadge) dashBadge.textContent = allNotes.length;
@@ -1828,7 +1831,7 @@ function switchAdminView(viewName, updateHash = true) {
         : (viewName === "interactions"
             ? "User Interactions"
             : (viewName === "tags"
-                ? "Tag Analytics"
+                ? "Tag Analysis"
                 : (viewName === "publish" 
                     ? "Publish Studio" 
                     : "Content Library"))));
@@ -1864,8 +1867,191 @@ function switchAdminView(viewName, updateHash = true) {
   }
 }
 
+// ==========================================
+// 4.04 Real-Time Clock & Interactive Calendar
+// ==========================================
+let calCurrentDate = new Date();
+let calViewYear = calCurrentDate.getFullYear();
+let calViewMonth = calCurrentDate.getMonth();
+
+function updateRealtimeClock() {
+  const now = new Date();
+  
+  // Format DD/MM/YYYY
+  const day = String(now.getDate()).padStart(2, "0");
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const year = now.getFullYear();
+  const dateFormatted = `${day}/${month}/${year}`;
+  
+  // Format Time (12h with AM/PM & seconds)
+  let hours = now.getHours();
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  const seconds = String(now.getSeconds()).padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours ? hours : 12; // '0' is 12
+  const formattedHours = String(hours).padStart(2, "0");
+  const timeFormatted = `${formattedHours}:${minutes}:${seconds} ${ampm}`;
+  
+  // Day of Week
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const dayName = dayNames[now.getDay()];
+
+  // Update Sidebar Widget Elements
+  const timeEl = $("#admin-live-time");
+  const dateEl = $("#admin-live-date");
+  const dayEl = $("#admin-live-day");
+  if (timeEl) timeEl.textContent = timeFormatted;
+  if (dateEl) dateEl.textContent = dateFormatted;
+  if (dayEl) dayEl.textContent = dayName;
+
+  // Update Modal Clock Elements
+  const modalClock = $("#cal-modal-live-clock");
+  const modalDate = $("#cal-modal-live-date");
+  const modalFooterStatus = $("#cal-footer-status");
+  if (modalClock) modalClock.textContent = timeFormatted;
+  if (modalDate) modalDate.textContent = dateFormatted;
+  if (modalFooterStatus) modalFooterStatus.textContent = `Today: ${dayName}, ${dateFormatted}`;
+}
+
+function initRealtimeClock() {
+  updateRealtimeClock();
+  setInterval(updateRealtimeClock, 1000);
+}
+
+function renderFullCalendar(year, month) {
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  
+  const monthNameEl = $("#cal-month-name");
+  const yearNumEl = $("#cal-year-num");
+  const gridEl = $("#calendar-days-grid");
+  
+  if (monthNameEl) monthNameEl.textContent = monthNames[month];
+  if (yearNumEl) yearNumEl.textContent = year;
+  if (!gridEl) return;
+
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+  const todayDate = today.getDate();
+
+  // First day of month (0 = Sun, 1 = Mon ... 6 = Sat)
+  const firstDay = new Date(year, month, 1).getDay();
+  // Total days in current month
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  // Total days in previous month
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+  let daysHtml = "";
+
+  // 1. Trailing days from previous month
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const d = daysInPrevMonth - i;
+    daysHtml += `<button type="button" class="cal-day-cell other-month" disabled>${d}</button>`;
+  }
+
+  // 2. Days of current month
+  for (let d = 1; d <= daysInMonth; d++) {
+    const cellDate = new Date(year, month, d);
+    const dayOfWeek = cellDate.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const isToday = isCurrentMonth && d === todayDate;
+    
+    const classes = [
+      "cal-day-cell",
+      isToday ? "today" : "",
+      isWeekend ? "weekend" : ""
+    ].filter(Boolean).join(" ");
+
+    daysHtml += `
+      <button type="button" class="${classes}" data-cal-day="${d}" data-cal-month="${month}" data-cal-year="${year}" title="${monthNames[month]} ${d}, ${year}${isToday ? ' (Today)' : ''}">
+        ${d}
+      </button>
+    `;
+  }
+
+  // 3. Leading days of next month to fill grid (up to 35 or 42 cells)
+  const totalCellsSoFar = firstDay + daysInMonth;
+  const targetTotal = totalCellsSoFar > 35 ? 42 : 35;
+  const remaining = targetTotal - totalCellsSoFar;
+  for (let d = 1; d <= remaining; d++) {
+    daysHtml += `<button type="button" class="cal-day-cell other-month" disabled>${d}</button>`;
+  }
+
+  gridEl.innerHTML = daysHtml;
+
+  // Add click handler to days
+  gridEl.querySelectorAll(".cal-day-cell:not(.other-month)").forEach(btn => {
+    btn.addEventListener("click", () => {
+      gridEl.querySelectorAll(".cal-day-cell").forEach(c => c.classList.remove("selected"));
+      btn.classList.add("selected");
+      const d = btn.dataset.calDay;
+      const m = Number(btn.dataset.calMonth) + 1;
+      const y = btn.dataset.calYear;
+      const dateStr = `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
+      showToast(`Selected date: ${dateStr}`, "info");
+    });
+  });
+}
+
+function setupCalendarEvents() {
+  const clockTrigger = $("#admin-calendar-clock-trigger");
+  const calDialog = $("#admin-full-calendar-dialog");
+  const calCloseBtn = $("#admin-calendar-close-btn");
+  const prevMonthBtn = $("#cal-prev-month-btn");
+  const nextMonthBtn = $("#cal-next-month-btn");
+  const jumpTodayBtn = $("#cal-jump-today-btn");
+
+  clockTrigger?.addEventListener("click", () => {
+    calViewYear = new Date().getFullYear();
+    calViewMonth = new Date().getMonth();
+    renderFullCalendar(calViewYear, calViewMonth);
+    calDialog?.showModal();
+  });
+
+  calCloseBtn?.addEventListener("click", () => {
+    calDialog?.close();
+  });
+
+  calDialog?.addEventListener("click", e => {
+    if (e.target === calDialog) {
+      calDialog.close();
+    }
+  });
+
+  prevMonthBtn?.addEventListener("click", () => {
+    calViewMonth--;
+    if (calViewMonth < 0) {
+      calViewMonth = 11;
+      calViewYear--;
+    }
+    renderFullCalendar(calViewYear, calViewMonth);
+  });
+
+  nextMonthBtn?.addEventListener("click", () => {
+    calViewMonth++;
+    if (calViewMonth > 11) {
+      calViewMonth = 0;
+      calViewYear++;
+    }
+    renderFullCalendar(calViewYear, calViewMonth);
+  });
+
+  jumpTodayBtn?.addEventListener("click", () => {
+    const today = new Date();
+    calViewYear = today.getFullYear();
+    calViewMonth = today.getMonth();
+    renderFullCalendar(calViewYear, calViewMonth);
+    showToast("Jumped to Today's date", "info");
+  });
+}
+
 function setupEventListeners() {
   initTheme();
+  initRealtimeClock();
+  setupCalendarEvents();
   setupFileDrop();
   setupPublishStudio();
 

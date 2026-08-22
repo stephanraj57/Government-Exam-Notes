@@ -140,15 +140,27 @@ function sendUnauthorized(response) {
 
 async function handleApi(request, response, url) {
   if (request.method === "GET" && url.pathname === "/api/visits") {
-    const visits = await readJson(VISITS_FILE);
+    const visits = await readJson(VISITS_FILE).catch(() => ({ count: 0, daily: {} }));
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const todayCount = (visits.daily && visits.daily[todayKey]) || 0;
+    sendJson(response, 200, { count: visits.count || 0, today: todayCount, daily: visits.daily || {} });
+    return true;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/visits/track") {
+    const visits = await readJson(VISITS_FILE).catch(() => ({ count: 0, daily: {} }));
+    if (!visits.daily) visits.daily = {};
     const cookies = parseCookies(request);
     const headers = {};
+    const todayKey = new Date().toISOString().slice(0, 10);
     if (!cookies.examVisitor) {
-      visits.count += 1;
+      visits.count = (visits.count || 0) + 1;
+      visits.daily[todayKey] = (visits.daily[todayKey] || 0) + 1;
       await writeJson(VISITS_FILE, visits);
       headers["Set-Cookie"] = `examVisitor=${crypto.randomUUID()}; Path=/; Max-Age=31536000; SameSite=Lax`;
     }
-    sendJson(response, 200, visits, headers);
+    const todayCount = visits.daily[todayKey] || 0;
+    sendJson(response, 200, { count: visits.count, today: todayCount, daily: visits.daily }, headers);
     return true;
   }
 
@@ -348,7 +360,7 @@ async function handleApi(request, response, url) {
   if (request.method === "POST" && url.pathname === "/api/admin/reset-data") {
     if (!isAdmin(request)) return sendUnauthorized(response), true;
     await writeJson(NOTES_FILE, []);
-    await writeJson(VISITS_FILE, { count: 0 });
+    await writeJson(VISITS_FILE, { count: 0, daily: {} });
     await writeJson(INTERACTIONS_FILE, {
       totalLikes: 0,
       totalDownloads: 0,

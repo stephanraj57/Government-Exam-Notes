@@ -127,7 +127,7 @@
   <main id="admin-dashboard-section" class="app-shell" hidden>
     <!-- Left Sidebar: Dashboard Portal Navigation -->
     <aside id="portal-sidebar" class="sidebar portal-sidebar">
-      <!-- Admin Profile Card -->
+      <!-- Admin Profile Card (Top of Sidebar) -->
       <div class="portal-profile-card">
         <div class="portal-avatar-wrap">
           <img src="assets/admin.jpg" alt="Stephanraj" class="portal-avatar-img">
@@ -141,6 +141,24 @@
           <span class="portal-user-role">Super Administrator</span>
         </div>
       </div>
+
+      <!-- Real-Time Clock & Date Widget (Click for Full Calendar Popup) -->
+      <button type="button" id="admin-calendar-clock-trigger" class="admin-sidebar-clock-widget" title="Click to open Full Academic & Exam Calendar">
+        <div class="clock-widget-left">
+          <div class="clock-time-row">
+            <span class="live-pulse-dot"></span>
+            <span id="admin-live-time" class="admin-live-time">--:--:--</span>
+          </div>
+          <div class="clock-date-row">
+            <span class="clock-cal-icon">📅</span>
+            <span id="admin-live-date" class="admin-live-date">--/--/----</span>
+            <span id="admin-live-day" class="admin-live-day">Today</span>
+          </div>
+        </div>
+        <span class="clock-widget-action" title="Open Calendar">
+          <span class="clock-widget-arrow">↗</span>
+        </span>
+      </button>
 
       <!-- Navigation Section: Core Tools -->
       <div class="sidebar-section">
@@ -162,10 +180,18 @@
           <button class="category admin-nav-card" data-admin-view="analysis">
             <span class="nav-icon-box analysis-box">🥧</span>
             <div class="nav-text-col">
-              <span class="cat-name">Analysis</span>
+              <span class="cat-name">Category Analysis</span>
               <small class="nav-sub-desc">Category Breakdown</small>
             </div>
             <b id="analysis-notes-badge" class="cat-count">8</b>
+          </button>
+          <button class="category admin-nav-card" data-admin-view="tags">
+            <span class="nav-icon-box tags-box">🏷️</span>
+            <div class="nav-text-col">
+              <span class="cat-name">Tag Analysis</span>
+              <small class="nav-sub-desc">Tag Cloud & Frequency</small>
+            </div>
+            <b id="tags-count-badge" class="cat-count">0</b>
           </button>
           <button class="category admin-nav-card" data-admin-view="interactions">
             <span class="nav-icon-box interactions-box">⚡</span>
@@ -174,14 +200,6 @@
               <small class="nav-sub-desc">Likes, Downloads & Searches</small>
             </div>
             <b id="interactions-badge" class="cat-count">Live</b>
-          </button>
-          <button class="category admin-nav-card" data-admin-view="tags">
-            <span class="nav-icon-box tags-box">🏷️</span>
-            <div class="nav-text-col">
-              <span class="cat-name">Tags</span>
-              <small class="nav-sub-desc">Tag Cloud & Frequency</small>
-            </div>
-            <b id="tags-count-badge" class="cat-count">0</b>
           </button>
           <button class="category admin-nav-card" data-admin-view="publish">
             <span class="nav-icon-box publish-box">☁</span>
@@ -259,11 +277,11 @@
           </div>
 
           <div class="metric-card">
-            <div class="metric-icon uploads-icon">☁</div>
+            <div class="metric-icon today-icon">📅</div>
             <div class="metric-info">
-              <span class="metric-label">Uploaded Image Notes</span>
-              <strong id="metric-uploaded-notes" class="metric-value">0</strong>
-              <small class="metric-sub-trend">High-Res JPG Files</small>
+              <span class="metric-label">Library Visitors Today</span>
+              <strong id="metric-visitors-today" class="metric-value">0</strong>
+              <small class="metric-sub-trend positive">Today's Traffic</small>
             </div>
           </div>
 
@@ -1023,6 +1041,71 @@
         <button type="button" id="verify-confirm-btn" class="publish-confirm-action-btn">
           <span>🚀</span> Confirm & Publish to Live Website
         </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Full Interactive Academic & Exam Calendar Popup Modal -->
+  <dialog id="admin-full-calendar-dialog" class="admin-dialog-modal calendar-modal" aria-labelledby="cal-modal-title">
+    <div class="calendar-modal-content">
+      <!-- Calendar Header -->
+      <div class="calendar-modal-header">
+        <div class="calendar-header-left">
+          <span class="calendar-header-icon">📅</span>
+          <div>
+            <h3 id="cal-modal-title" class="calendar-modal-title">Interactive Live Calendar</h3>
+            <span id="cal-modal-subtitle" class="calendar-modal-subtitle">System Realtime Clock & Month View</span>
+          </div>
+        </div>
+        <div class="calendar-header-actions">
+          <button type="button" id="cal-jump-today-btn" class="cal-action-pill" title="Jump to Today's Date">
+            ● Today
+          </button>
+          <button type="button" id="admin-calendar-close-btn" class="calendar-modal-close-btn" aria-label="Close Calendar" title="Close Calendar (Esc)">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Month & Year Navigation Bar -->
+      <div class="calendar-nav-bar">
+        <button type="button" id="cal-prev-month-btn" class="cal-nav-arrow" title="Previous Month" aria-label="Previous Month">
+          ‹
+        </button>
+        <div class="cal-current-month-display">
+          <strong id="cal-month-name">August</strong>
+          <span id="cal-year-num">2026</span>
+        </div>
+        <button type="button" id="cal-next-month-btn" class="cal-nav-arrow" title="Next Month" aria-label="Next Month">
+          ›
+        </button>
+      </div>
+
+      <!-- Days Grid -->
+      <div class="calendar-grid-wrap">
+        <div class="calendar-weekdays-row">
+          <span>Sun</span>
+          <span>Mon</span>
+          <span>Tue</span>
+          <span>Wed</span>
+          <span>Thu</span>
+          <span>Fri</span>
+          <span>Sat</span>
+        </div>
+        <div id="calendar-days-grid" class="calendar-days-grid">
+          <!-- Dynamically populated day cells -->
+        </div>
+      </div>
+
+      <!-- Live Time & Today Status Bar -->
+      <div class="calendar-modal-footer">
+        <div class="cal-footer-time-badge">
+          <span class="live-pulse-dot"></span>
+          <span>Live Clock: <strong id="cal-modal-live-clock">--:--:--</strong> (<span id="cal-modal-live-date">--/--/----</span>)</span>
+        </div>
+        <div class="cal-footer-note">
+          <span id="cal-footer-status">Today: --/--/----</span>
+        </div>
       </div>
     </div>
   </dialog>
