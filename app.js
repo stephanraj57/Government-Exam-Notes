@@ -314,6 +314,10 @@ function render() {
         `;
       }).join("");
     }
+
+    if (pagedList.length > 0) {
+      trackInteraction("impression", { noteIds: pagedList.map(n => n.id) });
+    }
   }
 
   // Render Pagination Controls
@@ -522,16 +526,87 @@ function selectCategory(catName) {
     btn.classList.toggle("active", btn.dataset.category === catName);
   });
 
+  if (catName && catName !== "All Notes") {
+    trackInteraction("search", { query: catName });
+  }
+
   render();
+}
+
+// ==========================================
+// 8.1 Real-Time Interaction Telemetry Tracker
+// ==========================================
+async function trackInteraction(type, payload = {}) {
+  try {
+    fetch("/api/interactions/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, ...payload })
+    }).catch(() => {});
+  } catch (e) {}
+
+  // Local storage fallback sync
+  try {
+    const raw = localStorage.getItem("exam_notes_interactions_data");
+    const data = raw ? JSON.parse(raw) : {
+      totalLikes: 0,
+      totalDownloads: 0,
+      totalSearches: 0,
+      totalImpressions: 0,
+      notes: {},
+      searches: {}
+    };
+    if (!data.notes) data.notes = {};
+    if (!data.searches) data.searches = {};
+
+    const noteId = payload.noteId;
+    const noteIds = Array.isArray(payload.noteIds) ? payload.noteIds : (noteId ? [noteId] : []);
+    const query = (payload.query || "").trim();
+
+    if (type === "like") {
+      data.totalLikes = Math.max(0, (data.totalLikes || 0) + 1);
+      if (noteId) {
+        if (!data.notes[noteId]) data.notes[noteId] = { likes: 0, downloads: 0, impressions: 0 };
+        data.notes[noteId].likes = Math.max(0, (data.notes[noteId].likes || 0) + 1);
+      }
+    } else if (type === "unlike") {
+      data.totalLikes = Math.max(0, (data.totalLikes || 0) - 1);
+      if (noteId && data.notes[noteId]) {
+        data.notes[noteId].likes = Math.max(0, (data.notes[noteId].likes || 0) - 1);
+      }
+    } else if (type === "download") {
+      data.totalDownloads = (data.totalDownloads || 0) + 1;
+      if (noteId) {
+        if (!data.notes[noteId]) data.notes[noteId] = { likes: 0, downloads: 0, impressions: 0 };
+        data.notes[noteId].downloads = (data.notes[noteId].downloads || 0) + 1;
+      }
+    } else if (type === "search") {
+      data.totalSearches = (data.totalSearches || 0) + 1;
+      if (query && query.length >= 2) {
+        const qKey = query.slice(0, 40);
+        data.searches[qKey] = (data.searches[qKey] || 0) + 1;
+      }
+    } else if (type === "impression" || type === "view") {
+      const increment = noteIds.length > 0 ? noteIds.length : 1;
+      data.totalImpressions = (data.totalImpressions || 0) + increment;
+      noteIds.forEach(id => {
+        if (!data.notes[id]) data.notes[id] = { likes: 0, downloads: 0, impressions: 0 };
+        data.notes[id].impressions = (data.notes[id].impressions || 0) + 1;
+      });
+    }
+    localStorage.setItem("exam_notes_interactions_data", JSON.stringify(data));
+  } catch (e) {}
 }
 
 function toggleBookmark(noteId, e) {
   if (e) e.stopPropagation();
   if (bookmarks.has(noteId)) {
     bookmarks.delete(noteId);
+    trackInteraction("unlike", { noteId });
     showToast("Removed from bookmarks.", "info");
   } else {
     bookmarks.add(noteId);
+    trackInteraction("like", { noteId });
     showToast("Saved to your Bookmarks! ♡", "success");
   }
   localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
@@ -541,6 +616,7 @@ function toggleBookmark(noteId, e) {
 function recordRecentView(noteId) {
   recentViewed = [noteId, ...recentViewed.filter(id => id !== noteId)].slice(0, 25);
   localStorage.setItem("exam_notes_recent", JSON.stringify(recentViewed));
+  trackInteraction("view", { noteId });
 }
 
 // ==========================================
@@ -726,6 +802,9 @@ function setupEventListeners() {
       activeTag = activeTag === tag ? null : tag;
       currentPage = 1;
       updatePopularTags();
+      if (activeTag) {
+        trackInteraction("search", { query: activeTag });
+      }
       render();
       return;
     }
@@ -737,6 +816,9 @@ function setupEventListeners() {
       activeTag = activeTag === tag ? null : tag;
       currentPage = 1;
       updatePopularTags();
+      if (activeTag) {
+        trackInteraction("search", { query: activeTag });
+      }
       render();
       return;
     }
@@ -748,6 +830,9 @@ function setupEventListeners() {
       currentPage = 1;
       $("#lightbox-dialog")?.close();
       updatePopularTags();
+      if (activeTag) {
+        trackInteraction("search", { query: activeTag });
+      }
       render();
       return;
     }
@@ -761,11 +846,19 @@ function setupEventListeners() {
     render();
   });
 
-  // Search Input
+  // Search Input with Telemetry Tracking
+  let searchDebounceTimer = null;
   const searchInput = $("#note-search");
   searchInput?.addEventListener("input", () => {
     currentPage = 1;
     render();
+    clearTimeout(searchDebounceTimer);
+    const query = (searchInput.value || "").trim();
+    if (query.length >= 2) {
+      searchDebounceTimer = setTimeout(() => {
+        trackInteraction("search", { query });
+      }, 700);
+    }
   });
 
   // Clear Search
@@ -887,6 +980,13 @@ function setupEventListeners() {
       const note = currentFilteredList[currentLightboxIndex];
       toggleBookmark(note.id);
       updateLightboxContent(note);
+    }
+  });
+
+  $("#lightbox-download-btn")?.addEventListener("click", () => {
+    if (currentLightboxIndex >= 0 && currentLightboxIndex < currentFilteredList.length) {
+      const note = currentFilteredList[currentLightboxIndex];
+      trackInteraction("download", { noteId: note.id });
     }
   });
 

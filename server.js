@@ -34,6 +34,7 @@ const DATA_DIR = path.join(ROOT, "data");
 const UPLOAD_DIR = path.join(ROOT, "uploads");
 const NOTES_FILE = path.join(DATA_DIR, "notes.json");
 const VISITS_FILE = path.join(DATA_DIR, "visits.json");
+const INTERACTIONS_FILE = path.join(DATA_DIR, "interactions.json");
 const environment = globalThis.process?.env || {};
 const previewConfig = globalThis.__EXAM_ALERT_CONFIG || {};
 const PORT = Number(previewConfig.port || environment.PORT || 4173);
@@ -58,6 +59,14 @@ async function ensureStorage() {
   await fs.mkdir(UPLOAD_DIR, { recursive: true });
   await createJsonIfMissing(NOTES_FILE, []);
   await createJsonIfMissing(VISITS_FILE, { count: 0 });
+  await createJsonIfMissing(INTERACTIONS_FILE, {
+    totalLikes: 0,
+    totalDownloads: 0,
+    totalSearches: 0,
+    totalImpressions: 0,
+    notes: {},
+    searches: {}
+  });
 }
 
 async function createJsonIfMissing(filePath, value) {
@@ -145,6 +154,75 @@ async function handleApi(request, response, url) {
 
   if (request.method === "GET" && url.pathname === "/api/notes") {
     sendJson(response, 200, { notes: await readJson(NOTES_FILE) });
+    return true;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/interactions") {
+    const interactions = await readJson(INTERACTIONS_FILE).catch(() => ({
+      totalLikes: 0,
+      totalDownloads: 0,
+      totalSearches: 0,
+      totalImpressions: 0,
+      notes: {},
+      searches: {}
+    }));
+    sendJson(response, 200, interactions);
+    return true;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/interactions/track") {
+    const body = await readBody(request).catch(() => ({}));
+    let interactions = await readJson(INTERACTIONS_FILE).catch(() => ({
+      totalLikes: 0,
+      totalDownloads: 0,
+      totalSearches: 0,
+      totalImpressions: 0,
+      notes: {},
+      searches: {}
+    }));
+
+    if (!interactions.notes) interactions.notes = {};
+    if (!interactions.searches) interactions.searches = {};
+
+    const type = String(body.type || "");
+    const noteId = String(body.noteId || "");
+    const noteIds = Array.isArray(body.noteIds) ? body.noteIds : (noteId ? [noteId] : []);
+    const query = String(body.query || "").trim();
+
+    if (type === "like") {
+      interactions.totalLikes = Math.max(0, (interactions.totalLikes || 0) + 1);
+      if (noteId) {
+        if (!interactions.notes[noteId]) interactions.notes[noteId] = { likes: 0, downloads: 0, impressions: 0 };
+        interactions.notes[noteId].likes = Math.max(0, (interactions.notes[noteId].likes || 0) + 1);
+      }
+    } else if (type === "unlike") {
+      interactions.totalLikes = Math.max(0, (interactions.totalLikes || 0) - 1);
+      if (noteId && interactions.notes[noteId]) {
+        interactions.notes[noteId].likes = Math.max(0, (interactions.notes[noteId].likes || 0) - 1);
+      }
+    } else if (type === "download") {
+      interactions.totalDownloads = (interactions.totalDownloads || 0) + 1;
+      if (noteId) {
+        if (!interactions.notes[noteId]) interactions.notes[noteId] = { likes: 0, downloads: 0, impressions: 0 };
+        interactions.notes[noteId].downloads = (interactions.notes[noteId].downloads || 0) + 1;
+      }
+    } else if (type === "search") {
+      interactions.totalSearches = (interactions.totalSearches || 0) + 1;
+      if (query && query.length >= 2) {
+        const qKey = query.slice(0, 40);
+        interactions.searches[qKey] = (interactions.searches[qKey] || 0) + 1;
+      }
+    } else if (type === "impression" || type === "view") {
+      const increment = noteIds.length > 0 ? noteIds.length : 1;
+      interactions.totalImpressions = (interactions.totalImpressions || 0) + increment;
+      noteIds.forEach(id => {
+        if (!interactions.notes[id]) interactions.notes[id] = { likes: 0, downloads: 0, impressions: 0 };
+        interactions.notes[id].impressions = (interactions.notes[id].impressions || 0) + 1;
+      });
+    }
+
+    await writeJson(INTERACTIONS_FILE, interactions);
+    sendJson(response, 200, { success: true, interactions });
     return true;
   }
 
@@ -271,7 +349,15 @@ async function handleApi(request, response, url) {
     if (!isAdmin(request)) return sendUnauthorized(response), true;
     await writeJson(NOTES_FILE, []);
     await writeJson(VISITS_FILE, { count: 0 });
-    sendJson(response, 200, { reset: true, message: "All server notes and visits cleared." });
+    await writeJson(INTERACTIONS_FILE, {
+      totalLikes: 0,
+      totalDownloads: 0,
+      totalSearches: 0,
+      totalImpressions: 0,
+      notes: {},
+      searches: {}
+    });
+    sendJson(response, 200, { reset: true, message: "All server notes, visits, and interactions cleared." });
     return true;
   }
 

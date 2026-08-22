@@ -252,22 +252,38 @@ function showDashboard() {
 // ==========================================
 // 4. Data Loading & Metrics
 // ==========================================
+let liveInteractions = {
+  totalLikes: 0,
+  totalDownloads: 0,
+  totalSearches: 0,
+  totalImpressions: 0,
+  notes: {},
+  searches: {}
+};
+
 async function loadDashboardData() {
   let uploaded = [];
   let visitsCount = 0;
 
   try {
-    const [notesData, visitsData] = await Promise.all([
+    const [notesData, visitsData, interData] = await Promise.all([
       api("/api/notes"),
-      api("/api/visits").catch(() => ({ count: 0 }))
+      api("/api/visits").catch(() => ({ count: 0 })),
+      api("/api/interactions").catch(() => null)
     ]);
 
     uploaded = notesData.notes || [];
     visitsCount = visitsData.count || 0;
+    if (interData && interData.totalLikes !== undefined) {
+      liveInteractions = interData;
+    } else {
+      liveInteractions = JSON.parse(localStorage.getItem("exam_notes_interactions_data") || '{"totalLikes":0,"totalDownloads":0,"totalSearches":0,"totalImpressions":0,"notes":{},"searches":{}}');
+    }
   } catch {
     isLocalClientMode = true;
     uploaded = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
-    visitsCount = Number(localStorage.getItem("exam_notes_local_visits") || "1");
+    visitsCount = Number(localStorage.getItem("exam_notes_local_visits") || "0");
+    liveInteractions = JSON.parse(localStorage.getItem("exam_notes_interactions_data") || '{"totalLikes":0,"totalDownloads":0,"totalSearches":0,"totalImpressions":0,"notes":{},"searches":{}}');
   }
 
   const localUploads = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
@@ -677,11 +693,11 @@ function renderTopNotesTable() {
     return;
   }
 
-  // Compute deterministic likes and saves for all notes
-  const notesWithInteractions = allNotes.map((n, idx) => {
-    const seed = Math.abs((n.id || "note").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) + (n.title || "").length * 17 + idx * 31);
-    const likes = n.likes || Math.max(18, Math.round((seed % 140) + 25));
-    const saves = n.saves || n.downloads || Math.max(35, Math.round((seed % 320) + 60));
+  // Use ACTUAL real-time likes and saves recorded from student interactions
+  const notesWithInteractions = allNotes.map((n) => {
+    const noteData = liveInteractions.notes?.[n.id] || {};
+    const likes = Number(noteData.likes) || 0;
+    const saves = Number(noteData.downloads) || 0;
     return {
       note: n,
       likes,
@@ -693,6 +709,9 @@ function renderTopNotesTable() {
   notesWithInteractions.sort((a, b) => {
     const valA = interSortKey === "likes" ? a.likes : a.saves;
     const valB = interSortKey === "likes" ? b.likes : b.saves;
+    if (valA === valB) {
+      return (b.note.createdAt || "").localeCompare(a.note.createdAt || "");
+    }
     return interSortDir === "desc" ? (valB - valA) : (valA - valB);
   });
 
@@ -756,29 +775,30 @@ function renderInteractionsView() {
   const viewsEl = $("#interaction-total-views");
   const interBadge = $("#interactions-badge");
 
-  // Compute proportional engagement telemetry
-  const totalNotes = allNotes.length;
-  const simulatedViews = totalNotes > 0 ? totalNotes * 310 + 420 : 0;
-  const simulatedDownloads = totalNotes > 0 ? Math.round(simulatedViews * 0.445) : 0;
-  const simulatedSearches = totalNotes > 0 ? Math.round(simulatedViews * 0.254) : 0;
-  const simulatedLikes = totalNotes > 0 ? Math.round(simulatedViews * 0.164) : 0;
+  // Read ACTUAL telemetry values
+  const realLikes = Number(liveInteractions.totalLikes) || 0;
+  const realDownloads = Number(liveInteractions.totalDownloads) || 0;
+  const realSearches = Number(liveInteractions.totalSearches) || 0;
+  const realViews = Number(liveInteractions.totalImpressions) || 0;
 
-  animateNumberCounter(likesEl, simulatedLikes, 1200);
-  animateNumberCounter(downloadsEl, simulatedDownloads, 1200);
-  animateNumberCounter(searchesEl, simulatedSearches, 1200);
-  animateNumberCounter(viewsEl, simulatedViews, 1200);
+  animateNumberCounter(likesEl, realLikes, 800);
+  animateNumberCounter(downloadsEl, realDownloads, 800);
+  animateNumberCounter(searchesEl, realSearches, 800);
+  animateNumberCounter(viewsEl, realViews, 800);
 
   if (interBadge) {
-    interBadge.textContent = totalNotes > 0 ? `${(simulatedViews / 1000).toFixed(1)}k` : "0";
+    interBadge.textContent = realViews > 999 ? `${(realViews / 1000).toFixed(1)}k` : String(realViews);
   }
 
   // Update Summary Metrics
   const convRateEl = $("#summary-conversion-rate");
   const engRateEl = $("#summary-engagement-rate");
   const searchVelEl = $("#summary-avg-searches");
-  if (convRateEl) convRateEl.textContent = totalNotes > 0 ? "44.5%" : "0.0%";
-  if (engRateEl) engRateEl.textContent = totalNotes > 0 ? "16.4%" : "0.0%";
-  if (searchVelEl) searchVelEl.textContent = totalNotes > 0 ? "78 / hr" : "0 / hr";
+  const convRate = realViews > 0 ? ((realDownloads / realViews) * 100).toFixed(1) + "%" : "0.0%";
+  const engRate = realViews > 0 ? ((realLikes / realViews) * 100).toFixed(1) + "%" : "0.0%";
+  if (convRateEl) convRateEl.textContent = convRate;
+  if (engRateEl) engRateEl.textContent = engRate;
+  if (searchVelEl) searchVelEl.textContent = `${realSearches} Searches`;
 
   // Update Progress Bars & Values with animated fill
   const pctViews = $("#pct-val-views");
@@ -791,22 +811,27 @@ function renderInteractionsView() {
   const barSearches = $("#bar-fill-searches");
   const barLikes = $("#bar-fill-likes");
 
+  const barViewsPct = realViews > 0 ? 100 : 0;
+  const barDownloadsPct = realViews > 0 ? Math.min(100, Math.round((realDownloads / realViews) * 100)) : 0;
+  const barSearchesPct = realViews > 0 ? Math.min(100, Math.round((realSearches / realViews) * 100)) : (realSearches > 0 ? 50 : 0);
+  const barLikesPct = realViews > 0 ? Math.min(100, Math.round((realLikes / realViews) * 100)) : 0;
+
   if (barViews) barViews.style.width = "0%";
   if (barDownloads) barDownloads.style.width = "0%";
   if (barSearches) barSearches.style.width = "0%";
   if (barLikes) barLikes.style.width = "0%";
 
   setTimeout(() => {
-    if (barViews) barViews.style.width = totalNotes > 0 ? "100%" : "0%";
-    if (barDownloads) barDownloads.style.width = totalNotes > 0 ? "44.5%" : "0%";
-    if (barSearches) barSearches.style.width = totalNotes > 0 ? "25.4%" : "0%";
-    if (barLikes) barLikes.style.width = totalNotes > 0 ? "16.4%" : "0%";
+    if (barViews) barViews.style.width = `${barViewsPct}%`;
+    if (barDownloads) barDownloads.style.width = `${barDownloadsPct}%`;
+    if (barSearches) barSearches.style.width = `${barSearchesPct}%`;
+    if (barLikes) barLikes.style.width = `${barLikesPct}%`;
   }, 50);
 
-  if (pctViews) pctViews.textContent = simulatedViews.toLocaleString();
-  if (pctDownloads) pctDownloads.textContent = simulatedDownloads.toLocaleString();
-  if (pctSearches) pctSearches.textContent = simulatedSearches.toLocaleString();
-  if (pctLikes) pctLikes.textContent = simulatedLikes.toLocaleString();
+  if (pctViews) pctViews.textContent = realViews.toLocaleString();
+  if (pctDownloads) pctDownloads.textContent = realDownloads.toLocaleString();
+  if (pctSearches) pctSearches.textContent = realSearches.toLocaleString();
+  if (pctLikes) pctLikes.textContent = realLikes.toLocaleString();
 
   // Render Top Notes Table with Sort
   renderTopNotesTable();
@@ -838,31 +863,21 @@ function renderInteractionsView() {
     renderTopNotesTable();
   });
 
-  // Render Top Searches Cloud
+  // Render Top Searches Cloud from actual search telemetry
   const searchCloudContainer = $("#searched-tags-cloud-container");
   if (searchCloudContainer) {
-    if (totalNotes === 0) {
-      searchCloudContainer.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--ink-muted); font-size: 0.82rem; width: 100%;">No student searches recorded yet. Search queries will appear here.</div>`;
+    const rawSearches = liveInteractions.searches || {};
+    const searchEntries = Object.entries(rawSearches)
+      .map(([query, count]) => ({ query, count }))
+      .sort((a, b) => b.count - a.count);
+
+    if (searchEntries.length === 0) {
+      searchCloudContainer.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--ink-muted); font-size: 0.82rem; width: 100%;">No student searches executed yet. Searches performed on the Public Portal will appear here.</div>`;
       return;
     }
 
-    const topSearches = [
-      { query: "UPSC Prelims 2025", count: 482 },
-      { query: "Fundamental Rights", count: 395 },
-      { query: "Constitution Articles 12-35", count: 328 },
-      { query: "Freedom Movement", count: 290 },
-      { query: "Monetary Policy & RBI", count: 245 },
-      { query: "Indus Valley Civilization", count: 212 },
-      { query: "Rivers of India & Maps", count: 184 },
-      { query: "GDP & National Income", count: 160 },
-      { query: "Modern Indian History", count: 142 },
-      { query: "Supreme Court Writs", count: 128 },
-      { query: "SSC CGL Formulas", count: 115 },
-      { query: "Art & Architecture", count: 96 }
-    ];
-
-    searchCloudContainer.innerHTML = topSearches.map(item => `
-      <button type="button" class="search-tag-bubble" data-search-term="${escapeHtml(item.query)}" title="Filter library by '${escapeHtml(item.query)}'">
+    searchCloudContainer.innerHTML = searchEntries.map(item => `
+      <button type="button" class="search-tag-bubble" data-search-term="${escapeHtml(item.query)}" title="Filter library by '${escapeHtml(item.query)}' (${item.count} search${item.count > 1 ? 'es' : ''})">
         <span>🔍 ${escapeHtml(item.query)}</span>
         <span class="search-tag-count">${item.count}</span>
       </button>
@@ -1945,8 +1960,18 @@ function setupEventListeners() {
     localStorage.removeItem("exam_notes_recent");
     localStorage.removeItem("exam_notes_favorites");
     localStorage.removeItem("exam_notes_offline_queue");
+    localStorage.removeItem("exam_notes_interactions_data");
 
-    showToast("✓ All test data & local caches have been wiped clean!", "success");
+    liveInteractions = {
+      totalLikes: 0,
+      totalDownloads: 0,
+      totalSearches: 0,
+      totalImpressions: 0,
+      notes: {},
+      searches: {}
+    };
+
+    showToast("✓ All test data, interactions & local caches have been wiped clean!", "success");
     await loadDashboardData();
   });
 
