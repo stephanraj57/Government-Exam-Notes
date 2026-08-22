@@ -267,6 +267,14 @@ async function handleApi(request, response, url) {
     return true;
   }
 
+  if (request.method === "POST" && url.pathname === "/api/admin/reset-data") {
+    if (!isAdmin(request)) return sendUnauthorized(response), true;
+    await writeJson(NOTES_FILE, []);
+    await writeJson(VISITS_FILE, { count: 0 });
+    sendJson(response, 200, { reset: true, message: "All server notes and visits cleared." });
+    return true;
+  }
+
   return false;
 }
 

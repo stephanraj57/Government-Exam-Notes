@@ -8,41 +8,9 @@
 // ==========================================
 // 1. Initial State & 7-Category Sample Notes with Multiple Tags
 // ==========================================
-// 1. Initial State & 8-Category Sample Notes with Upload Folder Images
+// 1. Initial State & Notes Repository
 // ==========================================
-const samples = [
-  ["Indian Constitution – Fundamental Rights & Preamble", "Polity", "20 May 2024", "preamble", ["Polity"], ["UPSC", "Constitution", "Preamble", "Prelims 2025"], "/uploads/00000000-0000-4000-8000-000000000002.jpg"],
-  ["Directive Principles of State Policy (DPSP – 36 to 51)", "Polity", "19 May 2024", "rights", ["Polity"], ["Polity", "Articles", "Fundamental Rights", "SSC CGL"], "/uploads/00000000-0000-4000-8000-000000000002.jpg"],
-  ["American Civil War & Emancipation (1861–1865)", "History", "18 May 2024", "revolt", ["History"], ["World History", "American War", "Lincoln", "SSC", "UPSC"], "/uploads/00000000-0000-4000-8000-000000000001.jpg"],
-  ["American War of Independence (1775–1783)", "History", "17 May 2024", "mauryan", ["History"], ["World History", "Independence", "Revolutions", "UPSC"], "/uploads/00000000-0000-4000-8000-000000000002.jpg"],
-  ["Battle of Buxar & Plassey (1757–1764)", "History", "16 May 2024", "revolt", ["History"], ["Modern History", "East India Company", "Battles", "SSC"], "/uploads/00000000-0000-4000-8000-000000000003.jpg"],
-  ["Chauri Chaura Incident & Non-Cooperation (1922)", "History", "15 May 2024", "revolt", ["History"], ["Freedom Struggle", "Non-Cooperation", "Gandhian Era", "UPSC"], "/uploads/00000000-0000-4000-8000-000000000005.jpg"],
-  ["French Revolution & Declaration of Rights (1789)", "History", "14 May 2024", "revolt", ["History"], ["World History", "Bastille", "Revolutions", "UPSC"], "/uploads/00000000-0000-4000-8000-000000000006.jpg"],
-  ["India's Independence & Partition Plan (1947)", "History", "13 May 2024", "revolt", ["History"], ["Freedom Struggle", "Mountbatten Plan", "Partition", "Modern History"], "/uploads/00000000-0000-4000-8000-000000000007.jpg"],
-  ["Jallianwala Bagh Massacre & Rowlatt Act (1919)", "History", "12 May 2024", "revolt", ["History"], ["Freedom Struggle", "Rowlatt Act", "Amritsar", "Modern History"], "/uploads/00000000-0000-4000-8000-000000000008.jpg"],
-  ["Physical Divisions & Mountain Passes of India", "Geography", "11 May 2024", "map", ["Geography"], ["Himalayas", "Passes", "Map Work", "Geography"], "/uploads/00000000-0000-4000-8000-000000000004.jpg"],
-  ["River Systems & Water Resources of India", "Geography", "10 May 2024", "water", ["Geography"], ["Rivers", "Dams", "Drainage System", "SSC"], "/uploads/00000000-0000-4000-8000-000000000004.jpg"],
-  ["Sectors of Indian Economy & GDP Breakdown", "Economy", "09 May 2024", "economy", ["Economy"], ["GDP", "Sectors", "Banking", "Economy"], "/uploads/00000000-0000-4000-8000-000000000003.jpg"],
-  ["Monetary Policy & RBI Quantitative Tools", "Economy", "08 May 2024", "rbi", ["Economy"], ["RBI", "Repo Rate", "Inflation", "Banking"], "/uploads/00000000-0000-4000-8000-000000000003.jpg"],
-  ["Classical Dance Forms & Traditions", "Art and Culture", "07 May 2024", "dance", ["Art and Culture"], ["Dance", "Classical", "Traditions", "Culture"], "/uploads/00000000-0000-4000-8000-000000000005.jpg"],
-  ["Temple Architecture – Nagara, Dravida & Vesara", "Art and Culture", "06 May 2024", "temple", ["Art and Culture"], ["Architecture", "Temples", "Art & Culture"], "/uploads/00000000-0000-4000-8000-000000000005.jpg"],
-  ["Speed, Distance & Time – Shortcut Formulas", "Maths", "05 May 2024", "maths_speed", ["Maths"], ["Maths Shortcuts", "Speed & Time", "Aptitude", "SSC"], "/uploads/00000000-0000-4000-8000-000000000006.jpg"],
-  ["Percentage & Profit-Loss Calculations", "Maths", "04 May 2024", "maths_calc", ["Maths"], ["Profit & Loss", "Percentages", "Arithmetic", "RRB"], "/uploads/00000000-0000-4000-8000-000000000006.jpg"],
-  ["Human Digestive System & Enzyme Action", "Science", "03 May 2024", "biology", ["Science"], ["Biology", "Enzymes", "Digestive System", "Science"], "/uploads/00000000-0000-4000-8000-000000000007.jpg"],
-  ["Newton’s Laws of Motion & Gravitation", "Science", "02 May 2024", "physics", ["Science"], ["Physics", "Mechanics", "Gravitation", "SSC"], "/uploads/00000000-0000-4000-8000-000000000007.jpg"],
-  ["English Grammar – Subject-Verb Agreement Rules", "English", "01 May 2024", "english_grammar", ["English"], ["English", "Grammar", "Rules", "SSC CGL"], "/uploads/00000000-0000-4000-8000-000000000008.jpg"],
-  ["Idioms, Phrases & One-Word Substitutions", "English", "30 Apr 2024", "english_vocab", ["English"], ["Vocabulary", "Idioms", "English", "Banking"], "/uploads/00000000-0000-4000-8000-000000000008.jpg"]
-].map(([title, subject, date, type, categories, tags, imageUrl], i) => ({
-  id: "sample" + i,
-  title,
-  subject,
-  date,
-  type,
-  categories,
-  tags: tags || [],
-  imageUrl: imageUrl || `/uploads/00000000-0000-4000-8000-00000000000${(i % 8) + 1}.jpg`,
-  isSample: true
-}));
+const samples = [];
 
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
@@ -109,8 +77,7 @@ function showToast(message, type = "info") {
 // ==========================================
 function initTheme() {
   const savedTheme = localStorage.getItem("exam_notes_theme");
-  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const theme = savedTheme || (prefersDark ? "dark" : "light");
+  const theme = savedTheme || "light";
   setTheme(theme, false);
 
   $("#theme-toggle")?.addEventListener("click", () => {
@@ -123,7 +90,7 @@ function initTheme() {
     setTheme(next, true);
 
     if (next === "eye-care") {
-      showToast("👓 Blue Light Filter Mode Enabled (Warm Reading Theme)", "info");
+      showToast("Eye Protection Enabled", "info");
     } else if (next === "dark") {
       showToast("🌙 Dark Mode Enabled", "info");
     } else {
@@ -141,10 +108,10 @@ function setTheme(theme, save = true) {
 
   if (theme === "dark") {
     if (themeIcon) themeIcon.textContent = "🌙";
-    if (themeToggle) themeToggle.title = "Current: Dark Mode (Click for Blue Light Filter 👓)";
+    if (themeToggle) themeToggle.title = "Current: Dark Mode (Click for Eye Protection Mode 👓)";
   } else if (theme === "eye-care") {
     if (themeIcon) themeIcon.textContent = "👓";
-    if (themeToggle) themeToggle.title = "Current: Blue Light Filter Mode (Click for Light Mode ☀️)";
+    if (themeToggle) themeToggle.title = "Current: Eye Protection Mode (Click for Light Mode ☀️)";
   } else {
     if (themeIcon) themeIcon.textContent = "☀️";
     if (themeToggle) themeToggle.title = "Current: Light Mode (Click for Dark Mode 🌙)";
@@ -389,8 +356,10 @@ function render() {
         emptyMsg.textContent = "You haven't bookmarked any notes yet. Tap the heart icon (♡) on any note to save it here.";
       } else if (currentView === "recent") {
         emptyMsg.textContent = "No recently viewed notes. Tap any note to open and review it in high resolution.";
-      } else {
+      } else if (searchTerm || activeTag || category !== "All Notes") {
         emptyMsg.textContent = "No notes matched your search query or active filter. Try clearing filters or searching for another topic.";
+      } else {
+        emptyMsg.textContent = "No revision notes published yet. Notes published by Master Admin will appear here in high resolution.";
       }
     }
   }

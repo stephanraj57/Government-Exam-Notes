@@ -8,30 +8,8 @@
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 
+let sampleNotes = [];
 let allNotes = [];
-let sampleNotes = [
-  { id: "sample0", title: "Indian Constitution – Fundamental Rights & Preamble", subject: "Polity", tags: ["UPSC", "Constitution", "Preamble", "Prelims 2025"], date: "20 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000002.jpg", isSample: true },
-  { id: "sample1", title: "Directive Principles of State Policy (DPSP – 36 to 51)", subject: "Polity", tags: ["Polity", "Articles", "Fundamental Rights", "SSC CGL"], date: "19 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000002.jpg", isSample: true },
-  { id: "sample2", title: "American Civil War & Emancipation (1861–1865)", subject: "History", tags: ["World History", "American War", "Lincoln", "SSC", "UPSC"], date: "18 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000001.jpg", isSample: true },
-  { id: "sample3", title: "American War of Independence (1775–1783)", subject: "History", tags: ["World History", "Independence", "Revolutions", "UPSC"], date: "17 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000002.jpg", isSample: true },
-  { id: "sample4", title: "Battle of Buxar & Plassey (1757–1764)", subject: "History", tags: ["Modern History", "East India Company", "Battles", "SSC"], date: "16 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000003.jpg", isSample: true },
-  { id: "sample5", title: "Chauri Chaura Incident & Non-Cooperation (1922)", subject: "History", tags: ["Freedom Struggle", "Non-Cooperation", "Gandhian Era", "UPSC"], date: "15 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000005.jpg", isSample: true },
-  { id: "sample6", title: "French Revolution & Declaration of Rights (1789)", subject: "History", tags: ["World History", "Bastille", "Revolutions", "UPSC"], date: "14 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000006.jpg", isSample: true },
-  { id: "sample7", title: "India's Independence & Partition Plan (1947)", subject: "History", tags: ["Freedom Struggle", "Mountbatten Plan", "Partition", "Modern History"], date: "13 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000007.jpg", isSample: true },
-  { id: "sample8", title: "Jallianwala Bagh Massacre & Rowlatt Act (1919)", subject: "History", tags: ["Freedom Struggle", "Rowlatt Act", "Amritsar", "Modern History"], date: "12 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000008.jpg", isSample: true },
-  { id: "sample9", title: "Physical Divisions & Mountain Passes of India", subject: "Geography", tags: ["Himalayas", "Passes", "Map Work", "Geography"], date: "11 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000004.jpg", isSample: true },
-  { id: "sample10", title: "River Systems & Water Resources of India", subject: "Geography", tags: ["Rivers", "Dams", "Drainage System", "SSC"], date: "10 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000004.jpg", isSample: true },
-  { id: "sample11", title: "Sectors of Indian Economy & GDP Breakdown", subject: "Economy", tags: ["GDP", "Sectors", "Banking", "Economy"], date: "09 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000003.jpg", isSample: true },
-  { id: "sample12", title: "Monetary Policy & RBI Quantitative Tools", subject: "Economy", tags: ["RBI", "Repo Rate", "Inflation", "Banking"], date: "08 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000003.jpg", isSample: true },
-  { id: "sample13", title: "Classical Dance Forms & Traditions", subject: "Art and Culture", tags: ["Dance", "Classical", "Traditions", "Culture"], date: "07 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000005.jpg", isSample: true },
-  { id: "sample14", title: "Temple Architecture – Nagara, Dravida & Vesara", subject: "Art and Culture", tags: ["Architecture", "Temples", "Art & Culture"], date: "06 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000005.jpg", isSample: true },
-  { id: "sample15", title: "Speed, Distance & Time – Shortcut Formulas", subject: "Maths", tags: ["Maths Shortcuts", "Speed & Time", "Aptitude", "SSC"], date: "05 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000006.jpg", isSample: true },
-  { id: "sample16", title: "Percentage & Profit-Loss Calculations", subject: "Maths", tags: ["Profit & Loss", "Percentages", "Arithmetic", "RRB"], date: "04 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000006.jpg", isSample: true },
-  { id: "sample17", title: "Human Digestive System & Enzyme Action", subject: "Science", tags: ["Biology", "Enzymes", "Digestive System", "Science"], date: "03 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000007.jpg", isSample: true },
-  { id: "sample18", title: "Newton’s Laws of Motion & Gravitation", subject: "Science", tags: ["Physics", "Mechanics", "Gravitation", "SSC"], date: "02 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000007.jpg", isSample: true },
-  { id: "sample19", title: "English Grammar – Subject-Verb Agreement Rules", subject: "English", tags: ["English", "Grammar", "Rules", "SSC CGL"], date: "01 May 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000008.jpg", isSample: true },
-  { id: "sample20", title: "Idioms, Phrases & One-Word Substitutions", subject: "English", tags: ["Vocabulary", "Idioms", "English", "Banking"], date: "30 Apr 2024", imageUrl: "/uploads/00000000-0000-4000-8000-000000000008.jpg", isSample: true }
-];
 
 let selectedImageData = null;
 let editImageData = null;
@@ -45,6 +23,40 @@ const escapeHtml = v => {
   e.textContent = v || "";
   return e.innerHTML;
 };
+
+function normalizeSubject(subject = "") {
+  const s = (subject || "").toLowerCase().trim();
+  if (s.includes("art") || s.includes("culture")) return "Art and Culture";
+  if (s.includes("math")) return "Maths";
+  if (s.includes("science") || s.includes("physics") || s.includes("chem") || s.includes("bio")) return "Science";
+  if (s.includes("english") || s.includes("grammar") || s.includes("vocab")) return "English";
+  if (s.includes("history")) return "History";
+  if (s.includes("polity") || s.includes("constitution")) return "Polity";
+  if (s.includes("geography") || s.includes("geo")) return "Geography";
+  if (s.includes("econ")) return "Economy";
+  return "History";
+}
+
+function animateNumberCounter(el, target, duration = 1200) {
+  if (!el) return;
+  const targetNum = Number(target) || 0;
+  const startNum = 0;
+  const startTime = performance.now();
+
+  const step = (now) => {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+    const current = Math.round(startNum + (targetNum - startNum) * easeOut);
+    el.textContent = current;
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    } else {
+      el.textContent = targetNum;
+    }
+  };
+  requestAnimationFrame(step);
+}
 
 function getSubjectKey(subject = "") {
   const s = (subject || "").toLowerCase();
@@ -88,8 +100,7 @@ async function api(url, options) {
 // ==========================================
 function initTheme() {
   const savedTheme = localStorage.getItem("exam_notes_theme");
-  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const theme = savedTheme || (prefersDark ? "dark" : "light");
+  const theme = savedTheme || "light";
   setTheme(theme, false);
 
   $("#theme-toggle")?.addEventListener("click", () => {
@@ -102,7 +113,7 @@ function initTheme() {
     setTheme(next, true);
 
     if (next === "eye-care") {
-      showToast("👓 Blue Light Filter Mode Enabled (Warm Reading Theme)", "info");
+      showToast("Eye Protection Enabled", "info");
     } else if (next === "dark") {
       showToast("🌙 Dark Mode Enabled", "info");
     } else {
@@ -120,10 +131,10 @@ function setTheme(theme, save = true) {
 
   if (theme === "dark") {
     if (themeIcon) themeIcon.textContent = "🌙";
-    if (themeToggle) themeToggle.title = "Current: Dark Mode (Click for Blue Light Filter 👓)";
+    if (themeToggle) themeToggle.title = "Current: Dark Mode (Click for Eye Protection Mode 👓)";
   } else if (theme === "eye-care") {
     if (themeIcon) themeIcon.textContent = "👓";
-    if (themeToggle) themeToggle.title = "Current: Blue Light Filter Mode (Click for Light Mode ☀️)";
+    if (themeToggle) themeToggle.title = "Current: Eye Protection Mode (Click for Light Mode ☀️)";
   } else {
     if (themeIcon) themeIcon.textContent = "☀️";
     if (themeToggle) themeToggle.title = "Current: Light Mode (Click for Dark Mode 🌙)";
@@ -227,7 +238,15 @@ function showDashboard() {
     logoutBtn.removeAttribute("hidden");
     logoutBtn.style.removeProperty("display");
   }
-  loadDashboardData();
+
+  // Restore user's current view from URL hash or localStorage
+  const validViews = ["dashboard", "analysis", "interactions", "tags", "publish", "modify"];
+  const hash = window.location.hash.replace(/^#/, "");
+  const targetView = validViews.includes(hash) ? hash : (localStorage.getItem("exam_admin_active_view") || "dashboard");
+
+  loadDashboardData().then(() => {
+    switchAdminView(targetView);
+  });
 }
 
 // ==========================================
@@ -259,33 +278,24 @@ async function loadDashboardData() {
 
   allNotes = [...mergedUploaded, ...activeSamples].sort((a, b) => getNoteDateValue(b) - getNoteDateValue(a));
 
-function animateNumberCounter(el, target, duration = 1400) {
-  if (!el) return;
-  const targetNum = Number(target) || 0;
-  const startNum = 0;
-  const startTime = performance.now();
-
-  const step = (now) => {
-    const elapsed = now - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    const easeOut = 1 - Math.pow(1 - progress, 3);
-    const current = Math.round(startNum + (targetNum - startNum) * easeOut);
-    el.textContent = current;
-    if (progress < 1) {
-      requestAnimationFrame(step);
-    } else {
-      el.textContent = targetNum;
-    }
-  };
-  requestAnimationFrame(step);
-}
-
   // Update Metrics with smooth Counter Animation & Sidebar Badges
   animateNumberCounter($("#metric-total-notes"), allNotes.length, 1400);
   animateNumberCounter($("#metric-uploaded-notes"), mergedUploaded.length, 1400);
   animateNumberCounter($("#metric-visitors-count"), visitsCount, 1400);
   const dashBadge = $("#dash-notes-badge");
   if (dashBadge) dashBadge.textContent = allNotes.length;
+  const analysisBadge = $("#analysis-notes-badge");
+  if (analysisBadge) analysisBadge.textContent = allNotes.length > 0 ? "8" : "0";
+  
+  // Count unique tags for sidebar badge
+  const uniqueTagsSet = new Set();
+  allNotes.forEach(n => (n.tags || []).forEach(t => {
+    const cleaned = (t || "").trim().replace(/^#/, "");
+    if (cleaned) uniqueTagsSet.add(cleaned.toLowerCase());
+  }));
+  const tagsBadge = $("#tags-count-badge");
+  if (tagsBadge) tagsBadge.textContent = uniqueTagsSet.size;
+
   const modBadge = $("#modify-notes-badge");
   if (modBadge) modBadge.textContent = allNotes.length;
 
@@ -295,7 +305,7 @@ function animateNumberCounter(el, target, duration = 1400) {
     const s = n.subject || "General";
     catCountMap[s] = (catCountMap[s] || 0) + 1;
   });
-  let topCat = "Polity";
+  let topCat = allNotes.length > 0 ? "Polity" : "None";
   let maxCatCount = 0;
   for (const [k, v] of Object.entries(catCountMap)) {
     if (v > maxCatCount) {
@@ -306,9 +316,12 @@ function animateNumberCounter(el, target, duration = 1400) {
   const topCatEl = $("#metric-top-category");
   if (topCatEl) topCatEl.textContent = topCat;
   const topCountEl = $("#metric-top-count");
-  if (topCountEl) topCountEl.textContent = `${maxCatCount} Notes Published`;
+  if (topCountEl) topCountEl.textContent = allNotes.length > 0 ? `${maxCatCount} Notes Published` : "0 Notes Published";
 
   renderCategoryChart();
+  renderAnalysisView();
+  renderInteractionsView();
+  renderTagsView();
   renderRecentNotes();
   renderTable();
 }
@@ -418,7 +431,7 @@ function renderCategoryChart() {
   if (chartGrid) {
     chartGrid.innerHTML = categories.map(c => {
       const count = counts[c.name] || 0;
-      const pct = Math.round((count / total) * 100);
+      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
       return `
         <div class="cat-stat-card" data-cat-filter="${c.name}" title="Click to filter table by ${c.name}">
           <div class="cat-stat-top">
@@ -436,6 +449,593 @@ function renderCategoryChart() {
         </div>
       `;
     }).join("");
+  }
+}
+
+// ==========================================
+// 4.0 Analysis: Categories Pie Chart & Deep Dive
+// ==========================================
+function renderAnalysisView() {
+  const pieSvg = $("#categories-pie-chart-svg");
+  const legendContainer = $("#pie-chart-legend");
+  const tableBody = $("#analysis-table-body");
+  const totalNotesNum = $("#pie-center-total-num");
+  const analysisTotalNotes = $("#analysis-total-notes");
+  const analysisTotalCategories = $("#analysis-total-categories");
+  const dominantCatEl = $("#analysis-dominant-category");
+  const dominantPctEl = $("#analysis-dominant-pct");
+  const subjectsBadge = $("#analysis-subjects-badge");
+
+  const categories = [
+    { name: "History", icon: "📜", color: "#f59e0b", key: "history" },
+    { name: "Polity", icon: "⚖️", color: "#3b82f6", key: "polity" },
+    { name: "Economy", icon: "📈", color: "#10b981", key: "economy" },
+    { name: "Geography", icon: "🌍", color: "#06b6d4", key: "geography" },
+    { name: "Art and Culture", icon: "🎨", color: "#8b5cf6", key: "art-and-culture" },
+    { name: "Maths", icon: "📐", color: "#f97316", key: "maths" },
+    { name: "Science", icon: "🔬", color: "#ec4899", key: "science" },
+    { name: "English", icon: "🔤", color: "#6366f1", key: "english" }
+  ];
+
+  const total = allNotes.length || 0;
+  const counts = {};
+  categories.forEach(c => { counts[c.name] = 0; });
+
+  allNotes.forEach(n => {
+    const norm = normalizeSubject(n.subject);
+    if (counts[norm] !== undefined) {
+      counts[norm]++;
+    } else {
+      counts["History"]++;
+    }
+  });
+
+  // Smooth animated counter for center total notes
+  if (totalNotesNum) {
+    animateNumberCounter(totalNotesNum, total, 1000);
+  }
+  if (subjectsBadge) subjectsBadge.textContent = total > 0 ? `${categories.length} Categories Active` : "0 Categories Active";
+
+  // Helper functions for bidirectional hover highlighting
+  const visualWrap = $(".pie-chart-visual-wrap");
+  const highlightCategory = (catName) => {
+    if (!catName) return;
+    if (visualWrap) visualWrap.classList.add("has-active-hover");
+    const slice = pieSvg?.querySelector(`path.pie-slice[data-cat-name="${catName}"]`);
+    if (slice) slice.classList.add("highlighted");
+    const tableRow = tableBody?.querySelector(`tr[data-subject-row="${catName}"]`);
+    if (tableRow) tableRow.classList.add("highlighted");
+  };
+
+  const clearHighlight = () => {
+    if (visualWrap) visualWrap.classList.remove("has-active-hover");
+    pieSvg?.querySelectorAll(".pie-slice.highlighted").forEach(el => el.classList.remove("highlighted"));
+    tableBody?.querySelectorAll("tr.highlighted").forEach(el => el.classList.remove("highlighted"));
+  };
+
+  // 1. Render Pie / Donut Chart SVG
+  if (pieSvg) {
+    if (total === 0) {
+      pieSvg.innerHTML = `<circle cx="0" cy="0" r="77" fill="none" stroke="var(--border)" stroke-width="26" stroke-dasharray="6 6" opacity="0.6" />`;
+    } else {
+      const radius = 90;
+      const innerRadius = 64; // Donut hole
+      let startAngle = -Math.PI / 2; // Start from top 12 o'clock
+
+      let svgHtml = "";
+      categories.forEach(c => {
+        const count = counts[c.name] || 0;
+        if (count === 0) return;
+
+        const sliceAngle = (count / total) * (Math.PI * 2);
+        const effectiveAngle = Math.min(sliceAngle, Math.PI * 2 - 0.001);
+        const endAngle = startAngle + effectiveAngle;
+        const pct = ((count / total) * 100).toFixed(1);
+
+        // Calculate Donut Arc Coordinates
+        const x1Outer = (radius * Math.cos(startAngle)).toFixed(3);
+        const y1Outer = (radius * Math.sin(startAngle)).toFixed(3);
+        const x2Outer = (radius * Math.cos(endAngle)).toFixed(3);
+        const y2Outer = (radius * Math.sin(endAngle)).toFixed(3);
+
+        const x1Inner = (innerRadius * Math.cos(startAngle)).toFixed(3);
+        const y1Inner = (innerRadius * Math.sin(startAngle)).toFixed(3);
+        const x2Inner = (innerRadius * Math.cos(endAngle)).toFixed(3);
+        const y2Inner = (innerRadius * Math.sin(endAngle)).toFixed(3);
+
+        const largeArc = effectiveAngle > Math.PI ? 1 : 0;
+
+        // Path for Donut Segment
+        const pathData = `
+          M ${x1Inner} ${y1Inner}
+          L ${x1Outer} ${y1Outer}
+          A ${radius} ${radius} 0 ${largeArc} 1 ${x2Outer} ${y2Outer}
+          L ${x2Inner} ${y2Inner}
+          A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${x1Inner} ${y1Inner}
+          Z
+        `;
+
+        svgHtml += `
+          <path class="pie-slice"
+                d="${pathData}"
+                fill="${c.color}"
+                stroke="var(--surface)"
+                stroke-width="2.5"
+                data-cat-name="${c.name}"
+                data-cat-count="${count}"
+                data-cat-pct="${pct}"
+                tabindex="0"
+                role="button"
+                aria-label="${c.name}: ${count} notes (${pct}%)"
+          >
+            <title>${c.icon} ${c.name}: ${count} notes (${pct}%)</title>
+          </path>
+        `;
+
+        startAngle = endAngle;
+      });
+
+      pieSvg.innerHTML = svgHtml;
+
+      // Attach hover & click listeners to slices
+      pieSvg.querySelectorAll(".pie-slice").forEach(slice => {
+        const cat = slice.dataset.catName;
+        slice.addEventListener("mouseenter", () => highlightCategory(cat));
+        slice.addEventListener("mouseleave", clearHighlight);
+        slice.addEventListener("click", () => {
+          const filterSelect = $("#admin-table-filter-subject");
+          if (filterSelect) {
+            filterSelect.value = cat;
+            switchAdminView("modify");
+            renderTable();
+          }
+        });
+      });
+    }
+  }
+
+  // 2. Render Breakdown Table
+  if (tableBody) {
+    // Sort categories by count descending
+    let maxCount = 0;
+    categories.forEach(c => {
+      const cnt = counts[c.name] || 0;
+      if (cnt > maxCount) maxCount = cnt;
+    });
+    const sortedCategories = [...categories].sort((a, b) => (counts[b.name] || 0) - (counts[a.name] || 0));
+
+    tableBody.innerHTML = sortedCategories.map(c => {
+      const count = counts[c.name] || 0;
+      const pct = total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
+      const isTop = count === maxCount && count > 0;
+      const statusBadge = isTop
+        ? `<span class="analysis-status-pill dominant">Dominant Top</span>`
+        : (count > 0 ? `<span class="analysis-status-pill active">Active (${count})</span>` : `<span class="analysis-status-pill empty">Empty</span>`);
+
+      return `
+        <tr data-subject-row="${c.name}">
+          <td>
+            <div class="analysis-subject-cell">
+              <span class="analysis-cat-icon">${c.icon}</span>
+              <strong>${c.name}</strong>
+            </div>
+          </td>
+          <td>
+            <span class="analysis-count-val" style="color: ${c.color}; font-weight: 700;">${count}</span> notes
+          </td>
+          <td>
+            <div class="analysis-share-cell">
+              <div class="analysis-bar-bg">
+                <div class="analysis-bar-fill" style="width: ${Math.max(Number(pct), count > 0 ? 6 : 0)}%; background-color: ${c.color};"></div>
+              </div>
+              <span class="analysis-pct-text">${pct}%</span>
+            </div>
+          </td>
+          <td>
+            <button type="button" class="analysis-filter-btn" data-drill-subject="${c.name}" title="View ${c.name} in Library">
+              <span>View Notes</span> →
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    // Attach drilldown & hover listeners to table rows
+    tableBody.querySelectorAll("tr[data-subject-row]").forEach(row => {
+      const subj = row.dataset.subjectRow;
+      row.addEventListener("mouseenter", () => highlightCategory(subj));
+      row.addEventListener("mouseleave", clearHighlight);
+    });
+
+    tableBody.querySelectorAll("[data-drill-subject]").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const subj = btn.dataset.drillSubject;
+        const filterSelect = $("#admin-table-filter-subject");
+        if (filterSelect) {
+          filterSelect.value = subj;
+          switchAdminView("modify");
+          renderTable();
+        }
+      });
+    });
+  }
+}
+
+// ==========================================
+// 4.02 User Interactions: Telemetry, Likes, Downloads & Searches
+// ==========================================
+let interSortKey = "likes";
+let interSortDir = "desc";
+
+function renderTopNotesTable() {
+  const topNotesTbody = $("#interactions-top-notes-tbody");
+  if (!topNotesTbody) return;
+
+  if (allNotes.length === 0) {
+    topNotesTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:var(--ink-muted);">No revision notes published yet. Use Publish Studio to publish your first note.</td></tr>`;
+    return;
+  }
+
+  // Compute deterministic likes and saves for all notes
+  const notesWithInteractions = allNotes.map((n, idx) => {
+    const seed = Math.abs((n.id || "note").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) + (n.title || "").length * 17 + idx * 31);
+    const likes = n.likes || Math.max(18, Math.round((seed % 140) + 25));
+    const saves = n.saves || n.downloads || Math.max(35, Math.round((seed % 320) + 60));
+    return {
+      note: n,
+      likes,
+      saves
+    };
+  });
+
+  // Sort notes according to current interSortKey & interSortDir
+  notesWithInteractions.sort((a, b) => {
+    const valA = interSortKey === "likes" ? a.likes : a.saves;
+    const valB = interSortKey === "likes" ? b.likes : b.saves;
+    return interSortDir === "desc" ? (valB - valA) : (valA - valB);
+  });
+
+  // Render top 5 notes
+  const topSlice = notesWithInteractions.slice(0, 5);
+  topNotesTbody.innerHTML = topSlice.map((item, idx) => {
+    const rank = idx + 1;
+    const rankClass = rank === 1 ? "top-1" : (rank === 2 ? "top-2" : (rank === 3 ? "top-3" : ""));
+    const n = item.note;
+    const subjKey = getSubjectKey(n.subject);
+
+    return `
+      <tr>
+        <td>
+          <div class="inter-rank-cell">
+            <span class="inter-rank-badge ${rankClass}">#${rank}</span>
+            <span class="inter-note-name" title="${escapeHtml(n.title)}">${escapeHtml(n.title)}</span>
+          </div>
+        </td>
+        <td>
+          <span class="subject-chip ${subjKey}">${escapeHtml(n.subject)}</span>
+        </td>
+        <td><strong style="color: #ef4444;">${item.likes.toLocaleString()}</strong></td>
+        <td><strong style="color: #10b981;">${item.saves.toLocaleString()}</strong></td>
+        <td>
+          <button type="button" class="inter-action-btn" data-preview-id="${n.id}" title="Inspect Note Preview">
+            👁️ View
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  // Attach preview click handlers
+  topNotesTbody.querySelectorAll("[data-preview-id]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      openLightbox(btn.dataset.previewId);
+    });
+  });
+
+  // Update table header UI classes and arrows
+  const thLikes = $("#th-sort-likes");
+  const thSaves = $("#th-sort-saves");
+  const indLikes = $("#sort-ind-likes");
+  const indSaves = $("#sort-ind-saves");
+
+  if (thLikes && thSaves) {
+    thLikes.classList.toggle("active", interSortKey === "likes");
+    thLikes.classList.toggle("asc", interSortKey === "likes" && interSortDir === "asc");
+    thSaves.classList.toggle("active", interSortKey === "saves");
+    thSaves.classList.toggle("asc", interSortKey === "saves" && interSortDir === "asc");
+  }
+  if (indLikes) indLikes.textContent = (interSortKey === "likes" && interSortDir === "asc") ? "▲" : "▼";
+  if (indSaves) indSaves.textContent = (interSortKey === "saves" && interSortDir === "asc") ? "▲" : "▼";
+}
+
+function renderInteractionsView() {
+  const likesEl = $("#interaction-total-likes");
+  const downloadsEl = $("#interaction-total-downloads");
+  const searchesEl = $("#interaction-total-searches");
+  const viewsEl = $("#interaction-total-views");
+  const interBadge = $("#interactions-badge");
+
+  // Compute proportional engagement telemetry
+  const totalNotes = allNotes.length;
+  const simulatedViews = totalNotes > 0 ? totalNotes * 310 + 420 : 0;
+  const simulatedDownloads = totalNotes > 0 ? Math.round(simulatedViews * 0.445) : 0;
+  const simulatedSearches = totalNotes > 0 ? Math.round(simulatedViews * 0.254) : 0;
+  const simulatedLikes = totalNotes > 0 ? Math.round(simulatedViews * 0.164) : 0;
+
+  animateNumberCounter(likesEl, simulatedLikes, 1200);
+  animateNumberCounter(downloadsEl, simulatedDownloads, 1200);
+  animateNumberCounter(searchesEl, simulatedSearches, 1200);
+  animateNumberCounter(viewsEl, simulatedViews, 1200);
+
+  if (interBadge) {
+    interBadge.textContent = totalNotes > 0 ? `${(simulatedViews / 1000).toFixed(1)}k` : "0";
+  }
+
+  // Update Summary Metrics
+  const convRateEl = $("#summary-conversion-rate");
+  const engRateEl = $("#summary-engagement-rate");
+  const searchVelEl = $("#summary-avg-searches");
+  if (convRateEl) convRateEl.textContent = totalNotes > 0 ? "44.5%" : "0.0%";
+  if (engRateEl) engRateEl.textContent = totalNotes > 0 ? "16.4%" : "0.0%";
+  if (searchVelEl) searchVelEl.textContent = totalNotes > 0 ? "78 / hr" : "0 / hr";
+
+  // Update Progress Bars & Values with animated fill
+  const pctViews = $("#pct-val-views");
+  const pctDownloads = $("#pct-val-downloads");
+  const pctSearches = $("#pct-val-searches");
+  const pctLikes = $("#pct-val-likes");
+
+  const barViews = $("#bar-fill-views");
+  const barDownloads = $("#bar-fill-downloads");
+  const barSearches = $("#bar-fill-searches");
+  const barLikes = $("#bar-fill-likes");
+
+  if (barViews) barViews.style.width = "0%";
+  if (barDownloads) barDownloads.style.width = "0%";
+  if (barSearches) barSearches.style.width = "0%";
+  if (barLikes) barLikes.style.width = "0%";
+
+  setTimeout(() => {
+    if (barViews) barViews.style.width = totalNotes > 0 ? "100%" : "0%";
+    if (barDownloads) barDownloads.style.width = totalNotes > 0 ? "44.5%" : "0%";
+    if (barSearches) barSearches.style.width = totalNotes > 0 ? "25.4%" : "0%";
+    if (barLikes) barLikes.style.width = totalNotes > 0 ? "16.4%" : "0%";
+  }, 50);
+
+  if (pctViews) pctViews.textContent = simulatedViews.toLocaleString();
+  if (pctDownloads) pctDownloads.textContent = simulatedDownloads.toLocaleString();
+  if (pctSearches) pctSearches.textContent = simulatedSearches.toLocaleString();
+  if (pctLikes) pctLikes.textContent = simulatedLikes.toLocaleString();
+
+  // Render Top Notes Table with Sort
+  renderTopNotesTable();
+
+  // Wire Sort Column Click Handlers
+  const thLikes = $("#th-sort-likes");
+  const thSaves = $("#th-sort-saves");
+
+  thLikes?.replaceWith(thLikes.cloneNode(true));
+  thSaves?.replaceWith(thSaves.cloneNode(true));
+
+  $("#th-sort-likes")?.addEventListener("click", () => {
+    if (interSortKey === "likes") {
+      interSortDir = interSortDir === "desc" ? "asc" : "desc";
+    } else {
+      interSortKey = "likes";
+      interSortDir = "desc";
+    }
+    renderTopNotesTable();
+  });
+
+  $("#th-sort-saves")?.addEventListener("click", () => {
+    if (interSortKey === "saves") {
+      interSortDir = interSortDir === "desc" ? "asc" : "desc";
+    } else {
+      interSortKey = "saves";
+      interSortDir = "desc";
+    }
+    renderTopNotesTable();
+  });
+
+  // Render Top Searches Cloud
+  const searchCloudContainer = $("#searched-tags-cloud-container");
+  if (searchCloudContainer) {
+    if (totalNotes === 0) {
+      searchCloudContainer.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--ink-muted); font-size: 0.82rem; width: 100%;">No student searches recorded yet. Search queries will appear here.</div>`;
+      return;
+    }
+
+    const topSearches = [
+      { query: "UPSC Prelims 2025", count: 482 },
+      { query: "Fundamental Rights", count: 395 },
+      { query: "Constitution Articles 12-35", count: 328 },
+      { query: "Freedom Movement", count: 290 },
+      { query: "Monetary Policy & RBI", count: 245 },
+      { query: "Indus Valley Civilization", count: 212 },
+      { query: "Rivers of India & Maps", count: 184 },
+      { query: "GDP & National Income", count: 160 },
+      { query: "Modern Indian History", count: 142 },
+      { query: "Supreme Court Writs", count: 128 },
+      { query: "SSC CGL Formulas", count: 115 },
+      { query: "Art & Architecture", count: 96 }
+    ];
+
+    searchCloudContainer.innerHTML = topSearches.map(item => `
+      <button type="button" class="search-tag-bubble" data-search-term="${escapeHtml(item.query)}" title="Filter library by '${escapeHtml(item.query)}'">
+        <span>🔍 ${escapeHtml(item.query)}</span>
+        <span class="search-tag-count">${item.count}</span>
+      </button>
+    `).join("");
+
+    searchCloudContainer.querySelectorAll("[data-search-term]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const query = btn.dataset.searchTerm;
+        const searchInput = $("#admin-table-search");
+        if (searchInput) {
+          searchInput.value = query;
+        }
+        switchAdminView("modify");
+        renderTable();
+      });
+    });
+  }
+
+  // Tab Switch Handler
+  const tabTopNotesBtn = $("#tab-top-notes-btn");
+  const tabTopSearchesBtn = $("#tab-top-searches-btn");
+  const paneTopNotes = $("#pane-top-notes");
+  const paneTopSearches = $("#pane-top-searches");
+
+  tabTopNotesBtn?.addEventListener("click", () => {
+    tabTopNotesBtn.classList.add("active");
+    tabTopSearchesBtn?.classList.remove("active");
+    if (paneTopNotes) paneTopNotes.hidden = false;
+    if (paneTopSearches) paneTopSearches.hidden = true;
+  });
+
+  tabTopSearchesBtn?.addEventListener("click", () => {
+    tabTopSearchesBtn.classList.add("active");
+    tabTopNotesBtn?.classList.remove("active");
+    if (paneTopNotes) paneTopNotes.hidden = true;
+    if (paneTopSearches) paneTopSearches.hidden = false;
+  });
+}
+
+// ==========================================
+// 4.01 Tags: Interactive Tag Cloud & Analytics
+// ==========================================
+function renderTagsView() {
+  const cloudContainer = $("#admin-tag-cloud-container");
+  const tableBody = $("#tags-leaderboard-tbody");
+  const uniqueBadge = $("#tags-unique-badge");
+  const tagsBadge = $("#tags-count-badge");
+  const searchInput = $("#admin-tags-search-input");
+
+  // Collect and aggregate tags
+  const tagCounts = {};
+  const totalNotes = allNotes.length || 0;
+
+  allNotes.forEach(note => {
+    const tags = note.tags || [];
+    tags.forEach(rawTag => {
+      const tag = rawTag.trim().replace(/^#/, "");
+      if (!tag) return;
+      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+    });
+  });
+
+  const tagList = Object.keys(tagCounts).map(name => ({
+    name,
+    count: tagCounts[name],
+    pct: totalNotes > 0 ? ((tagCounts[name] / totalNotes) * 100).toFixed(1) : "0.0"
+  })).sort((a, b) => b.count - a.count);
+
+  const uniqueCount = tagList.length;
+  if (uniqueBadge) uniqueBadge.textContent = `${uniqueCount} Unique Tags`;
+  if (tagsBadge) tagsBadge.textContent = uniqueCount;
+
+  // Max tag count for relative sizing
+  const maxCount = tagList.length > 0 ? tagList[0].count : 1;
+
+  // Render Tag Cloud function
+  const renderCloud = (filter = "") => {
+    if (!cloudContainer) return;
+    const filterLower = filter.toLowerCase().trim();
+    const filtered = tagList.filter(t => t.name.toLowerCase().includes(filterLower));
+
+    if (filtered.length === 0) {
+      cloudContainer.innerHTML = `<div style="color: var(--ink-muted); font-size: 0.82rem; padding: 24px 8px; width: 100%; text-align: center;">No tags found matching "${escapeHtml(filter)}".</div>`;
+      return;
+    }
+
+    cloudContainer.innerHTML = filtered.map((t, idx) => {
+      const ratio = t.count / maxCount;
+      const sizeClass = ratio >= 0.75 ? "size-lg" : (ratio >= 0.4 ? "size-md" : "size-sm");
+      return `
+        <button type="button" class="interactive-tag-chip ${sizeClass}" data-filter-tag="${escapeHtml(t.name)}" style="animation-delay: ${(idx * 0.03).toFixed(2)}s;" title="Filter by #${escapeHtml(t.name)} (${t.count} notes)">
+          <span>#${escapeHtml(t.name)}</span>
+          <span class="tag-chip-count">${t.count}</span>
+        </button>
+      `;
+    }).join("");
+
+    // Attach click listener to tag chips
+    cloudContainer.querySelectorAll("[data-filter-tag]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const tag = btn.dataset.filterTag;
+        const searchInput = $("#admin-table-search");
+        if (searchInput) {
+          searchInput.value = tag;
+        }
+        switchAdminView("modify");
+        renderTable();
+      });
+    });
+  };
+
+  renderCloud(searchInput ? searchInput.value : "");
+
+  // Search input live filtering
+  if (searchInput && !searchInput.dataset.bound) {
+    searchInput.dataset.bound = "true";
+    searchInput.addEventListener("input", e => {
+      renderCloud(e.target.value);
+    });
+  }
+
+  // Render Leaderboard Table
+  if (tableBody) {
+    const topTags = tagList.slice(0, 10);
+    if (topTags.length === 0) {
+      tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--ink-muted); padding: 20px;">No tags in library yet.</td></tr>`;
+      return;
+    }
+
+    tableBody.innerHTML = topTags.map((t, idx) => {
+      const rank = idx + 1;
+      const rankClass = rank === 1 ? "top-1" : (rank === 2 ? "top-2" : (rank === 3 ? "top-3" : ""));
+      return `
+        <tr>
+          <td>
+            <div class="tag-rank-cell">
+              <span class="tag-rank-badge ${rankClass}">#${rank}</span>
+              <span class="tag-name-text">#${escapeHtml(t.name)}</span>
+            </div>
+          </td>
+          <td>
+            <strong style="color: #ea580c;">${t.count}</strong> notes
+          </td>
+          <td>
+            <div class="analysis-share-cell">
+              <div class="tag-bar-bg">
+                <div class="tag-bar-fill" style="width: ${Math.max(Number(t.pct), 6)}%;"></div>
+              </div>
+              <span class="analysis-pct-text">${t.pct}%</span>
+            </div>
+          </td>
+          <td>
+            <button type="button" class="tags-filter-btn" data-drill-tag="${escapeHtml(t.name)}" title="View notes with #${escapeHtml(t.name)}">
+              <span>View Notes</span> →
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    // Attach drilldown button click listeners
+    tableBody.querySelectorAll("[data-drill-tag]").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const tag = btn.dataset.drillTag;
+        const searchInput = $("#admin-table-search");
+        if (searchInput) {
+          searchInput.value = tag;
+        }
+        switchAdminView("modify");
+        renderTable();
+      });
+    });
   }
 }
 
@@ -838,6 +1438,290 @@ function setupFileDrop() {
 }
 
 // ==========================================
+// 5.1 Publishing Studio Interactive Preview & Tags
+// ==========================================
+function setupPublishStudio() {
+  const titleInput = $("#studio-note-title");
+  const charCount = $("#studio-title-char-count");
+  const subjectSelect = $("#studio-note-subject");
+  const categoryPills = $$(".pub-cat-pill");
+  const tagsInput = $("#studio-note-tags");
+  const quickTagBtns = $$(".quick-tag-btn");
+  const simTitle = $("#sim-title-text");
+  const simBadge = $("#sim-subject-badge");
+  const simTagsRow = $("#sim-tags-row");
+
+  const catEmojiMap = {
+    "History": "📜 History",
+    "Polity": "⚖️ Polity",
+    "Economy": "📈 Economy",
+    "Geography": "🌍 Geography",
+    "Art and Culture": "🎨 Art and Culture",
+    "Maths": "📐 Maths",
+    "Science": "🔬 Science",
+    "English": "🔤 English"
+  };
+
+  // 1. Live Title input & character counter
+  titleInput?.addEventListener("input", () => {
+    const val = titleInput.value;
+    if (charCount) charCount.textContent = `${val.length}/80`;
+    if (simTitle) {
+      simTitle.textContent = val.trim() || "Indian Constitution – Fundamental Rights & Preamble";
+    }
+  });
+
+  // 2. Category Pill click handler
+  categoryPills.forEach(pill => {
+    pill.addEventListener("click", () => {
+      categoryPills.forEach(p => p.classList.remove("active"));
+      pill.classList.add("active");
+      const catVal = pill.dataset.catVal;
+      if (subjectSelect) {
+        subjectSelect.value = catVal;
+      }
+      if (simBadge) {
+        simBadge.textContent = catEmojiMap[catVal] || catVal;
+      }
+    });
+  });
+
+  // 3. Live Tags Simulator Update
+  const updateSimTags = () => {
+    if (!simTagsRow) return;
+    const raw = tagsInput ? tagsInput.value : "";
+    const tags = raw.split(",").map(t => t.trim().replace(/^#/, "")).filter(Boolean);
+    if (tags.length === 0) {
+      simTagsRow.innerHTML = `<span class="sim-tag">#UPSC</span><span class="sim-tag">#Constitution</span>`;
+    } else {
+      simTagsRow.innerHTML = tags.map(t => `<span class="sim-tag">#${escapeHtml(t)}</span>`).join("");
+    }
+  };
+
+  tagsInput?.addEventListener("input", updateSimTags);
+
+  // 4. Quick Tag suggestion click
+  quickTagBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const tagToAdd = btn.dataset.addTag;
+      if (!tagsInput || !tagToAdd) return;
+      const current = tagsInput.value.trim();
+      const existing = current.split(",").map(s => s.trim().replace(/^#/, "")).filter(Boolean);
+      if (!existing.includes(tagToAdd)) {
+        existing.push(tagToAdd);
+        tagsInput.value = existing.join(", ");
+        updateSimTags();
+      }
+    });
+  });
+
+  // 5. Verification Modal Zoom & Close Controls
+  const verifyDialog = $("#admin-publish-verify-dialog");
+  $("#verify-zoom-in")?.addEventListener("click", () => {
+    currentVerifyZoom = Math.min(currentVerifyZoom + 0.25, 3);
+    applyVerifyZoom();
+  });
+  $("#verify-zoom-out")?.addEventListener("click", () => {
+    currentVerifyZoom = Math.max(currentVerifyZoom - 0.25, 0.5);
+    applyVerifyZoom();
+  });
+  $("#verify-zoom-reset")?.addEventListener("click", () => {
+    currentVerifyZoom = 1;
+    applyVerifyZoom();
+  });
+
+  $("#verify-close-btn")?.addEventListener("click", () => {
+    verifyDialog?.close();
+  });
+  $("#verify-cancel-btn")?.addEventListener("click", () => {
+    verifyDialog?.close();
+  });
+
+  // Direct Inspect Button on Card Simulator
+  $("#open-verify-preview-btn")?.addEventListener("click", () => {
+    openPublishVerificationModal();
+  });
+
+  // Verification Confirm Publish Button
+  $("#verify-confirm-btn")?.addEventListener("click", async () => {
+    await executePublishNote();
+  });
+}
+
+// ==========================================
+// 5.2 Publish Verification Modal Logic
+// ==========================================
+let currentVerifyZoom = 1;
+
+function openPublishVerificationModal() {
+  const titleInput = $("#studio-note-title");
+  const subjectInput = $("#studio-note-subject");
+  const tagsInput = $("#studio-note-tags");
+  const msg = $("#studio-upload-msg");
+  const dialog = $("#admin-publish-verify-dialog");
+
+  const title = titleInput ? titleInput.value.trim() : "";
+  const subject = subjectInput ? subjectInput.value : "Polity";
+  const rawTags = tagsInput ? tagsInput.value : "";
+  const parsedTags = rawTags.split(",").map(s => s.trim().replace(/^#/, "")).filter(Boolean);
+
+  if (!title) {
+    if (msg) {
+      msg.textContent = "Please enter a topic title.";
+      msg.className = "form-message error";
+    }
+    titleInput?.focus();
+    return;
+  }
+
+  if (!selectedImageData) {
+    if (msg) {
+      msg.textContent = "Please choose a JPG image to upload.";
+      msg.className = "form-message error";
+    }
+    return;
+  }
+
+  // Populate Verification Modal
+  const modalImg = $("#verify-modal-img");
+  const modalTitle = $("#verify-meta-title");
+  const modalSubj = $("#verify-meta-subject");
+  const modalTags = $("#verify-meta-tags");
+  const modalFileName = $("#verify-file-name");
+  const modalFileSize = $("#verify-file-size");
+  const fileInput = $("#studio-file-input");
+
+  if (modalImg) modalImg.src = selectedImageData;
+  if (modalTitle) modalTitle.textContent = title;
+  
+  const catEmojiMap = {
+    "History": "📜 History",
+    "Polity": "⚖️ Polity",
+    "Economy": "📈 Economy",
+    "Geography": "🌍 Geography",
+    "Art and Culture": "🎨 Art and Culture",
+    "Maths": "📐 Maths",
+    "Science": "🔬 Science",
+    "English": "🔤 English"
+  };
+
+  if (modalSubj) {
+    modalSubj.textContent = catEmojiMap[subject] || subject;
+    modalSubj.className = `subject-chip ${getSubjectKey(subject)}`;
+  }
+
+  if (modalTags) {
+    if (parsedTags.length === 0) {
+      modalTags.innerHTML = `<span class="text-muted" style="font-size: 0.72rem;">No tags specified</span>`;
+    } else {
+      modalTags.innerHTML = parsedTags.map(t => `<span class="table-tag">#${escapeHtml(t)}</span>`).join("");
+    }
+  }
+
+  const fileName = fileInput?.files?.[0]?.name || $("#preview-file-name")?.textContent || "revision-note.jpg";
+  const fileSize = fileInput?.files?.[0] ? `${(fileInput.files[0].size / 1024).toFixed(1)} KB` : $("#preview-file-size")?.textContent || "High-Res JPG";
+  if (modalFileName) modalFileName.textContent = fileName;
+  if (modalFileSize) modalFileSize.textContent = fileSize;
+
+  // Reset zoom
+  currentVerifyZoom = 1;
+  applyVerifyZoom();
+
+  if (dialog) dialog.showModal();
+}
+
+function applyVerifyZoom() {
+  const modalImg = $("#verify-modal-img");
+  const levelText = $("#verify-zoom-level");
+  if (modalImg) {
+    modalImg.style.transform = `scale(${currentVerifyZoom})`;
+  }
+  if (levelText) {
+    levelText.textContent = `${Math.round(currentVerifyZoom * 100)}%`;
+  }
+}
+
+async function executePublishNote() {
+  const titleInput = $("#studio-note-title");
+  const subjectInput = $("#studio-note-subject");
+  const tagsInput = $("#studio-note-tags");
+  const msg = $("#studio-upload-msg");
+  const submitBtn = $("#studio-submit-btn");
+  const confirmBtn = $("#verify-confirm-btn");
+  const verifyDialog = $("#admin-publish-verify-dialog");
+
+  if (!selectedImageData) return;
+
+  const rawTags = tagsInput ? tagsInput.value : "";
+  const parsedTags = rawTags.split(",").map(s => s.trim().replace(/^#/, "")).filter(Boolean);
+
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = `<span>⏳</span> Publishing…`;
+  }
+
+  try {
+    await api("/api/admin/notes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: titleInput.value.trim(),
+        subject: subjectInput.value,
+        tags: parsedTags,
+        imageData: selectedImageData
+      })
+    });
+
+    showToast("✓ Revision note published! Live on Home Page.", "success");
+    if (msg) {
+      msg.textContent = "✓ Published! Note is now live for all students.";
+      msg.className = "form-message success";
+    }
+  } catch (err) {
+    const localNote = {
+      id: "local_" + Date.now(),
+      title: titleInput.value.trim(),
+      subject: subjectInput.value,
+      tags: parsedTags,
+      imageUrl: selectedImageData,
+      createdAt: new Date().toISOString()
+    };
+
+    const existingLocal = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
+    existingLocal.unshift(localNote);
+    localStorage.setItem("exam_notes_custom_uploads", JSON.stringify(existingLocal));
+
+    showToast("✓ Note published & added to Student Portal!", "success");
+    if (msg) {
+      msg.textContent = "✓ Published to your library!";
+      msg.className = "form-message success";
+    }
+  } finally {
+    if (verifyDialog) verifyDialog.close();
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = `<span>🚀</span> Confirm & Publish to Live Website`;
+    }
+
+    $("#admin-upload-form").reset();
+    selectedImageData = null;
+    $("#dropzone-prompt").hidden = false;
+    $("#dropzone-preview-wrap").hidden = true;
+    const charCount = $("#studio-title-char-count");
+    if (charCount) charCount.textContent = "0/80";
+    const simTitle = $("#sim-title-text");
+    if (simTitle) simTitle.textContent = "Indian Constitution – Fundamental Rights & Preamble";
+    const simTagsRow = $("#sim-tags-row");
+    if (simTagsRow) simTagsRow.innerHTML = `<span class="sim-tag">#UPSC</span><span class="sim-tag">#Constitution</span>`;
+    const simBadge = $("#sim-subject-badge");
+    if (simBadge) simBadge.textContent = "⚖️ Polity";
+    $$(".pub-cat-pill").forEach(p => p.classList.toggle("active", p.dataset.catVal === "Polity"));
+    if (submitBtn) submitBtn.disabled = false;
+    await loadDashboardData();
+  }
+}
+
+// ==========================================
 // 6. Edit Note Modal Operations
 // ==========================================
 function openEditModal(noteId) {
@@ -868,9 +1752,27 @@ function openEditModal(noteId) {
 // ==========================================
 let currentAdminView = "dashboard";
 
-function switchAdminView(viewName) {
+function switchAdminView(viewName, updateHash = true) {
+  const validViews = ["dashboard", "analysis", "interactions", "tags", "publish", "modify"];
+  if (!validViews.includes(viewName)) {
+    viewName = "dashboard";
+  }
+
   currentAdminView = viewName;
+  localStorage.setItem("exam_admin_active_view", viewName);
+
+  if (updateHash && window.location.hash !== `#${viewName}`) {
+    try {
+      history.replaceState(null, "", `#${viewName}`);
+    } catch {
+      window.location.hash = viewName;
+    }
+  }
+
   const dashView = $("#admin-view-dashboard");
+  const analysisView = $("#admin-view-analysis");
+  const interactionsView = $("#admin-view-interactions");
+  const tagsView = $("#admin-view-tags");
   const publishView = $("#admin-view-publish");
   const modifyView = $("#admin-view-modify");
   const navButtons = $$("[data-admin-view]");
@@ -883,6 +1785,18 @@ function switchAdminView(viewName) {
     dashView.hidden = (viewName !== "dashboard");
     dashView.classList.toggle("active", viewName === "dashboard");
   }
+  if (analysisView) {
+    analysisView.hidden = (viewName !== "analysis");
+    analysisView.classList.toggle("active", viewName === "analysis");
+  }
+  if (interactionsView) {
+    interactionsView.hidden = (viewName !== "interactions");
+    interactionsView.classList.toggle("active", viewName === "interactions");
+  }
+  if (tagsView) {
+    tagsView.hidden = (viewName !== "tags");
+    tagsView.classList.toggle("active", viewName === "tags");
+  }
   if (publishView) {
     publishView.hidden = (viewName !== "publish");
     publishView.classList.toggle("active", viewName === "publish");
@@ -892,17 +1806,44 @@ function switchAdminView(viewName) {
     modifyView.classList.toggle("active", viewName === "modify");
   }
 
-  const secName = viewName === "dashboard" ? "Dash Board" : (viewName === "publish" ? "Publish Studio" : "Content Library");
+  const secName = viewName === "dashboard" 
+    ? "Dash Board" 
+    : (viewName === "analysis" 
+        ? "Category Analysis" 
+        : (viewName === "interactions"
+            ? "User Interactions"
+            : (viewName === "tags"
+                ? "Tag Analytics"
+                : (viewName === "publish" 
+                    ? "Publish Studio" 
+                    : "Content Library"))));
+            
   const secEl = $("#portal-current-section");
   if (secEl) secEl.textContent = secName;
   const greetEl = $("#portal-greeting-heading");
   if (greetEl) {
-    greetEl.textContent = viewName === "dashboard" ? "Welcome back, Stephanraj 👋" : (viewName === "publish" ? "Publish Revision Note ☁" : "Content Library Management ✏️");
+    greetEl.textContent = viewName === "dashboard" 
+      ? "Welcome back, Stephanraj 👋" 
+      : (viewName === "analysis" 
+          ? "Categories & Subject Analytics 🥧" 
+          : (viewName === "interactions"
+              ? "Student Engagement & Interaction Telemetry ⚡"
+              : (viewName === "tags"
+                  ? "Tag Cloud & Keyword Distribution 🏷️"
+                  : (viewName === "publish" 
+                      ? "Publish Revision Note ☁" 
+                      : "Content Library Management ✏️"))));
   }
 
   if (viewName === "dashboard") {
     renderCategoryChart();
     renderRecentNotes();
+  } else if (viewName === "analysis") {
+    renderAnalysisView();
+  } else if (viewName === "interactions") {
+    renderInteractionsView();
+  } else if (viewName === "tags") {
+    renderTagsView();
   } else if (viewName === "modify") {
     renderTable();
   }
@@ -911,6 +1852,7 @@ function switchAdminView(viewName) {
 function setupEventListeners() {
   initTheme();
   setupFileDrop();
+  setupPublishStudio();
 
   // Sidebar Hide / View Toggle (Desktop Collapsible & Mobile Off-Canvas Drawer)
   const appShell = $("#admin-dashboard-section");
@@ -977,6 +1919,37 @@ function setupEventListeners() {
     });
   });
 
+  // Handle browser back/forward and hash changes
+  window.addEventListener("hashchange", () => {
+    const hash = window.location.hash.replace(/^#/, "");
+    const validViews = ["dashboard", "analysis", "interactions", "tags", "publish", "modify"];
+    if (validViews.includes(hash) && sessionStorage.getItem("exam_admin_local_session") === "true") {
+      switchAdminView(hash, false);
+    }
+  });
+
+  // Clean / Reset All Data Button
+  $("#admin-clean-data-btn")?.addEventListener("click", async () => {
+    if (!confirm("Are you sure you want to clean all test data, custom notes, and local cache? This will reset the website to a clean state for testing.")) {
+      return;
+    }
+
+    try {
+      await api("/api/admin/reset-data", { method: "POST" });
+    } catch {}
+
+    localStorage.removeItem("exam_notes_custom_uploads");
+    localStorage.removeItem("exam_notes_deleted_sample_ids");
+    localStorage.removeItem("exam_notes_local_visits");
+    localStorage.removeItem("exam_notes_bookmarks");
+    localStorage.removeItem("exam_notes_recent");
+    localStorage.removeItem("exam_notes_favorites");
+    localStorage.removeItem("exam_notes_offline_queue");
+
+    showToast("✓ All test data & local caches have been wiped clean!", "success");
+    await loadDashboardData();
+  });
+
   // Recent notes delegation click to preview
   $("#dashboard-recent-notes")?.addEventListener("click", e => {
     const prev = e.target.closest("[data-preview-id]");
@@ -1004,8 +1977,23 @@ function setupEventListeners() {
     if (!pwdInput) return;
     const isPassword = pwdInput.type === "password";
     pwdInput.type = isPassword ? "text" : "password";
-    const eyeIcon = $(".pwd-eye-icon");
-    if (eyeIcon) eyeIcon.textContent = isPassword ? "🙈" : "👁️";
+    const eyeSvg = $("#pwd-eye-icon");
+    if (eyeSvg) {
+      if (isPassword) {
+        eyeSvg.innerHTML = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>`;
+      } else {
+        eyeSvg.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
+      }
+    }
+  });
+
+  // Quick Autofill Pill Button
+  $("#quick-fill-btn")?.addEventListener("click", () => {
+    if (pwdInput) {
+      pwdInput.value = "admin123";
+      pwdInput.focus();
+      showToast("Auto-filled default password (admin123). Click Sign In to enter.", "info");
+    }
   });
 
   // Login Form Submit
@@ -1017,7 +2005,7 @@ function setupEventListeners() {
     if (!pwdInput || !msg) return;
 
     const enteredPassword = pwdInput.value.trim();
-    msg.textContent = "Verifying password credentials…";
+    msg.textContent = "Verifying credentials…";
     msg.className = "form-message";
     btn.disabled = true;
 
@@ -1038,7 +2026,7 @@ function setupEventListeners() {
           showToast("Signed in (Direct Browser Mode).", "success");
           showDashboard();
         } else {
-          msg.textContent = "Incorrect password. (Default is admin123 or check your .env file)";
+          msg.textContent = "Incorrect password. (Default is admin123 or check your server setup)";
           msg.className = "form-message error";
         }
       } else {
@@ -1065,66 +2053,10 @@ function setupEventListeners() {
   $("#admin-logout-btn")?.addEventListener("click", handleLogout);
   $("#sidebar-signout-btn")?.addEventListener("click", handleLogout);
 
-  // Upload Form Submit
-  $("#admin-upload-form")?.addEventListener("submit", async e => {
+  // Upload Form Submit (Opens Image Verification Popup First)
+  $("#admin-upload-form")?.addEventListener("submit", e => {
     e.preventDefault();
-    const titleInput = $("#studio-note-title");
-    const subjectInput = $("#studio-note-subject");
-    const tagsInput = $("#studio-note-tags");
-    const msg = $("#studio-upload-msg");
-    const submitBtn = $("#studio-submit-btn");
-
-    if (!selectedImageData) {
-      msg.textContent = "Please choose a JPG image to upload.";
-      msg.className = "form-message error";
-      return;
-    }
-
-    const rawTags = tagsInput ? tagsInput.value : "";
-    const parsedTags = rawTags.split(",").map(s => s.trim().replace(/^#/, "")).filter(Boolean);
-
-    msg.textContent = "Publishing note to library…";
-    msg.className = "form-message";
-    submitBtn.disabled = true;
-
-    try {
-      await api("/api/admin/notes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: titleInput.value.trim(),
-          subject: subjectInput.value,
-          tags: parsedTags,
-          imageData: selectedImageData
-        })
-      });
-
-      showToast("✓ Revision note published! Live on Home Page.", "success");
-      msg.textContent = "✓ Published! Note is now visible to all students.";
-    } catch (err) {
-      const localNote = {
-        id: "local_" + Date.now(),
-        title: titleInput.value.trim(),
-        subject: subjectInput.value,
-        tags: parsedTags,
-        imageUrl: selectedImageData,
-        createdAt: new Date().toISOString()
-      };
-
-      const existingLocal = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
-      existingLocal.unshift(localNote);
-      localStorage.setItem("exam_notes_custom_uploads", JSON.stringify(existingLocal));
-
-      showToast("✓ Note saved locally & added to Home Page!", "success");
-      msg.textContent = "✓ Published to your library!";
-    } finally {
-      $("#admin-upload-form").reset();
-      selectedImageData = null;
-      $("#dropzone-prompt").hidden = false;
-      $("#dropzone-preview-wrap").hidden = true;
-      submitBtn.disabled = false;
-      await loadDashboardData();
-    }
+    openPublishVerificationModal();
   });
 
   // Edit Note Form Submit

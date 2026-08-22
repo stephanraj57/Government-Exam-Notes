@@ -32,107 +32,92 @@
     </div>
   </header>
 
-  <!-- Unauthenticated Login View Container -->
+  <!-- Unauthenticated Login View Container (Obsidian Glow & Glass Studio Design) -->
   <main class="admin-container" id="admin-auth-container">
-    <section id="admin-auth-section" class="admin-auth-card">
-      <!-- Static Study & Exam Themed Icons Framing Login Window (No Floating Drift) -->
-      <div class="auth-floating-elements" aria-hidden="true">
-        <!-- Top Row (Above login window) -->
-        <span class="static-icon size-lg pos-1" title="Smart Brain">🧠</span>
-        <span class="static-icon size-md pos-2" title="Answer Notes">📝</span>
-        <span class="static-icon size-sm pos-3" title="Economy">📈</span>
-        <span class="static-icon size-md pos-4" title="Telescope">🔭</span>
-        <span class="static-icon size-lg pos-5" title="Workstation">🖥️</span>
-        <span class="static-icon size-lg pos-6" title="Current Affairs">🌐</span>
-        <span class="static-icon size-md pos-7" title="Honor Medal">🏅</span>
-        <span class="static-icon size-sm pos-8" title="Concepts">💡</span>
-        <span class="static-icon size-md pos-9" title="Key Pin">📌</span>
-        <span class="static-icon size-lg pos-10" title="Polity & Justice">⚖️</span>
+    
+    <!-- Ambient Radial Glow Mesh Backdrop -->
+    <div class="obsidian-ambient-glow">
+      <div class="glow-orb glow-orb-1"></div>
+      <div class="glow-orb glow-orb-2"></div>
+    </div>
 
-        <!-- Left Wing (Staggered around left of login window) -->
-        <span class="static-icon size-lg pos-11" title="History">🏛️</span>
-        <span class="static-icon size-md pos-12" title="Graduation Cap">🎓</span>
-        <span class="static-icon size-sm pos-13" title="Ruler">📏</span>
-        <span class="static-icon size-md pos-14" title="Fountain Pen">🖋️</span>
-        <span class="static-icon size-sm pos-15" title="Paperclip">📎</span>
-        <span class="static-icon size-md pos-16" title="Timer">⏱️</span>
-        <span class="static-icon size-sm pos-17" title="Map Pin">📍</span>
-        <span class="static-icon size-sm pos-18" title="Ballpoint Pen">🖊️</span>
-        <span class="static-icon size-md pos-19" title="Pencil">✏️</span>
-        <span class="static-icon size-sm pos-20" title="Data Chart">📊</span>
-        <span class="static-icon size-md pos-21" title="Scale">📐</span>
-        <span class="static-icon size-sm pos-22" title="Compass">🧭</span>
-        <span class="static-icon size-lg pos-23" title="Notebook">📓</span>
-        <span class="static-icon size-sm pos-24" title="Sticky Tabs">📑</span>
+    <div class="obsidian-auth-wrapper">
+      
+      <!-- Obsidian Studio Glass Card -->
+      <section id="admin-auth-section" class="obsidian-auth-card">
+        
+        <!-- Header & Identity -->
+        <div class="obsidian-card-header">
+          <div class="obsidian-lock-wrap">
+            <div class="lock-glow-ring"></div>
+            <div class="obsidian-lock-badge">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </div>
+          </div>
 
-        <!-- Right Wing (Staggered around right of login window) -->
-        <span class="static-icon size-lg pos-25" title="Geography">🌍</span>
-        <span class="static-icon size-md pos-26" title="Syllabus Scroll">📜</span>
-        <span class="static-icon size-sm pos-27" title="Bookmark Ribbon">🔖</span>
-        <span class="static-icon size-lg pos-28" title="Reading Book">📖</span>
-        <span class="static-icon size-sm pos-29" title="Petri Dish">🧫</span>
-        <span class="static-icon size-md pos-30" title="Research">🔍</span>
-        <span class="static-icon size-sm pos-31" title="Exam Calendar">📅</span>
-        <span class="static-icon size-sm pos-32" title="Central Bank">🏦</span>
-        <span class="static-icon size-lg pos-33" title="Success Trophy">🏆</span>
-        <span class="static-icon size-sm pos-34" title="Service Badge">🎖️</span>
-        <span class="static-icon size-md pos-35" title="Eraser">🧹</span>
-        <span class="static-icon size-sm pos-36" title="Art & Culture">🎨</span>
-        <span class="static-icon size-md pos-37" title="Chemistry Lab">🧪</span>
-        <span class="static-icon size-md pos-38" title="Digital Notes">💻</span>
-
-        <!-- Bottom Row (Below login window) -->
-        <span class="static-icon size-md pos-39" title="Aptitude Abacus">🧮</span>
-        <span class="static-icon size-lg pos-40" title="Study Books">📚</span>
-        <span class="static-icon size-sm pos-41" title="Alarm Clock">⏰</span>
-        <span class="static-icon size-sm pos-42" title="Mobile Learning">📱</span>
-        <span class="static-icon size-md pos-43" title="Biology DNA">🧬</span>
-        <span class="static-icon size-md pos-44" title="Fast Revision">⚡</span>
-        <span class="static-icon size-sm pos-45" title="Economy Graph">📉</span>
-        <span class="static-icon size-sm pos-46" title="1st Rank Gold">🥇</span>
-        <span class="static-icon size-md pos-47" title="Target Exam">🎯</span>
-        <span class="static-icon size-lg pos-48" title="Science Research">🔬</span>
-      </div>
-
-      <div class="auth-card-modern">
-        <div class="auth-photo-frame">
-          <img src="assets/admin.jpg" alt="Stephanraj" class="auth-admin-avatar">
-          <span class="online-status-dot" title="Administrator"></span>
+          <h1 class="obsidian-title">Admin Studio</h1>
+          
+          <div class="obsidian-identity-pill">
+            <span class="live-pulse-dot"></span>
+            <span class="admin-name-text">Stephanraj</span>
+            <span class="role-divider">•</span>
+            <span class="admin-role-tag">Master Admin</span>
+          </div>
         </div>
 
-        <div class="auth-header-text">
-          <span class="auth-badge">stephanraj</span>
-          <h1>Welcome back</h1>
-          <p class="auth-desc">Please enter your administrator password to access Admin Studio.</p>
-        </div>
-
-        <form id="admin-page-login-form" class="auth-form-modern">
-          <div class="auth-input-group">
-            <label for="admin-page-password" class="auth-input-label">Admin Password</label>
-            <div class="password-field-wrap">
-              <span class="field-icon-left">🔒</span>
-              <input id="admin-page-password" type="password" autocomplete="current-password" placeholder="Enter administrator password..." required>
-              <button id="toggle-pwd-visibility" class="toggle-pwd-btn" type="button" title="Show/Hide Password" aria-label="Toggle password visibility">
-                <span class="pwd-eye-icon">👁️</span>
+        <!-- Password Form -->
+        <form id="admin-page-login-form" class="obsidian-form">
+          <div class="obsidian-input-group">
+            <label for="admin-page-password" class="obsidian-label">Master Password</label>
+            <div class="obsidian-field-wrap">
+              <span class="obsidian-leading-icon">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 2l-2 2m-1.5 1.5L16 7l-1.5 1.5-1.5-1.5-3 3 1.5 1.5L8 13l-1.5-1.5-4 4a2.83 2.83 0 0 0 4 4l4-4-1.5-1.5 1.5-1.5 1.5 1.5 3-3-1.5-1.5 1.5-1.5 1.5 1.5 1.5-1.5L22 3l-1-1z"></path>
+                </svg>
+              </span>
+              <input id="admin-page-password" type="password" autocomplete="current-password" placeholder="Enter password to unlock..." required autofocus>
+              <button id="toggle-pwd-visibility" class="obsidian-pwd-toggle" type="button" title="Show/Hide Password" aria-label="Toggle password visibility">
+                <svg id="pwd-eye-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
               </button>
             </div>
           </div>
 
           <p id="admin-page-login-msg" class="form-message"></p>
 
-          <button id="admin-page-login-submit" class="auth-submit-btn" type="submit">
-            <span>Sign In to Dashboard</span>
-            <span class="btn-arrow">→</span>
+          <button id="admin-page-login-submit" class="obsidian-submit-btn" type="submit">
+            <span>Unlock Studio</span>
           </button>
         </form>
 
-        <div class="auth-card-footer">
-          <a href="index.html" class="back-link">
-            <span>←</span> Back to Public Website
+        <!-- Card Footer -->
+        <div class="obsidian-card-footer">
+          <a href="index.html" class="obsidian-return-link" title="Return to Notes Library">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            <span>Public Notes Library</span>
           </a>
         </div>
-      </div>
-    </section>
+
+      </section>
+
+      <!-- Page Sub-Footer -->
+      <footer class="obsidian-page-footer">
+        <span class="security-chip">
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          <span>End-to-End Encrypted Session</span>
+        </span>
+      </footer>
+
+    </div>
   </main>
 
   <!-- Mobile Sidebar Backdrop Overlay -->
@@ -174,6 +159,30 @@
             </div>
             <b id="dash-notes-badge" class="cat-count">0</b>
           </button>
+          <button class="category admin-nav-card" data-admin-view="analysis">
+            <span class="nav-icon-box analysis-box">🥧</span>
+            <div class="nav-text-col">
+              <span class="cat-name">Analysis</span>
+              <small class="nav-sub-desc">Category Breakdown</small>
+            </div>
+            <b id="analysis-notes-badge" class="cat-count">8</b>
+          </button>
+          <button class="category admin-nav-card" data-admin-view="interactions">
+            <span class="nav-icon-box interactions-box">⚡</span>
+            <div class="nav-text-col">
+              <span class="cat-name">Interactions</span>
+              <small class="nav-sub-desc">Likes, Downloads & Searches</small>
+            </div>
+            <b id="interactions-badge" class="cat-count">Live</b>
+          </button>
+          <button class="category admin-nav-card" data-admin-view="tags">
+            <span class="nav-icon-box tags-box">🏷️</span>
+            <div class="nav-text-col">
+              <span class="cat-name">Tags</span>
+              <small class="nav-sub-desc">Tag Cloud & Frequency</small>
+            </div>
+            <b id="tags-count-badge" class="cat-count">0</b>
+          </button>
           <button class="category admin-nav-card" data-admin-view="publish">
             <span class="nav-icon-box publish-box">☁</span>
             <div class="nav-text-col">
@@ -202,6 +211,11 @@
             <span class="quick-link-text">Public Portal</span>
             <span class="quick-link-arrow">↗</span>
           </a>
+          <button type="button" id="admin-clean-data-btn" class="sidebar-quick-link clean-data-link" title="Clean all uploads, cache and reset to pristine state">
+            <span class="quick-link-icon">🧹</span>
+            <span class="quick-link-text">Clean All Data</span>
+            <span class="quick-link-arrow">↺</span>
+          </button>
         </div>
       </div>
 
@@ -318,31 +332,349 @@
         </div>
       </div>
 
+      <!-- View: Analysis (Category Distribution Pie Chart & Deep Analytics) -->
+      <div id="admin-view-analysis" class="admin-view-pane" hidden>
+        <!-- Main Analysis Layout: Left Pie Chart + Right Category Breakdown Table -->
+        <div class="analysis-main-grid">
+          
+          <!-- Category Pie Chart Card -->
+          <div class="admin-card analysis-chart-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Visual Analytics</p>
+                <h2>Categories Pie Chart</h2>
+              </div>
+              <span class="badge live-badge">Interactive Slices</span>
+            </div>
+
+            <div class="pie-chart-container">
+              <div class="pie-chart-visual-wrap">
+                <!-- SVG Vector Pie Chart with Interactive Hover Segments -->
+                <svg id="categories-pie-chart-svg" class="categories-pie-chart-svg" viewBox="-120 -120 240 240" width="230" height="230">
+                  <!-- Dynamically rendered pie / donut slices -->
+                </svg>
+                <div class="pie-center-badge">
+                  <span class="pie-center-total" id="pie-center-total-num">0</span>
+                  <span class="pie-center-label">Total Notes</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="pie-chart-footer">
+              <small class="field-hint">💡 Hover or click any category slice to highlight subject metrics and filter notes.</small>
+            </div>
+          </div>
+
+          <!-- Category Share Breakdown Table Card -->
+          <div class="admin-card analysis-details-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Subject Metrics</p>
+                <h2>Category Distribution & Share</h2>
+              </div>
+              <span class="badge live-badge" id="analysis-subjects-badge">8 Categories</span>
+            </div>
+
+            <div class="analysis-table-wrap">
+              <table class="analysis-breakdown-table">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Count</th>
+                    <th>Library Share</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="analysis-table-body">
+                  <!-- Dynamically populated table rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- View: User Interactions (Likes, Downloads, Searches, Views Analytics) -->
+      <div id="admin-view-interactions" class="admin-view-pane" hidden>
+        
+        <!-- Top 4 Interaction Stat Cards -->
+        <div class="interactions-metrics-grid">
+          
+          <div class="metric-card interaction-kpi-card kpi-likes">
+            <div class="metric-icon-wrap icon-likes">❤️</div>
+            <div class="metric-info">
+              <p class="metric-label">Total Notes Liked</p>
+              <h3 id="interaction-total-likes" class="metric-value">0</h3>
+              <small class="metric-subtext"><span class="kpi-trend-up">↑ 18.4%</span> Student Favorites</small>
+            </div>
+          </div>
+
+          <div class="metric-card interaction-kpi-card kpi-downloads">
+            <div class="metric-icon-wrap icon-downloads">⬇️</div>
+            <div class="metric-info">
+              <p class="metric-label">Total Downloads</p>
+              <h3 id="interaction-total-downloads" class="metric-value">0</h3>
+              <small class="metric-subtext"><span class="kpi-trend-up">↑ 24.1%</span> High-Res Exports</small>
+            </div>
+          </div>
+
+          <div class="metric-card interaction-kpi-card kpi-searches">
+            <div class="metric-icon-wrap icon-searches">🔍</div>
+            <div class="metric-info">
+              <p class="metric-label">Searches Executed</p>
+              <h3 id="interaction-total-searches" class="metric-value">0</h3>
+              <small class="metric-subtext"><span class="kpi-trend-up">↑ 12.8%</span> Keyword Lookups</small>
+            </div>
+          </div>
+
+          <div class="metric-card interaction-kpi-card kpi-views">
+            <div class="metric-icon-wrap icon-views">👁️</div>
+            <div class="metric-info">
+              <p class="metric-label">Note Impressions</p>
+              <h3 id="interaction-total-views" class="metric-value">0</h3>
+              <small class="metric-subtext"><span class="kpi-trend-up">↑ 31.6%</span> Fullscreen Reads</small>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Main Interactions Layout Grid -->
+        <div class="interactions-main-grid">
+          
+          <!-- Left Card: Visual Activity Distribution & Engagement Flow -->
+          <div class="admin-card interactions-flow-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Engagement Ratio</p>
+                <h2>Interaction Breakdown</h2>
+              </div>
+              <span class="badge live-badge">Live Telemetry</span>
+            </div>
+
+            <div class="interaction-bars-container">
+              
+              <!-- Bar 1: Views -->
+              <div class="interaction-bar-row">
+                <div class="interaction-row-label">
+                  <span class="interaction-icon">👁️</span>
+                  <strong>Lightbox Views</strong>
+                </div>
+                <div class="interaction-bar-track">
+                  <div id="bar-fill-views" class="interaction-bar-fill fill-views" style="width: 100%;"></div>
+                </div>
+                <span id="pct-val-views" class="interaction-count-badge">8,640</span>
+              </div>
+
+              <!-- Bar 2: Downloads -->
+              <div class="interaction-bar-row">
+                <div class="interaction-row-label">
+                  <span class="interaction-icon">⬇️</span>
+                  <strong>Note Downloads</strong>
+                </div>
+                <div class="interaction-bar-track">
+                  <div id="bar-fill-downloads" class="interaction-bar-fill fill-downloads" style="width: 44%;"></div>
+                </div>
+                <span id="pct-val-downloads" class="interaction-count-badge">3,850</span>
+              </div>
+
+              <!-- Bar 3: Searches -->
+              <div class="interaction-bar-row">
+                <div class="interaction-row-label">
+                  <span class="interaction-icon">🔍</span>
+                  <strong>Keyword Searches</strong>
+                </div>
+                <div class="interaction-bar-track">
+                  <div id="bar-fill-searches" class="interaction-bar-fill fill-searches" style="width: 25%;"></div>
+                </div>
+                <span id="pct-val-searches" class="interaction-count-badge">2,190</span>
+              </div>
+
+              <!-- Bar 4: Likes -->
+              <div class="interaction-bar-row">
+                <div class="interaction-row-label">
+                  <span class="interaction-icon">❤️</span>
+                  <strong>Likes & Saves</strong>
+                </div>
+                <div class="interaction-bar-track">
+                  <div id="bar-fill-likes" class="interaction-bar-fill fill-likes" style="width: 16%;"></div>
+                </div>
+                <span id="pct-val-likes" class="interaction-count-badge">1,420</span>
+              </div>
+
+            </div>
+
+            <div class="interaction-summary-box">
+              <div class="summary-metric">
+                <span class="summary-metric-val" id="summary-conversion-rate">44.5%</span>
+                <span class="summary-metric-lbl">Download Rate</span>
+              </div>
+              <div class="summary-metric">
+                <span class="summary-metric-val" id="summary-engagement-rate">16.4%</span>
+                <span class="summary-metric-lbl">Favorite Rate</span>
+              </div>
+              <div class="summary-metric">
+                <span class="summary-metric-val" id="summary-avg-searches">78 / hr</span>
+                <span class="summary-metric-lbl">Search Velocity</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Card: Top Engaged Notes & Trending Searched Tags -->
+          <div class="admin-card interactions-leaderboard-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Student Discovery</p>
+                <h2>Most Popular & Searched Content</h2>
+              </div>
+              <div class="interactions-tab-switch">
+                <button type="button" id="tab-top-notes-btn" class="inter-tab-btn active">Top Notes</button>
+                <button type="button" id="tab-top-searches-btn" class="inter-tab-btn">Top Searches</button>
+              </div>
+            </div>
+
+            <!-- Tab 1: Top Engaged Notes Table -->
+            <div id="pane-top-notes" class="inter-pane active">
+              <div class="inter-table-wrap">
+                <table class="interactions-table">
+                  <thead>
+                    <tr>
+                      <th>Rank & Note</th>
+                      <th>Subject</th>
+                      <th id="th-sort-likes" class="sortable-col active" data-sort-field="likes" title="Click to sort by Likes (Ascending / Descending)">
+                        <div class="sort-col-content">
+                          <span>❤️ Likes</span>
+                          <span class="sort-indicator" id="sort-ind-likes">▼</span>
+                        </div>
+                      </th>
+                      <th id="th-sort-saves" class="sortable-col" data-sort-field="saves" title="Click to sort by Saves (Ascending / Descending)">
+                        <div class="sort-col-content">
+                          <span>⬇️ Saves</span>
+                          <span class="sort-indicator" id="sort-ind-saves">▼</span>
+                        </div>
+                      </th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="interactions-top-notes-tbody">
+                    <!-- Dynamically populated -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Tab 2: Most Searched Keywords & Tags Cloud -->
+            <div id="pane-top-searches" class="inter-pane" hidden>
+              <div class="searched-tags-cloud" id="searched-tags-cloud-container">
+                <!-- Dynamically populated search tags bubbles -->
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- View: Tags (Tag Cloud, Frequency Analytics & Quick Drilldowns) -->
+      <div id="admin-view-tags" class="admin-view-pane" hidden>
+        <div class="tags-main-grid">
+          
+          <!-- Left: Interactive Tag Cloud Card -->
+          <div class="admin-card tags-cloud-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Visual Discovery</p>
+                <h2>Interactive Tag Cloud</h2>
+              </div>
+              <span class="badge live-badge" id="tags-unique-badge">0 Unique Tags</span>
+            </div>
+
+            <div class="tags-search-bar-wrap">
+              <span class="tags-search-icon">🔍</span>
+              <input type="search" id="admin-tags-search-input" class="tags-search-input" placeholder="Search keywords & tags (e.g. UPSC, GDP)..." autocomplete="off">
+            </div>
+
+            <div class="tag-cloud-container" id="admin-tag-cloud-container">
+              <!-- Dynamically populated interactive tag chips -->
+            </div>
+
+            <div class="tags-cloud-footer">
+              <small class="field-hint">💡 Tip: Click any tag chip to instantly filter the Content Library by that tag.</small>
+            </div>
+          </div>
+
+          <!-- Right: Top Tag Leaderboard & Frequency Metrics Card -->
+          <div class="admin-card tags-leaderboard-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Frequency Ranking</p>
+                <h2>Top Tags Leaderboard</h2>
+              </div>
+              <span class="badge live-badge" id="tags-leaderboard-badge">Most Applied</span>
+            </div>
+
+            <div class="tags-table-wrap">
+              <table class="tags-leaderboard-table">
+                <thead>
+                  <tr>
+                    <th>Rank & Tag</th>
+                    <th>Count</th>
+                    <th>Library Share</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="tags-leaderboard-tbody">
+                  <!-- Dynamically populated top tag rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
       <!-- View 2: Publish (Upload Center Studio) -->
       <div id="admin-view-publish" class="admin-view-pane" hidden>
         <div class="admin-card upload-studio-card">
           <div class="card-header">
             <div>
-              <p class="eyebrow">Upload Center Studio</p>
+              <p class="eyebrow">Publishing Studio</p>
               <h2>Publish Revision Note Image</h2>
             </div>
-            <span class="badge live-badge">● Ready to publish</span>
+            <div class="publish-header-meta">
+              <span class="badge live-badge">● Live Public Pipeline</span>
+            </div>
           </div>
 
           <form id="admin-upload-form" class="studio-form">
-            <div class="studio-form-grid">
-              <div class="studio-form-col">
-                <label class="form-label">
-                  Topic Title
-                  <input id="studio-note-title" type="text" maxlength="80" placeholder="e.g. Fundamental Rights (Articles 12–35)" required>
-                  <small class="field-hint">A clear, descriptive concept title for students.</small>
-                </label>
+            <div class="publish-studio-layout">
+              
+              <!-- Left Column: Note Metadata & Tagging -->
+              <div class="publish-meta-pane">
+                
+                <!-- Topic Title -->
+                <div class="publish-field-group">
+                  <div class="publish-label-row">
+                    <label for="studio-note-title" class="publish-field-label">
+                      <span class="label-icon">✍️</span> Topic Title
+                    </label>
+                    <span class="char-count" id="studio-title-char-count">0/80</span>
+                  </div>
+                  <div class="publish-input-wrap">
+                    <input id="studio-note-title" class="publish-input" type="text" maxlength="80" placeholder="e.g. Fundamental Rights (Articles 12–35)" required autocomplete="off">
+                  </div>
+                </div>
 
-                <label class="form-label">
-                  Subject & Category
-                  <select id="studio-note-subject" required>
+                <!-- Subject Category Pill Selector -->
+                <div class="publish-field-group">
+                  <label class="publish-field-label">
+                    <span class="label-icon">📚</span> Subject & Category
+                  </label>
+                  
+                  <select id="studio-note-subject" class="studio-subject-hidden-select" required>
                     <option value="History">📜 History</option>
-                    <option value="Polity">⚖️ Polity</option>
+                    <option value="Polity" selected>⚖️ Polity</option>
                     <option value="Economy">📈 Economy</option>
                     <option value="Geography">🌍 Geography</option>
                     <option value="Art and Culture">🎨 Art and Culture</option>
@@ -350,45 +682,101 @@
                     <option value="Science">🔬 Science</option>
                     <option value="English">🔤 English</option>
                   </select>
-                </label>
 
-                <label class="form-label">
-                  Multiple Tags (Comma-separated)
-                  <input id="studio-note-tags" type="text" placeholder="e.g. UPSC, Constitution, Articles, Prelims 2025">
-                  <small class="field-hint">Add keywords to help students search & filter this note.</small>
-                </label>
+                  <div class="publish-category-pill-grid" id="publish-category-pill-grid">
+                    <button type="button" class="pub-cat-pill" data-cat-val="History"><span class="pill-emoji">📜</span> History</button>
+                    <button type="button" class="pub-cat-pill active" data-cat-val="Polity"><span class="pill-emoji">⚖️</span> Polity</button>
+                    <button type="button" class="pub-cat-pill" data-cat-val="Economy"><span class="pill-emoji">📈</span> Economy</button>
+                    <button type="button" class="pub-cat-pill" data-cat-val="Geography"><span class="pill-emoji">🌍</span> Geography</button>
+                    <button type="button" class="pub-cat-pill" data-cat-val="Art and Culture"><span class="pill-emoji">🎨</span> Art & Cult.</button>
+                    <button type="button" class="pub-cat-pill" data-cat-val="Maths"><span class="pill-emoji">📐</span> Maths</button>
+                    <button type="button" class="pub-cat-pill" data-cat-val="Science"><span class="pill-emoji">🔬</span> Science</button>
+                    <button type="button" class="pub-cat-pill" data-cat-val="English"><span class="pill-emoji">🔤</span> English</button>
+                  </div>
+                </div>
+
+                <!-- Tags Input & Quick Suggestion Chips -->
+                <div class="publish-field-group">
+                  <label for="studio-note-tags" class="publish-field-label">
+                    <span class="label-icon">🏷️</span> Multiple Tags (Comma-separated)
+                  </label>
+                  <div class="publish-input-wrap">
+                    <input id="studio-note-tags" class="publish-input" type="text" placeholder="e.g. UPSC, Constitution, Articles, Prelims 2025" autocomplete="off">
+                  </div>
+                  
+                  <!-- Quick Tag Suggestion Chips -->
+                  <div class="quick-tag-suggestions">
+                    <span class="quick-tag-label">Quick Add:</span>
+                    <button type="button" class="quick-tag-btn" data-add-tag="UPSC">+ UPSC</button>
+                    <button type="button" class="quick-tag-btn" data-add-tag="Prelims 2025">+ Prelims 2025</button>
+                    <button type="button" class="quick-tag-btn" data-add-tag="Constitution">+ Constitution</button>
+                    <button type="button" class="quick-tag-btn" data-add-tag="Articles">+ Articles</button>
+                    <button type="button" class="quick-tag-btn" data-add-tag="SSC CGL">+ SSC CGL</button>
+                    <button type="button" class="quick-tag-btn" data-add-tag="Revision">+ Revision</button>
+                  </div>
+                </div>
+
               </div>
 
-              <div class="studio-form-col">
-                <!-- File Upload Drop Zone with Live Image Preview -->
-                <label class="form-label">Note Image (JPG / JPEG)</label>
+              <!-- Right Column: Note Image Dropzone & Live Note Card Preview -->
+              <div class="publish-preview-pane">
+                
+                <label class="publish-field-label">
+                  <span class="label-icon">🖼️</span> Note Image & Live Student Card Simulator
+                </label>
+
+                <!-- Enhanced Modern Dropzone -->
                 <div id="studio-dropzone" class="studio-dropzone">
                   <input id="studio-file-input" type="file" accept="image/jpeg,.jpg,.jpeg" required>
                   
                   <div id="dropzone-prompt" class="dropzone-prompt">
-                    <span class="dropzone-icon">📁</span>
-                    <strong>Click to browse or drag & drop image</strong>
-                    <p>High-resolution JPG, maximum 5 MB</p>
+                    <div class="dropzone-cloud-icon">☁️</div>
+                    <strong class="dropzone-headline">Drag & drop JPG or click to upload</strong>
+                    <p class="dropzone-subline">High-resolution JPG diagram / notes, maximum 5 MB</p>
                   </div>
 
-                  <!-- Live Preview Container -->
+                  <!-- Live Preview File Overlay Bar -->
                   <div id="dropzone-preview-wrap" class="dropzone-preview-wrap" hidden>
                     <img id="dropzone-img-preview" class="preview-img" alt="Upload preview">
                     <div class="preview-details">
-                      <span id="preview-file-name" class="preview-name">image.jpg</span>
-                      <span id="preview-file-size" class="preview-size">0 KB</span>
+                      <div class="preview-details-left">
+                        <span id="preview-file-name" class="preview-name">image.jpg</span>
+                        <span id="preview-file-size" class="preview-size">0 KB</span>
+                      </div>
                       <button id="remove-preview-btn" type="button" class="text-btn danger">Remove & Replace</button>
                     </div>
                   </div>
                 </div>
+
+                <!-- Live Card Preview Simulator -->
+                <div class="publish-live-card-sim">
+                  <div class="sim-header">
+                    <span class="sim-label">Live Public Card Preview</span>
+                    <div class="sim-header-right">
+                      <span class="sim-badge" id="sim-subject-badge">⚖️ Polity</span>
+                      <button type="button" id="open-verify-preview-btn" class="sim-inspect-btn" title="Inspect Full Note Preview in Popup">👁️ Inspect</button>
+                    </div>
+                  </div>
+                  <div class="sim-card-body">
+                    <h4 class="sim-title" id="sim-title-text">Indian Constitution – Fundamental Rights & Preamble</h4>
+                    <div class="sim-tags-row" id="sim-tags-row">
+                      <span class="sim-tag">#UPSC</span>
+                      <span class="sim-tag">#Constitution</span>
+                    </div>
+                  </div>
+                </div>
+
               </div>
+
             </div>
 
             <p id="studio-upload-msg" class="form-message"></p>
 
-            <div class="studio-form-actions">
-              <button id="studio-submit-btn" class="upload-button full" type="submit">
-                <span>☁</span> Publish Note to Public Website
+            <div class="publish-bottom-actions">
+              <button id="studio-submit-btn" class="publish-action-button" type="submit">
+                <span class="pub-btn-icon">🚀</span>
+                <span class="pub-btn-text">Publish Note to Public Website</span>
+                <span class="pub-btn-hint">Instant Student Access</span>
               </button>
             </div>
           </form>
@@ -558,6 +946,85 @@
         </button>
       </div>
     </form>
+  </dialog>
+
+  <!-- Publish Note Image Verification Popup Window -->
+  <dialog id="admin-publish-verify-dialog" class="dialog publish-verify-dialog">
+    <div class="verify-dialog-content">
+      <!-- Header -->
+      <div class="verify-dialog-header">
+        <div class="verify-header-left">
+          <p class="eyebrow">Quality Inspection & Verification</p>
+          <h2>Verify Revision Note Image & Details</h2>
+        </div>
+        <button id="verify-close-btn" class="close-button" type="button" title="Close & Cancel">×</button>
+      </div>
+
+      <!-- Main Body: High-Res Image Viewport & Metadata Confirmation -->
+      <div class="verify-dialog-body">
+        
+        <!-- High-Res Image Viewport with interactive zoom -->
+        <div class="verify-media-viewport">
+          <div class="verify-zoom-bar">
+            <button id="verify-zoom-out" class="verify-zoom-btn" type="button" title="Zoom Out (−)">−</button>
+            <span id="verify-zoom-level" class="verify-zoom-level">100%</span>
+            <button id="verify-zoom-in" class="verify-zoom-btn" type="button" title="Zoom In (+)">+</button>
+            <button id="verify-zoom-reset" class="verify-zoom-btn" type="button" title="Reset Zoom">↺</button>
+          </div>
+          
+          <div class="verify-image-container" id="verify-image-container">
+            <img id="verify-modal-img" class="verify-high-res-img" src="" alt="High resolution note preview">
+          </div>
+        </div>
+
+        <!-- Note Summary Card & Metadata Confirmation -->
+        <div class="verify-info-panel">
+          <div class="verify-info-card">
+            <span class="verify-info-heading">Public Note Specifications</span>
+            
+            <div class="verify-meta-item">
+              <span class="verify-meta-label">Subject & Category:</span>
+              <span id="verify-meta-subject" class="subject-chip">⚖️ Polity</span>
+            </div>
+
+            <div class="verify-meta-item">
+              <span class="verify-meta-label">Topic Title:</span>
+              <h4 id="verify-meta-title" class="verify-topic-title">Fundamental Rights</h4>
+            </div>
+
+            <div class="verify-meta-item">
+              <span class="verify-meta-label">Keywords / Tags:</span>
+              <div id="verify-meta-tags" class="verify-tags-wrap">
+                <span class="table-tag">#UPSC</span>
+              </div>
+            </div>
+
+            <div class="verify-meta-item">
+              <span class="verify-meta-label">File Specs:</span>
+              <div class="verify-file-stats">
+                <span id="verify-file-name" class="verify-file-name">diagram.jpg</span>
+                <span id="verify-file-size" class="verify-file-badge">0 KB</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="verify-tip-box">
+            <span>💡 <strong>Live Rendering:</strong> This is the exact high-definition view students will inspect in the note lightbox.</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Action Footer -->
+      <div class="verify-dialog-footer">
+        <button type="button" id="verify-cancel-btn" class="outline-button verify-cancel-btn">
+          <span>←</span> Back to Edit
+        </button>
+        <button type="button" id="verify-confirm-btn" class="publish-confirm-action-btn">
+          <span>🚀</span> Confirm & Publish to Live Website
+        </button>
+      </div>
+    </div>
   </dialog>
 
   <!-- Lightbox / High-Res Note Preview Popup Window -->
