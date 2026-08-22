@@ -138,10 +138,18 @@ function sendUnauthorized(response) {
   sendJson(response, 401, { error: "Admin sign-in is required for this action." });
 }
 
+function getLocalDateKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 async function handleApi(request, response, url) {
   if (request.method === "GET" && url.pathname === "/api/visits") {
     const visits = await readJson(VISITS_FILE).catch(() => ({ count: 0, daily: {} }));
-    const todayKey = new Date().toISOString().slice(0, 10);
+    const todayKey = getLocalDateKey();
     const todayCount = (visits.daily && visits.daily[todayKey]) || 0;
     sendJson(response, 200, { count: visits.count || 0, today: todayCount, daily: visits.daily || {} });
     return true;
@@ -151,16 +159,36 @@ async function handleApi(request, response, url) {
     const visits = await readJson(VISITS_FILE).catch(() => ({ count: 0, daily: {} }));
     if (!visits.daily) visits.daily = {};
     const cookies = parseCookies(request);
-    const headers = {};
-    const todayKey = new Date().toISOString().slice(0, 10);
-    if (!cookies.examVisitor) {
-      visits.count = (visits.count || 0) + 1;
+    const todayKey = getLocalDateKey();
+    const setCookiesList = [];
+    let shouldSave = false;
+
+    // Track Today's Unique Visitor (if client hasn't visited today yet)
+    if (cookies.examVisitorDay !== todayKey) {
       visits.daily[todayKey] = (visits.daily[todayKey] || 0) + 1;
-      await writeJson(VISITS_FILE, visits);
-      headers["Set-Cookie"] = `examVisitor=${crypto.randomUUID()}; Path=/; Max-Age=31536000; SameSite=Lax`;
+      setCookiesList.push(`examVisitorDay=${todayKey}; Path=/; Max-Age=86400; SameSite=Lax`);
+      shouldSave = true;
     }
+
+    // Track Lifetime Unique Visitor (if first time ever visiting website)
+    if (!cookies.examVisitorUid) {
+      visits.count = (visits.count || 0) + 1;
+      const uid = crypto.randomUUID();
+      setCookiesList.push(`examVisitorUid=${uid}; Path=/; Max-Age=31536000; SameSite=Lax`);
+      shouldSave = true;
+    }
+
+    if (shouldSave) {
+      await writeJson(VISITS_FILE, visits);
+    }
+
+    const headers = {};
+    if (setCookiesList.length > 0) {
+      headers["Set-Cookie"] = setCookiesList.length === 1 ? setCookiesList[0] : setCookiesList;
+    }
+
     const todayCount = visits.daily[todayKey] || 0;
-    sendJson(response, 200, { count: visits.count, today: todayCount, daily: visits.daily }, headers);
+    sendJson(response, 200, { count: visits.count || 0, today: todayCount, daily: visits.daily }, headers);
     return true;
   }
 

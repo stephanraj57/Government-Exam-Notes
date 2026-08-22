@@ -147,10 +147,23 @@ async function loadNotes() {
 
   notes = [...mergedUploaded, ...activeSamples];
 
-  // Track genuine student visit once per session
+  // Prune any stale bookmark IDs that no longer exist in current library
+  const noteIdSet = new Set(notes.map(n => n.id));
+  bookmarks = new Set([...bookmarks].filter(id => noteIdSet.has(id)));
+  localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
+
+  // Track genuine student homepage visit (recording daily & total website traffic)
   if (!sessionStorage.getItem("exam_student_session_visit")) {
     sessionStorage.setItem("exam_student_session_visit", "true");
-    fetch("/api/visits/track", { method: "POST" }).catch(() => {});
+    fetch("/api/visits/track", { method: "POST" })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          localStorage.setItem("exam_notes_local_visits", String(data.count || 0));
+          localStorage.setItem("exam_notes_local_visits_today", String(data.today || 0));
+        }
+      })
+      .catch(() => {});
   }
 
   updateAdminState();
@@ -383,7 +396,8 @@ function render() {
 
   // Update Bookmarks Counter Badge
   const bookmarkBadge = $("#bookmark-badge");
-  if (bookmarkBadge) bookmarkBadge.textContent = bookmarks.size;
+  const validBookmarksCount = [...bookmarks].filter(id => notes.some(n => n.id === id)).length;
+  if (bookmarkBadge) bookmarkBadge.textContent = validBookmarksCount;
 }
 
 // ==========================================
