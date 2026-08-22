@@ -29,12 +29,12 @@ function normalizeSubject(subject = "") {
   if (s.includes("art") || s.includes("culture")) return "Art and Culture";
   if (s.includes("math")) return "Maths";
   if (s.includes("science") || s.includes("physics") || s.includes("chem") || s.includes("bio")) return "Science";
-  if (s.includes("english") || s.includes("grammar") || s.includes("vocab")) return "English";
+  if (s.includes("other") || s.includes("english") || s.includes("grammar") || s.includes("vocab")) return "Others";
   if (s.includes("history")) return "History";
   if (s.includes("polity") || s.includes("constitution")) return "Polity";
   if (s.includes("geography") || s.includes("geo")) return "Geography";
   if (s.includes("econ")) return "Economy";
-  return "History";
+  return "Others";
 }
 
 function animateNumberCounter(el, target, duration = 1200) {
@@ -63,12 +63,12 @@ function getSubjectKey(subject = "") {
   if (s.includes("art") || s.includes("culture")) return "art-culture";
   if (s.includes("math")) return "maths";
   if (s.includes("science")) return "science";
-  if (s.includes("english")) return "english";
+  if (s.includes("other") || s.includes("english")) return "others";
   if (s.includes("history")) return "history";
   if (s.includes("polity")) return "polity";
   if (s.includes("geography")) return "geography";
   if (s.includes("economy")) return "economy";
-  return "history";
+  return "others";
 }
 
 function showToast(message, type = "info") {
@@ -250,13 +250,17 @@ function showDashboard() {
     logoutBtn.style.removeProperty("display");
   }
 
-  // Restore user's current view from URL hash or localStorage
-  const validViews = ["dashboard", "analysis", "interactions", "tags", "publish", "modify"];
+  // Restore user's current view from URL hash, sessionStorage or localStorage
+  const validViews = ["dashboard", "analysis", "interactions", "tags", "missing-searches", "publish", "modify"];
   const hash = window.location.hash.replace(/^#/, "");
-  const targetView = validViews.includes(hash) ? hash : (localStorage.getItem("exam_admin_active_view") || "dashboard");
+  const savedView = sessionStorage.getItem("exam_admin_active_view") || localStorage.getItem("exam_admin_active_view") || "dashboard";
+  const targetView = validViews.includes(hash) ? hash : (validViews.includes(savedView) ? savedView : "dashboard");
+
+  // Switch immediately so page reload renders the exact active view with zero delay
+  switchAdminView(targetView, true);
 
   loadDashboardData().then(() => {
-    switchAdminView(targetView);
+    switchAdminView(targetView, false);
   });
 }
 
@@ -276,6 +280,7 @@ async function loadDashboardData() {
   let uploaded = [];
   let visitsCount = 0;
   let todayVisits = 0;
+  let activeUsers = 1;
 
   try {
     const [notesData, visitsData, interData] = await Promise.all([
@@ -287,6 +292,7 @@ async function loadDashboardData() {
     uploaded = notesData.notes || [];
     visitsCount = visitsData.count || 0;
     todayVisits = visitsData.today || 0;
+    activeUsers = (visitsData && visitsData.activeUsers) || (interData && interData.activeUsers) || 1;
     if (interData && interData.totalLikes !== undefined) {
       liveInteractions = interData;
     } else {
@@ -348,13 +354,35 @@ async function loadDashboardData() {
   const topCountEl = $("#metric-top-count");
   if (topCountEl) topCountEl.textContent = allNotes.length > 0 ? `${maxCatCount} Notes Published` : "0 Notes Published";
 
+  const missingCount = Object.keys(liveInteractions.missingSearches || {}).length;
+  const missingBadge = $("#missing-searches-badge");
+  if (missingBadge) {
+    missingBadge.textContent = missingCount;
+  }
+
+  updateActiveUsersDisplay(activeUsers);
+
   renderCategoryChart();
   renderAnalysisView();
   renderInteractionsView();
   renderTagsView();
+  renderMissingSearchesView();
   renderPublishTagSuggestions("");
   renderRecentNotes();
   renderTable();
+}
+
+function updateActiveUsersDisplay(count) {
+  const safeCount = Math.max(1, Number(count) || 1);
+  const statusText = $("#admin-server-status-text");
+  if (statusText) {
+    const userLabel = safeCount === 1 ? "1 Active User" : `${safeCount} Active Users`;
+    statusText.textContent = `Online · ${userLabel}`;
+  }
+  const liveEl = $("#metric-live-online-users");
+  if (liveEl) {
+    liveEl.textContent = `🟢 ${safeCount} Online Now`;
+  }
 }
 
 function renderRecentNotes() {
@@ -415,7 +443,7 @@ function renderCategoryChart() {
     { name: "Art and Culture", icon: "🎨", color: "#7c3aed", key: "art-and-culture" },
     { name: "Maths", icon: "📐", color: "#ea580c", key: "maths" },
     { name: "Science", icon: "🔬", color: "#e11d48", key: "science" },
-    { name: "English", icon: "🔤", color: "#0284c7", key: "english" }
+    { name: "Others", icon: "📁", color: "#0284c7", key: "others" }
   ];
 
   const total = allNotes.length || 1;
@@ -505,7 +533,7 @@ function renderAnalysisView() {
     { name: "Art and Culture", icon: "🎨", color: "#8b5cf6", key: "art-and-culture" },
     { name: "Maths", icon: "📐", color: "#f97316", key: "maths" },
     { name: "Science", icon: "🔬", color: "#ec4899", key: "science" },
-    { name: "English", icon: "🔤", color: "#6366f1", key: "english" }
+    { name: "Others", icon: "📁", color: "#6366f1", key: "others" }
   ];
 
   const total = allNotes.length || 0;
@@ -1059,6 +1087,130 @@ function renderTagsView() {
   }
 }
 
+// ==========================================
+// 4.035 Search Demands (Unavailable Content Gaps)
+// ==========================================
+let missingSearchesState = {
+  filter: "",
+  sortBy: "count-desc" // "count-desc" | "recent-desc" | "alpha-asc"
+};
+
+function renderMissingSearchesView() {
+  const missingObj = liveInteractions.missingSearches || {};
+  let list = Object.values(missingObj);
+
+  const totalSearches = list.reduce((acc, item) => acc + (Number(item.count) || 0), 0);
+  const uniqueTopics = list.length;
+
+  // Find Top Wanted Topic
+  let topTopic = "—";
+  let topCount = 0;
+  if (list.length > 0) {
+    const sortedByCount = [...list].sort((a, b) => (Number(b.count) || 0) - (Number(a.count) || 0));
+    topTopic = sortedByCount[0].query || "—";
+    topCount = sortedByCount[0].count || 0;
+  }
+
+  // Update Badges & Stat Cards
+  const headerBadge = $("#missing-searches-header-count");
+  if (headerBadge) headerBadge.textContent = `${uniqueTopics} Missing Topic${uniqueTopics === 1 ? '' : 's'}`;
+
+  const sidebarBadge = $("#missing-searches-badge");
+  if (sidebarBadge) {
+    sidebarBadge.textContent = uniqueTopics;
+  }
+
+  const statTotal = $("#stat-missing-total-searches");
+  if (statTotal) statTotal.textContent = totalSearches;
+
+  const statUnique = $("#stat-missing-unique-topics");
+  if (statUnique) statUnique.textContent = uniqueTopics;
+
+  const statTop = $("#stat-missing-top-topic");
+  if (statTop) statTop.textContent = topTopic;
+
+  const statTopCnt = $("#stat-missing-top-count");
+  if (statTopCnt) statTopCnt.textContent = `${topCount} student search${topCount === 1 ? '' : 'es'}`;
+
+  // Apply Filter & Sort
+  const filterVal = (missingSearchesState.filter || "").toLowerCase().trim();
+  let filtered = list.filter(item => (item.query || "").toLowerCase().includes(filterVal));
+
+  if (missingSearchesState.sortBy === "count-desc") {
+    filtered.sort((a, b) => (Number(b.count) || 0) - (Number(a.count) || 0));
+  } else if (missingSearchesState.sortBy === "recent-desc") {
+    filtered.sort((a, b) => new Date(b.lastSearched || 0) - new Date(a.lastSearched || 0));
+  } else if (missingSearchesState.sortBy === "alpha-asc") {
+    filtered.sort((a, b) => (a.query || "").localeCompare(b.query || ""));
+  }
+
+  const tbody = $("#missing-demands-tbody");
+  const tableWrap = $("#missing-table-wrapper");
+  const emptyState = $("#missing-demands-empty-state");
+
+  if (filtered.length === 0) {
+    if (tbody) tbody.innerHTML = "";
+    if (tableWrap) tableWrap.style.display = "none";
+    if (emptyState) emptyState.hidden = false;
+  } else {
+    if (tableWrap) tableWrap.style.display = "block";
+    if (emptyState) emptyState.hidden = true;
+
+    const maxDemand = Math.max(...filtered.map(i => Number(i.count) || 1), 1);
+
+    if (tbody) {
+      tbody.innerHTML = filtered.map((item, idx) => {
+        const rank = idx + 1;
+        const count = Number(item.count) || 1;
+        const pct = Math.min(100, Math.max(12, (count / maxDemand) * 100));
+        let lastDateText = "Recent";
+        if (item.lastSearched) {
+          const d = new Date(item.lastSearched);
+          if (!isNaN(d.getTime())) {
+            lastDateText = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+          }
+        }
+
+        return `
+          <tr>
+            <td>
+              <span class="demand-rank-badge">#${rank}</span>
+            </td>
+            <td>
+              <div class="demand-keyword-wrap">
+                <span class="demand-keyword-pill">
+                  <span>🔎</span> <strong>${escapeHtml(item.query)}</strong>
+                </span>
+              </div>
+            </td>
+            <td>
+              <div class="demand-count-col">
+                <div class="demand-count-header">
+                  <span class="demand-count-badge">${count} search${count === 1 ? '' : 'es'}</span>
+                </div>
+                <div class="demand-bar-bg">
+                  <div class="demand-bar-fill" style="width: ${pct}%;"></div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="demand-time-text">${lastDateText}</span>
+            </td>
+            <td style="text-align: right;">
+              <button type="button" class="fulfill-action-btn" data-fulfill-topic="${escapeHtml(item.query)}" title="Create and publish note for ${escapeHtml(item.query)}">
+                <span>➕</span> Create Note
+              </button>
+              <button type="button" class="dismiss-demand-btn" data-dismiss-topic="${escapeHtml(item.query)}" title="Dismiss this topic from demands log">
+                ✕
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+  }
+}
+
 function getNoteDateValue(n) {
   if (n.createdAt) {
     const t = Date.parse(n.createdAt);
@@ -1375,8 +1527,63 @@ async function deleteNotesByIds(ids) {
 }
 
 // ==========================================
-// 5. File Drag & Drop + Live Image Preview
+// 5. Intelligent Image Optimizer & File Processor
 // ==========================================
+function optimizeImageFile(file, maxDimension = 2400, quality = 0.90) {
+  return new Promise((resolve, reject) => {
+    // If it's SVG, keep raw SVG base64
+    if (file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg")) {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = e => {
+      const img = new Image();
+      img.onerror = () => resolve(e.target.result); // Fallback to raw dataURL if decoding fails
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(e.target.result);
+          return;
+        }
+
+        // Fill clean white background for PNG transparency
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        try {
+          const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
+          resolve(compressedDataUrl);
+        } catch {
+          resolve(e.target.result);
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function setupFileDrop() {
   const fileInput = $("#studio-file-input");
   const dropzone = $("#studio-dropzone");
@@ -1388,13 +1595,13 @@ function setupFileDrop() {
   const removeBtn = $("#remove-preview-btn");
   const msg = $("#studio-upload-msg");
 
-  function processFile(file) {
+  async function processFile(file) {
     if (msg) {
       msg.textContent = "";
       msg.className = "form-message";
     }
 
-    if (!file || !file.type.startsWith("image/")) {
+    if (!file || (!file.type.startsWith("image/") && !/\.(jpe?g|png|webp|svg)$/i.test(file.name))) {
       showToast("Only image files (JPG, PNG, WEBP, SVG) can be uploaded.", "error");
       if (msg) {
         msg.textContent = "Only image files (JPG, PNG, WEBP, SVG) are allowed.";
@@ -1404,28 +1611,31 @@ function setupFileDrop() {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      showToast("Image size exceeds 10 MB limit.", "error");
+    if (file.size > 15 * 1024 * 1024) {
+      showToast("Image size exceeds 15 MB limit.", "error");
       if (msg) {
-        msg.textContent = "File size exceeds 10 MB. Please select a smaller image.";
+        msg.textContent = "File size exceeds 15 MB. Please select a smaller image.";
         msg.className = "form-message error";
       }
       clearPreview();
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = e => {
-      selectedImageData = e.target.result;
-      imgPreview.src = selectedImageData;
+    try {
       nameLabel.textContent = file.name;
-      sizeLabel.textContent = `${(file.size / 1024).toFixed(1)} KB`;
-
+      sizeLabel.textContent = "Optimizing note image…";
       promptBox.hidden = true;
       previewWrap.hidden = false;
+
+      const dataUrl = await optimizeImageFile(file);
+      selectedImageData = dataUrl;
+      imgPreview.src = selectedImageData;
+      sizeLabel.textContent = `${(file.size / 1024).toFixed(1)} KB (High-Res)`;
       if (msg) msg.textContent = "";
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      showToast("Failed to process image file.", "error");
+      clearPreview();
+    }
   }
 
   function clearPreview() {
@@ -1790,15 +2000,19 @@ async function executePublishNote() {
   const confirmBtn = $("#verify-confirm-btn");
   const verifyDialog = $("#admin-publish-verify-dialog");
 
-  if (!selectedImageData) return;
+  if (!selectedImageData) {
+    showToast("Please upload a note image diagram first.", "error");
+    return;
+  }
 
   const rawTags = tagsInput ? tagsInput.value : "";
   const parsedTags = rawTags.split(",").map(s => s.trim().replace(/^#/, "")).filter(Boolean);
 
   if (confirmBtn) {
     confirmBtn.disabled = true;
-    confirmBtn.innerHTML = `<span>⏳</span> Publishing…`;
+    confirmBtn.innerHTML = `<span>⏳</span> Publishing to Library…`;
   }
+  if (submitBtn) submitBtn.disabled = true;
 
   try {
     await api("/api/admin/notes", {
@@ -1817,32 +2031,10 @@ async function executePublishNote() {
       msg.textContent = "✓ Published! Note is now live for all students.";
       msg.className = "form-message success";
     }
-  } catch (err) {
-    const localNote = {
-      id: "local_" + Date.now(),
-      title: titleInput.value.trim(),
-      subject: subjectInput.value,
-      tags: parsedTags,
-      imageUrl: selectedImageData,
-      createdAt: new Date().toISOString()
-    };
 
-    const existingLocal = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
-    existingLocal.unshift(localNote);
-    localStorage.setItem("exam_notes_custom_uploads", JSON.stringify(existingLocal));
-
-    showToast("✓ Note published & added to Student Portal!", "success");
-    if (msg) {
-      msg.textContent = "✓ Published to your library!";
-      msg.className = "form-message success";
-    }
-  } finally {
     if (verifyDialog) verifyDialog.close();
-    if (confirmBtn) {
-      confirmBtn.disabled = false;
-      confirmBtn.innerHTML = `<span>🚀</span> Confirm & Publish to Live Website`;
-    }
 
+    // Reset Form & Preview on successful publish
     $("#admin-upload-form").reset();
     selectedImageData = null;
     $("#dropzone-prompt").hidden = false;
@@ -1856,8 +2048,21 @@ async function executePublishNote() {
     const simBadge = $("#sim-subject-badge");
     if (simBadge) simBadge.textContent = "⚖️ Polity";
     $$(".pub-cat-pill").forEach(p => p.classList.toggle("active", p.dataset.catVal === "Polity"));
-    if (submitBtn) submitBtn.disabled = false;
+
     await loadDashboardData();
+  } catch (err) {
+    console.error("Publish Note Error:", err);
+    showToast("Upload Error: " + (err.message || "Failed to save note to server."), "error");
+    if (msg) {
+      msg.textContent = "Error: " + (err.message || "Failed to publish note to server.");
+      msg.className = "form-message error";
+    }
+  } finally {
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = `<span>🚀</span> Confirm & Publish to Live Website`;
+    }
+    if (submitBtn) submitBtn.disabled = false;
   }
 }
 
@@ -1893,58 +2098,42 @@ function openEditModal(noteId) {
 let currentAdminView = "dashboard";
 
 function switchAdminView(viewName, updateHash = true) {
-  const validViews = ["dashboard", "analysis", "interactions", "tags", "publish", "modify"];
+  const validViews = ["dashboard", "analysis", "interactions", "tags", "missing-searches", "publish", "modify"];
   if (!validViews.includes(viewName)) {
     viewName = "dashboard";
   }
 
   currentAdminView = viewName;
+  sessionStorage.setItem("exam_admin_active_view", viewName);
   localStorage.setItem("exam_admin_active_view", viewName);
 
   if (updateHash && window.location.hash !== `#${viewName}`) {
     try {
-      history.replaceState(null, "", `#${viewName}`);
-    } catch {
       window.location.hash = viewName;
+    } catch {
+      history.replaceState(null, "", `#${viewName}`);
     }
   }
 
-  const dashView = $("#admin-view-dashboard");
-  const analysisView = $("#admin-view-analysis");
-  const interactionsView = $("#admin-view-interactions");
-  const tagsView = $("#admin-view-tags");
-  const publishView = $("#admin-view-publish");
-  const modifyView = $("#admin-view-modify");
+  // Update Sidebar Navigation Active Highlight
   const navButtons = $$("[data-admin-view]");
-
   navButtons.forEach(btn => {
     btn.classList.toggle("active", btn.dataset.adminView === viewName);
   });
 
-  if (dashView) {
-    dashView.hidden = (viewName !== "dashboard");
-    dashView.classList.toggle("active", viewName === "dashboard");
-  }
-  if (analysisView) {
-    analysisView.hidden = (viewName !== "analysis");
-    analysisView.classList.toggle("active", viewName === "analysis");
-  }
-  if (interactionsView) {
-    interactionsView.hidden = (viewName !== "interactions");
-    interactionsView.classList.toggle("active", viewName === "interactions");
-  }
-  if (tagsView) {
-    tagsView.hidden = (viewName !== "tags");
-    tagsView.classList.toggle("active", viewName === "tags");
-  }
-  if (publishView) {
-    publishView.hidden = (viewName !== "publish");
-    publishView.classList.toggle("active", viewName === "publish");
-  }
-  if (modifyView) {
-    modifyView.hidden = (viewName !== "modify");
-    modifyView.classList.toggle("active", viewName === "modify");
-  }
+  const allPanes = $$(".admin-view-pane");
+  allPanes.forEach(pane => {
+    const isTarget = pane.id === `admin-view-${viewName}`;
+    pane.hidden = !isTarget;
+    pane.classList.toggle("active", isTarget);
+    if (isTarget) {
+      pane.removeAttribute("hidden");
+      pane.style.removeProperty("display");
+    } else {
+      pane.setAttribute("hidden", "");
+      pane.style.setProperty("display", "none", "important");
+    }
+  });
 
   const secName = viewName === "dashboard" 
     ? "Dash Board" 
@@ -1954,9 +2143,11 @@ function switchAdminView(viewName, updateHash = true) {
             ? "User Interactions"
             : (viewName === "tags"
                 ? "Tag Analysis"
-                : (viewName === "publish" 
-                    ? "Publish Studio" 
-                    : "Content Library"))));
+                : (viewName === "missing-searches"
+                    ? "Search Demands"
+                    : (viewName === "publish" 
+                        ? "Publish Studio" 
+                        : "Content Library")))));
             
   const secEl = $("#portal-current-section");
   if (secEl) secEl.textContent = secName;
@@ -1970,9 +2161,11 @@ function switchAdminView(viewName, updateHash = true) {
               ? "Student Engagement & Interaction Telemetry ⚡"
               : (viewName === "tags"
                   ? "Tag Cloud & Keyword Distribution 🏷️"
-                  : (viewName === "publish" 
-                      ? "Publish Revision Note ☁" 
-                      : "Content Library Management ✏️"))));
+                  : (viewName === "missing-searches"
+                      ? "Student Search Demands & Content Gaps 🔎"
+                      : (viewName === "publish" 
+                          ? "Publish Revision Note ☁" 
+                          : "Content Library Management ✏️")))));
   }
 
   if (viewName === "dashboard") {
@@ -1984,6 +2177,8 @@ function switchAdminView(viewName, updateHash = true) {
     renderInteractionsView();
   } else if (viewName === "tags") {
     renderTagsView();
+  } else if (viewName === "missing-searches") {
+    renderMissingSearchesView();
   } else if (viewName === "modify") {
     renderTable();
   }
@@ -2245,9 +2440,69 @@ function setupEventListeners() {
   // Handle browser back/forward and hash changes
   window.addEventListener("hashchange", () => {
     const hash = window.location.hash.replace(/^#/, "");
-    const validViews = ["dashboard", "analysis", "interactions", "tags", "publish", "modify"];
+    const validViews = ["dashboard", "analysis", "interactions", "tags", "missing-searches", "publish", "modify"];
     if (validViews.includes(hash) && sessionStorage.getItem("exam_admin_local_session") === "true") {
       switchAdminView(hash, false);
+    }
+  });
+
+  // Missing Demands Filter & Sort listeners
+  $("#missing-demands-search-input")?.addEventListener("input", e => {
+    missingSearchesState.filter = e.target.value;
+    renderMissingSearchesView();
+  });
+
+  $("#missing-demands-sort-select")?.addEventListener("change", e => {
+    missingSearchesState.sortBy = e.target.value;
+    renderMissingSearchesView();
+  });
+
+  // Clear all missing searches
+  $("#clear-missing-searches-btn")?.addEventListener("click", async () => {
+    if (!confirm("Are you sure you want to clear all logged search demands?")) return;
+    try {
+      await api("/api/admin/missing-searches/clear", { method: "POST" });
+    } catch {}
+    if (liveInteractions) {
+      liveInteractions.missingSearches = {};
+    }
+    renderMissingSearchesView();
+    showToast("✓ All search demands cleared!", "success");
+  });
+
+  // Event Delegation for Fulfill & Dismiss
+  $("#missing-demands-tbody")?.addEventListener("click", async e => {
+    const fulfillBtn = e.target.closest("[data-fulfill-topic]");
+    if (fulfillBtn) {
+      const topic = fulfillBtn.dataset.fulfillTopic;
+      switchAdminView("publish");
+      const titleInput = $("#studio-note-title");
+      if (titleInput) {
+        titleInput.value = topic;
+        const charCount = $("#studio-title-char-count");
+        if (charCount) charCount.textContent = `${topic.length}/80`;
+        const simTitle = $("#sim-title-text");
+        if (simTitle) simTitle.textContent = topic;
+      }
+      showToast(`✓ Pre-filled note title with in-demand topic: "${topic}"`, "success");
+      setTimeout(() => {
+        $("#studio-file-input")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 200);
+      return;
+    }
+
+    const dismissBtn = e.target.closest("[data-dismiss-topic]");
+    if (dismissBtn) {
+      const topic = dismissBtn.dataset.dismissTopic;
+      if (!confirm(`Remove "${topic}" from the search demands log?`)) return;
+      try {
+        await api("/api/admin/missing-searches/" + encodeURIComponent(topic), { method: "DELETE" });
+      } catch {}
+      if (liveInteractions && liveInteractions.missingSearches) {
+        delete liveInteractions.missingSearches[topic];
+      }
+      renderMissingSearchesView();
+      showToast(`Topic "${topic}" removed from demands log.`, "info");
     }
   });
 
@@ -2276,7 +2531,8 @@ function setupEventListeners() {
       totalSearches: 0,
       totalImpressions: 0,
       notes: {},
-      searches: {}
+      searches: {},
+      missingSearches: {}
     };
 
     showToast("✓ All test data, interactions & local caches have been wiped clean!", "success");
@@ -2439,29 +2695,17 @@ function setupEventListeners() {
       });
 
       showToast("✓ Note updated successfully!", "success");
-    } catch (err) {
-      const existingLocal = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
-      const idx = existingLocal.findIndex(x => x.id === id);
-      if (idx !== -1) {
-        existingLocal[idx].title = title;
-        existingLocal[idx].subject = subject;
-        existingLocal[idx].tags = parsedTags;
-        if (editImageData) existingLocal[idx].imageUrl = editImageData;
-        localStorage.setItem("exam_notes_custom_uploads", JSON.stringify(existingLocal));
-      } else {
-        const sampleIdx = sampleNotes.findIndex(x => x.id === id);
-        if (sampleIdx !== -1) {
-          sampleNotes[sampleIdx].title = title;
-          sampleNotes[sampleIdx].subject = subject;
-          sampleNotes[sampleIdx].tags = parsedTags;
-          if (editImageData) sampleNotes[sampleIdx].imageUrl = editImageData;
-        }
-      }
-      showToast("✓ Note updated in local storage!", "success");
-    } finally {
-      submitBtn.disabled = false;
       $("#admin-edit-dialog")?.close();
       await loadDashboardData();
+    } catch (err) {
+      console.error("Edit Note Error:", err);
+      showToast("Update Failed: " + (err.message || "Failed to update note."), "error");
+      if (msg) {
+        msg.textContent = "Error: " + (err.message || "Failed to save changes.");
+        msg.className = "form-message error";
+      }
+    } finally {
+      submitBtn.disabled = false;
     }
   });
 
@@ -2873,3 +3117,17 @@ function prevLightbox() {
 // Start
 setupEventListeners();
 checkAuth();
+
+// ==========================================
+// Real-Time Active Users Presence Poller
+// ==========================================
+setInterval(async () => {
+  if (sessionStorage.getItem("exam_admin_local_session") === "true" || document.visibilityState === "visible") {
+    try {
+      const res = await api("/api/heartbeat");
+      if (res && res.activeUsers !== undefined) {
+        updateActiveUsersDisplay(res.activeUsers);
+      }
+    } catch {}
+  }
+}, 10000);

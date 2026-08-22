@@ -65,7 +65,8 @@ async function ensureStorage() {
     totalSearches: 0,
     totalImpressions: 0,
     notes: {},
-    searches: {}
+    searches: {},
+    missingSearches: {}
   });
 }
 
@@ -110,14 +111,14 @@ function safePasswordMatch(value) {
   return supplied.length === expected.length && crypto.timingSafeEqual(supplied, expected);
 }
 
-function readBody(request, limit = 7 * 1024 * 1024) {
+function readBody(request, limit = 15 * 1024 * 1024) {
   return new Promise((resolve, reject) => {
     let size = 0;
     const chunks = [];
     request.on("data", (chunk) => {
       size += chunk.length;
       if (size > limit) {
-        reject(new Error("Request is too large."));
+        reject(new Error("Upload payload is too large. Limit is 15 MB."));
         request.destroy();
         return;
       }
@@ -138,6 +139,33 @@ function sendUnauthorized(response) {
   sendJson(response, 401, { error: "Admin sign-in is required for this action." });
 }
 
+const activeSessions = new Map();
+
+function getActiveUsersCount() {
+  const now = Date.now();
+  const threshold = now - 90000; // 90 seconds active window
+  for (const [id, ts] of activeSessions.entries()) {
+    if (ts < threshold) {
+      activeSessions.delete(id);
+    }
+  }
+  return Math.max(1, activeSessions.size);
+}
+
+function registerSessionHeartbeat(request, body = null, isLeave = false) {
+  const cookies = parseCookies(request);
+  let sessionId = (body && body.sessionId) || cookies.examVisitorUid || cookies.examVisitorDay;
+  if (!sessionId) {
+    sessionId = `client-${request.socket.remoteAddress || "local"}`;
+  }
+  if (isLeave) {
+    activeSessions.delete(sessionId);
+  } else {
+    activeSessions.set(sessionId, Date.now());
+  }
+  return getActiveUsersCount();
+}
+
 function getLocalDateKey() {
   const now = new Date();
   const year = now.getFullYear();
@@ -147,15 +175,34 @@ function getLocalDateKey() {
 }
 
 async function handleApi(request, response, url) {
+  if (url.pathname === "/api/heartbeat") {
+    let body = null;
+    if (request.method === "POST") {
+      body = await readBody(request).catch(() => null);
+    }
+    const isLeave = url.searchParams.get("leave") === "true";
+    const activeCount = registerSessionHeartbeat(request, body, isLeave);
+    sendJson(response, 200, { online: true, activeUsers: activeCount, port: PORT });
+    return true;
+  }
+
   if (request.method === "GET" && url.pathname === "/api/visits") {
+    registerSessionHeartbeat(request);
     const visits = await readJson(VISITS_FILE).catch(() => ({ count: 0, daily: {} }));
     const todayKey = getLocalDateKey();
     const todayCount = (visits.daily && visits.daily[todayKey]) || 0;
-    sendJson(response, 200, { count: visits.count || 0, today: todayCount, daily: visits.daily || {} });
+    sendJson(response, 200, {
+      count: visits.count || 0,
+      today: todayCount,
+      activeUsers: getActiveUsersCount(),
+      daily: visits.daily || {}
+    });
     return true;
   }
 
   if (request.method === "POST" && url.pathname === "/api/visits/track") {
+    const body = await readBody(request).catch(() => ({}));
+    registerSessionHeartbeat(request, body);
     const visits = await readJson(VISITS_FILE).catch(() => ({ count: 0, daily: {} }));
     if (!visits.daily) visits.daily = {};
     const cookies = parseCookies(request);
@@ -188,24 +235,33 @@ async function handleApi(request, response, url) {
     }
 
     const todayCount = visits.daily[todayKey] || 0;
-    sendJson(response, 200, { count: visits.count || 0, today: todayCount, daily: visits.daily }, headers);
+    sendJson(response, 200, {
+      count: visits.count || 0,
+      today: todayCount,
+      activeUsers: getActiveUsersCount(),
+      daily: visits.daily
+    }, headers);
     return true;
   }
 
   if (request.method === "GET" && url.pathname === "/api/notes") {
+    registerSessionHeartbeat(request);
     sendJson(response, 200, { notes: await readJson(NOTES_FILE) });
     return true;
   }
 
   if (request.method === "GET" && url.pathname === "/api/interactions") {
+    registerSessionHeartbeat(request);
     const interactions = await readJson(INTERACTIONS_FILE).catch(() => ({
       totalLikes: 0,
       totalDownloads: 0,
       totalSearches: 0,
       totalImpressions: 0,
       notes: {},
-      searches: {}
+      searches: {},
+      missingSearches: {}
     }));
+    interactions.activeUsers = getActiveUsersCount();
     sendJson(response, 200, interactions);
     return true;
   }
@@ -223,6 +279,7 @@ async function handleApi(request, response, url) {
 
     if (!interactions.notes) interactions.notes = {};
     if (!interactions.searches) interactions.searches = {};
+    if (!interactions.missingSearches) interactions.missingSearches = {};
 
     const type = String(body.type || "");
     const noteId = String(body.noteId || "");
@@ -251,6 +308,20 @@ async function handleApi(request, response, url) {
       if (query && query.length >= 2) {
         const qKey = query.slice(0, 40);
         interactions.searches[qKey] = (interactions.searches[qKey] || 0) + 1;
+      }
+    } else if (type === "missing_search" || type === "unfulfilled_search") {
+      if (query && query.length >= 2) {
+        const qKey = query.slice(0, 60);
+        if (!interactions.missingSearches[qKey]) {
+          interactions.missingSearches[qKey] = {
+            query: qKey,
+            count: 0,
+            firstSearched: new Date().toISOString(),
+            lastSearched: new Date().toISOString()
+          };
+        }
+        interactions.missingSearches[qKey].count = (interactions.missingSearches[qKey].count || 0) + 1;
+        interactions.missingSearches[qKey].lastSearched = new Date().toISOString();
       }
     } else if (type === "impression" || type === "view") {
       const increment = noteIds.length > 0 ? noteIds.length : 1;
@@ -302,19 +373,26 @@ async function handleApi(request, response, url) {
     const tags = Array.isArray(body.tags)
       ? body.tags.map(t => String(t).trim().replace(/^#/, "")).filter(Boolean).slice(0, 10)
       : String(body.tags || "").split(",").map(t => t.trim().replace(/^#/, "")).filter(Boolean).slice(0, 10);
-    const imageMatch = String(body.imageData || "").match(/^data:image\/jpeg;base64,([a-zA-Z0-9+/=]+)$/);
+    
+    const rawImage = String(body.imageData || "").trim();
+    const imageMatch = rawImage.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=\r\n\s]+)$/);
     if (!title || !subject || !imageMatch) {
-      sendJson(response, 400, { error: "A title, subject, and JPG image are required." });
+      sendJson(response, 400, { error: "A title, subject, and valid note image diagram are required." });
       return true;
     }
-    const image = Buffer.from(imageMatch[1], "base64");
-    if (image.length > 5 * 1024 * 1024 || image.length < 4 || image[0] !== 0xff || image[1] !== 0xd8 || image[2] !== 0xff) {
-      sendJson(response, 400, { error: "The uploaded file must be a JPG image under 5 MB." });
+
+    const rawType = imageMatch[1].toLowerCase();
+    const ext = rawType.includes("png") ? "png" : rawType.includes("webp") ? "webp" : rawType.includes("svg") ? "svg" : "jpg";
+    const imageBuffer = Buffer.from(imageMatch[2].replace(/[\r\n\s]/g, ""), "base64");
+
+    if (imageBuffer.length < 4 || imageBuffer.length > 12 * 1024 * 1024) {
+      sendJson(response, 400, { error: "Image file is too large or corrupted. Please upload an image under 10 MB." });
       return true;
     }
+
     const id = crypto.randomUUID();
-    const fileName = `${id}.jpg`;
-    await fs.writeFile(path.join(UPLOAD_DIR, fileName), image);
+    const fileName = `${id}.${ext}`;
+    await fs.writeFile(path.join(UPLOAD_DIR, fileName), imageBuffer);
     const notes = await readJson(NOTES_FILE);
     const note = { id, title, subject, tags, imageUrl: `/uploads/${fileName}`, createdAt: new Date().toISOString() };
     notes.unshift(note);
@@ -352,12 +430,19 @@ async function handleApi(request, response, url) {
     }
 
     if (body.imageData) {
-      const imageMatch = String(body.imageData).match(/^data:image\/jpeg;base64,([a-zA-Z0-9+/=]+)$/);
+      const rawImage = String(body.imageData).trim();
+      const imageMatch = rawImage.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=\r\n\s]+)$/);
       if (imageMatch) {
-        const image = Buffer.from(imageMatch[1], "base64");
-        if (image.length <= 5 * 1024 * 1024 && image.length >= 4 && image[0] === 0xff && image[1] === 0xd8 && image[2] === 0xff) {
-          const fileName = note.imageUrl ? path.basename(note.imageUrl) : `${id}.jpg`;
-          await fs.writeFile(path.join(UPLOAD_DIR, fileName), image);
+        const rawType = imageMatch[1].toLowerCase();
+        const ext = rawType.includes("png") ? "png" : rawType.includes("webp") ? "webp" : rawType.includes("svg") ? "svg" : "jpg";
+        const imageBuffer = Buffer.from(imageMatch[2].replace(/[\r\n\s]/g, ""), "base64");
+        if (imageBuffer.length >= 4 && imageBuffer.length <= 12 * 1024 * 1024) {
+          const fileName = `${id}.${ext}`;
+          // Clean up old image file if extension changed
+          if (note.imageUrl && !note.imageUrl.endsWith(`.${ext}`)) {
+            await fs.unlink(path.join(ROOT, note.imageUrl)).catch(() => undefined);
+          }
+          await fs.writeFile(path.join(UPLOAD_DIR, fileName), imageBuffer);
           note.imageUrl = `/uploads/${fileName}`;
         }
       }
@@ -385,6 +470,27 @@ async function handleApi(request, response, url) {
     return true;
   }
 
+  if (request.method === "DELETE" && url.pathname.startsWith("/api/admin/missing-searches/")) {
+    if (!isAdmin(request)) return sendUnauthorized(response), true;
+    const queryKey = decodeURIComponent(url.pathname.replace("/api/admin/missing-searches/", ""));
+    let interactions = await readJson(INTERACTIONS_FILE).catch(() => ({}));
+    if (interactions.missingSearches) {
+      delete interactions.missingSearches[queryKey];
+      await writeJson(INTERACTIONS_FILE, interactions);
+    }
+    sendJson(response, 200, { success: true, missingSearches: interactions.missingSearches || {} });
+    return true;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/admin/missing-searches/clear") {
+    if (!isAdmin(request)) return sendUnauthorized(response), true;
+    let interactions = await readJson(INTERACTIONS_FILE).catch(() => ({}));
+    interactions.missingSearches = {};
+    await writeJson(INTERACTIONS_FILE, interactions);
+    sendJson(response, 200, { success: true, missingSearches: {} });
+    return true;
+  }
+
   if (request.method === "POST" && url.pathname === "/api/admin/reset-data") {
     if (!isAdmin(request)) return sendUnauthorized(response), true;
     await writeJson(NOTES_FILE, []);
@@ -395,7 +501,8 @@ async function handleApi(request, response, url) {
       totalSearches: 0,
       totalImpressions: 0,
       notes: {},
-      searches: {}
+      searches: {},
+      missingSearches: {}
     });
     sendJson(response, 200, { reset: true, message: "All server notes, visits, and interactions cleared." });
     return true;
@@ -404,10 +511,11 @@ async function handleApi(request, response, url) {
   return false;
 }
 
-async function serveStatic(response, pathname) {
+async function serveStatic(request, response, pathname) {
   const allowedPublicFiles = new Set([
     "/",
     "/index.html",
+    "/about.html",
     "/admin.html",
     "/styles.css",
     "/app.js",
@@ -415,7 +523,7 @@ async function serveStatic(response, pathname) {
     "/assets/ailogo.png",
     "/assets/admin.jpg"
   ]);
-  const isPublicUpload = /^\/uploads\/[0-9a-f-]+\.jpg$/i.test(pathname);
+  const isPublicUpload = /^\/uploads\/[0-9a-f-]+\.(jpg|jpeg|png|webp|svg)$/i.test(pathname);
   const isPublicAsset = pathname.startsWith("/assets/");
   if (!allowedPublicFiles.has(pathname) && !isPublicUpload && !isPublicAsset) {
     response.writeHead(404);
@@ -430,8 +538,32 @@ async function serveStatic(response, pathname) {
     return;
   }
   try {
+    const stats = await fs.stat(filePath);
+    const etag = `"${stats.size.toString(16)}-${stats.mtimeMs.toString(16)}"`;
+    
+    // Check conditional ETag for 304 Not Modified
+    if (request.headers["if-none-match"] === etag) {
+      response.writeHead(304, {
+        "ETag": etag,
+        "Cache-Control": (isPublicUpload || isPublicAsset) ? "public, max-age=31536000, immutable" : "no-cache, must-revalidate"
+      });
+      response.end();
+      return;
+    }
+
     const content = await fs.readFile(filePath);
-    response.writeHead(200, { "Content-Type": mimeTypes[path.extname(filePath)] || "application/octet-stream" });
+    const ext = path.extname(filePath);
+    const contentType = mimeTypes[ext] || "application/octet-stream";
+    
+    const headers = {
+      "Content-Type": contentType,
+      "ETag": etag,
+      "Cache-Control": (isPublicUpload || isPublicAsset)
+        ? "public, max-age=31536000, immutable"
+        : "no-cache, must-revalidate"
+    };
+
+    response.writeHead(200, headers);
     response.end(content);
   } catch {
     response.writeHead(404);
@@ -449,7 +581,7 @@ async function start() {
         if (!handled) sendJson(response, 404, { error: "API route not found." });
         return;
       }
-      await serveStatic(response, url.pathname);
+      await serveStatic(request, response, url.pathname);
     } catch (error) {
       sendJson(response, 500, { error: error.message || "Server error." });
     }

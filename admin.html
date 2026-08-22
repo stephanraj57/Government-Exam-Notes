@@ -218,6 +218,14 @@
             </div>
             <b id="tags-count-badge" class="cat-count">0</b>
           </button>
+          <button class="category admin-nav-card" data-admin-view="missing-searches">
+            <span class="nav-icon-box missing-searches-box">🔎</span>
+            <div class="nav-text-col">
+              <span class="cat-name">Search Demands</span>
+              <small class="nav-sub-desc">Unavailable Searches</small>
+            </div>
+            <b id="missing-searches-badge" class="cat-count badge-warning">0</b>
+          </button>
           <button class="category admin-nav-card" data-admin-view="publish">
             <span class="nav-icon-box publish-box">☁</span>
             <div class="nav-text-col">
@@ -256,9 +264,9 @@
 
       <!-- Portal Footer Status -->
       <div class="portal-sidebar-footer">
-        <div class="portal-system-status">
+        <div class="portal-system-status" id="portal-system-status" title="Real-Time Active Visitors & Server Engine">
           <span class="pulse-dot"></span>
-          <span class="status-text">Server Online · 4173</span>
+          <span class="status-text" id="admin-server-status-text">Online · 1 Active User</span>
         </div>
       </div>
     </aside>
@@ -298,7 +306,7 @@
             <div class="metric-info">
               <span class="metric-label">Website Visitors Today</span>
               <strong id="metric-visitors-today" class="metric-value">0</strong>
-              <small class="metric-sub-trend positive">Today's Traffic</small>
+              <small id="metric-live-online-users" class="metric-sub-trend positive">🟢 1 Online Now</small>
             </div>
           </div>
 
@@ -668,6 +676,114 @@
         </div>
       </div>
 
+      <!-- View: Missing Content Search Demands -->
+      <div id="admin-view-missing-searches" class="admin-view-pane" hidden>
+        <div class="admin-card search-demands-card">
+          
+          <!-- Header -->
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Audience Demand Intelligence</p>
+              <h2>Student Search Demands (Unavailable Topics)</h2>
+              <p class="card-subtitle">Real-time log of topics searched by students on the home page where 0 notes were found. Fulfill these missing topics to grow your student revision library.</p>
+            </div>
+            <div class="missing-searches-header-actions">
+              <span id="missing-searches-header-count" class="badge badge-warning">0 Missing Topics</span>
+              <button id="clear-missing-searches-btn" class="outline-button btn-sm" type="button" title="Clear all logged search demands">
+                <span>🧹</span> Clear Log
+              </button>
+            </div>
+          </div>
+
+          <!-- 4 Key Demand Metrics -->
+          <div class="metrics-grid missing-metrics-grid">
+            <div class="metric-card">
+              <div class="metric-icon-box">🔍</div>
+              <div class="metric-text-col">
+                <span class="metric-label">Total Unmet Searches</span>
+                <strong id="stat-missing-total-searches" class="metric-val">0</strong>
+                <span class="metric-sub">Student search attempts</span>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-icon-box">📋</div>
+              <div class="metric-text-col">
+                <span class="metric-label">Unique Topic Gaps</span>
+                <strong id="stat-missing-unique-topics" class="metric-val">0</strong>
+                <span class="metric-sub">Distinct missing keywords</span>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-icon-box">🔥</div>
+              <div class="metric-text-col">
+                <span class="metric-label">Top Wanted Topic</span>
+                <strong id="stat-missing-top-topic" class="metric-val text-truncate">—</strong>
+                <span id="stat-missing-top-count" class="metric-sub">0 searches</span>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-icon-box">⚡</div>
+              <div class="metric-text-col">
+                <span class="metric-label">Quick Fulfillment</span>
+                <strong class="metric-val text-success">1-Click</strong>
+                <span class="metric-sub">Publish pre-filled note</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Demand Table & Search Filter Toolbar -->
+          <div class="missing-demands-container">
+            <div class="missing-demands-toolbar">
+              <div class="search-box missing-search-box">
+                <span class="search-icon">⌕</span>
+                <input id="missing-demands-search-input" type="search" placeholder="Filter search demands (e.g. UPSC, History, Science)...">
+              </div>
+
+              <div class="missing-toolbar-controls">
+                <label class="sort-label">
+                  <span>Sort:</span>
+                  <select id="missing-demands-sort-select">
+                    <option value="count-desc">Highest Demand (Most Searched)</option>
+                    <option value="recent-desc">Most Recent Search First</option>
+                    <option value="alpha-asc">Topic A–Z</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <!-- Missing Demands Table -->
+            <div class="missing-table-wrapper" id="missing-table-wrapper">
+              <table class="missing-demands-table">
+                <thead>
+                  <tr>
+                    <th style="width: 70px;">Rank</th>
+                    <th>Searched Topic / Keyword</th>
+                    <th style="width: 180px;">Student Demand</th>
+                    <th style="width: 180px;">Last Searched</th>
+                    <th style="width: 180px; text-align: right;">Fulfill Action</th>
+                  </tr>
+                </thead>
+                <tbody id="missing-demands-tbody">
+                  <!-- Dynamically populated missing search rows -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Empty State when no missing searches exist -->
+            <div id="missing-demands-empty-state" class="empty-state missing-empty-state" hidden>
+              <div class="empty-icon">🎉</div>
+              <h3>No Unmet Search Demands</h3>
+              <p>All student searches on the home page have matching revision notes in your library!</p>
+              <span class="text-muted" style="font-size: 0.8rem;">When students search for unavailable topics, they will automatically appear here with exact search frequencies.</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
       <!-- View 2: Publish (Upload Center Studio) -->
       <div id="admin-view-publish" class="admin-view-pane" hidden>
         <div class="admin-card upload-studio-card">
@@ -714,7 +830,7 @@
                     <option value="Art and Culture">🎨 Art and Culture</option>
                     <option value="Maths">📐 Maths</option>
                     <option value="Science">🔬 Science</option>
-                    <option value="English">🔤 English</option>
+                    <option value="Others">📁 Others</option>
                   </select>
 
                   <div class="publish-category-pill-grid" id="publish-category-pill-grid">
@@ -725,7 +841,7 @@
                     <button type="button" class="pub-cat-pill" data-cat-val="Art and Culture"><span class="pill-emoji">🎨</span> Art & Cult.</button>
                     <button type="button" class="pub-cat-pill" data-cat-val="Maths"><span class="pill-emoji">📐</span> Maths</button>
                     <button type="button" class="pub-cat-pill" data-cat-val="Science"><span class="pill-emoji">🔬</span> Science</button>
-                    <button type="button" class="pub-cat-pill" data-cat-val="English"><span class="pill-emoji">🔤</span> English</button>
+                    <button type="button" class="pub-cat-pill" data-cat-val="Others"><span class="pill-emoji">📁</span> Others</button>
                   </div>
                 </div>
 
@@ -837,7 +953,7 @@
                 <option value="Art and Culture">🎨 Art and Culture</option>
                 <option value="Maths">📐 Maths</option>
                 <option value="Science">🔬 Science</option>
-                <option value="English">🔤 English</option>
+                <option value="Others">📁 Others</option>
               </select>
 
               <!-- View Mode Toggle: Table / Grid Cards -->
@@ -957,7 +1073,7 @@
             <option value="Art and Culture">🎨 Art and Culture</option>
             <option value="Maths">📐 Maths</option>
             <option value="Science">🔬 Science</option>
-            <option value="English">🔤 English</option>
+            <option value="Others">📁 Others</option>
           </select>
         </div>
 

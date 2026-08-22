@@ -47,12 +47,12 @@ function getSubjectKey(subject = "") {
   if (s.includes("art") || s.includes("culture")) return "art-culture";
   if (s.includes("math")) return "maths";
   if (s.includes("science")) return "science";
-  if (s.includes("english")) return "english";
+  if (s.includes("other") || s.includes("english")) return "others";
   if (s.includes("history")) return "history";
   if (s.includes("polity")) return "polity";
   if (s.includes("geography")) return "geography";
   if (s.includes("economy")) return "economy";
-  return "history";
+  return "others";
 }
 
 function showToast(message, type = "info") {
@@ -122,8 +122,6 @@ function setTheme(theme, save = true) {
 // 4. Data Loading & Persistence
 // ==========================================
 async function loadNotes() {
-  let uploaded = [];
-
   try {
     const [notesRes, visitsRes, meRes] = await Promise.all([
       fetch("/api/notes").then(r => r.ok ? r.json() : { notes: [] }),
@@ -131,21 +129,12 @@ async function loadNotes() {
       fetch("/api/admin/me").then(r => r.ok ? r.json() : { admin: false }).catch(() => ({ admin: false }))
     ]);
 
-    uploaded = notesRes.notes || [];
+    notes = notesRes.notes || [];
     isAdmin = Boolean(meRes.admin);
   } catch {
-    uploaded = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
-    isAdmin = sessionStorage.getItem("exam_admin_local_session") === "true";
+    notes = [];
+    isAdmin = false;
   }
-
-  // Merge server uploads with local client uploads
-  const localUploads = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
-  const mergedUploaded = [...localUploads.filter(l => !uploaded.some(u => u.id === l.id)), ...uploaded];
-
-  const deletedSamples = JSON.parse(localStorage.getItem("exam_notes_deleted_sample_ids") || "[]");
-  const activeSamples = samples.filter(s => !deletedSamples.includes(s.id));
-
-  notes = [...mergedUploaded, ...activeSamples];
 
   // Prune any stale bookmark IDs that no longer exist in current library
   const noteIdSet = new Set(notes.map(n => n.id));
@@ -203,11 +192,12 @@ function updatePopularTags() {
   ).join("");
 }
 
-function renderCardMedia(note) {
+function renderCardMedia(note, pIndex = 0) {
   if (note.imageUrl) {
+    const priorityAttr = pIndex < 2 ? 'fetchpriority="high"' : 'fetchpriority="low"';
     return `
       <div class="card-media">
-        <img class="note-image" src="${note.imageUrl}" alt="${escapeHtml(note.title)}" loading="lazy">
+        <img class="note-image" src="${note.imageUrl}" alt="${escapeHtml(note.title)}" loading="lazy" decoding="async" ${priorityAttr}>
       </div>
     `;
   }
@@ -299,7 +289,14 @@ function render() {
   const notesGrid = $("#notes-grid");
   if (notesGrid) {
     notesGrid.className = `notes-grid ${viewMode === "list" ? "list-view" : ""}`;
-    
+  }
+
+  const gridBtn = $("#grid-view-btn") || $("#view-grid");
+  const listBtn = $("#list-view-btn") || $("#view-list");
+  if (gridBtn) gridBtn.classList.toggle("active", viewMode === "grid");
+  if (listBtn) listBtn.classList.toggle("active", viewMode === "list");
+
+  if (notesGrid) {
     if (pagedList.length === 0) {
       notesGrid.innerHTML = "";
     } else {
@@ -320,7 +317,7 @@ function render() {
             <button class="card-bookmark-btn ${isBookmarked ? "bookmarked" : ""}" data-bookmark="${n.id}" type="button" title="${isBookmarked ? "Remove Bookmark" : "Save Bookmark"}" aria-label="Bookmark Note">
               ${isBookmarked ? "♥" : "♡"}
             </button>
-            ${renderCardMedia(n)}
+            ${renderCardMedia(n, pIndex)}
             <div class="note-content">
               <span class="subject-chip ${subjKey}">${escapeHtml(n.subject)}</span>
               <h3 class="note-title">${escapeHtml(n.title)}</h3>
@@ -483,7 +480,7 @@ function updateCategoryCounts() {
     "art-culture": 0,
     maths: 0,
     science: 0,
-    english: 0
+    others: 0
   };
 
   notes.forEach(n => {
@@ -504,7 +501,7 @@ function updateCategoryCounts() {
   setCnt("#art-culture-count", counts["art-culture"]);
   setCnt("#maths-count", counts.maths);
   setCnt("#science-count", counts.science);
-  setCnt("#english-count", counts.english);
+  setCnt("#others-count", counts.others);
 }
 
 // ==========================================
@@ -601,6 +598,21 @@ async function trackInteraction(type, payload = {}) {
       if (query && query.length >= 2) {
         const qKey = query.slice(0, 40);
         data.searches[qKey] = (data.searches[qKey] || 0) + 1;
+      }
+    } else if (type === "missing_search" || type === "unfulfilled_search") {
+      if (!data.missingSearches) data.missingSearches = {};
+      if (query && query.length >= 2) {
+        const qKey = query.slice(0, 60);
+        if (!data.missingSearches[qKey]) {
+          data.missingSearches[qKey] = {
+            query: qKey,
+            count: 0,
+            firstSearched: new Date().toISOString(),
+            lastSearched: new Date().toISOString()
+          };
+        }
+        data.missingSearches[qKey].count = (data.missingSearches[qKey].count || 0) + 1;
+        data.missingSearches[qKey].lastSearched = new Date().toISOString();
       }
     } else if (type === "impression" || type === "view") {
       const increment = noteIds.length > 0 ? noteIds.length : 1;
@@ -862,18 +874,27 @@ function setupEventListeners() {
     render();
   });
 
-  // Search Input with Telemetry Tracking
+  // Search Input with Telemetry & Missing Demands Tracking
   let searchDebounceTimer = null;
+  let missingSearchDebounceTimer = null;
   const searchInput = $("#note-search");
   searchInput?.addEventListener("input", () => {
     currentPage = 1;
     render();
     clearTimeout(searchDebounceTimer);
+    clearTimeout(missingSearchDebounceTimer);
     const query = (searchInput.value || "").trim();
     if (query.length >= 2) {
       searchDebounceTimer = setTimeout(() => {
         trackInteraction("search", { query });
       }, 700);
+
+      // If search returns 0 matching notes (unavailable data), log as missing search demand!
+      missingSearchDebounceTimer = setTimeout(() => {
+        if (currentFilteredList.length === 0) {
+          trackInteraction("missing_search", { query, resultCount: 0 });
+        }
+      }, 1100);
     }
   });
 
@@ -891,19 +912,18 @@ function setupEventListeners() {
   });
 
   // Grid / List View Toggle
-  $("#view-grid")?.addEventListener("click", () => {
+  const gridBtn = $("#grid-view-btn") || $("#view-grid");
+  const listBtn = $("#list-view-btn") || $("#view-list");
+
+  gridBtn?.addEventListener("click", () => {
     viewMode = "grid";
     localStorage.setItem("exam_notes_view", "grid");
-    $("#view-grid")?.classList.add("active");
-    $("#view-list")?.classList.remove("active");
     render();
   });
 
-  $("#view-list")?.addEventListener("click", () => {
+  listBtn?.addEventListener("click", () => {
     viewMode = "list";
     localStorage.setItem("exam_notes_view", "list");
-    $("#view-list")?.classList.add("active");
-    $("#view-grid")?.classList.remove("active");
     render();
   });
 
@@ -1119,25 +1139,51 @@ function setupEventListeners() {
   });
 }
 
-async function deleteNote(id) {
-  try {
-    await fetch("/api/admin/notes/" + id, { method: "DELETE" });
-  } catch {}
-
-  const existingLocal = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
-  const filteredLocal = existingLocal.filter(x => x.id !== id);
-  localStorage.setItem("exam_notes_custom_uploads", JSON.stringify(filteredLocal));
-
-  const deletedSamples = JSON.parse(localStorage.getItem("exam_notes_deleted_sample_ids") || "[]");
-  if (!deletedSamples.includes(id)) {
-    deletedSamples.push(id);
-    localStorage.setItem("exam_notes_deleted_sample_ids", JSON.stringify(deletedSamples));
-  }
-
-  showToast("Note deleted.", "success");
-  await loadNotes();
-}
-
 // Start Application
 setupEventListeners();
 loadNotes();
+
+// ==========================================
+// Real-Time Student Presence Heartbeat
+// ==========================================
+(function initHeartbeat() {
+  let sessionId = sessionStorage.getItem("exam_visitor_session_id");
+  if (!sessionId) {
+    sessionId = "s_" + Math.random().toString(36).slice(2, 11) + "_" + Date.now().toString(36);
+    sessionStorage.setItem("exam_visitor_session_id", sessionId);
+  }
+
+  function sendHeartbeat(isLeave = false) {
+    if (isLeave) {
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon("/api/heartbeat?leave=true", JSON.stringify({ sessionId }));
+      }
+      return;
+    }
+    fetch("/api/heartbeat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId })
+    }).catch(() => {});
+  }
+
+  // Initial heartbeat
+  sendHeartbeat(false);
+
+  // Periodic heartbeat every 45s when page is active
+  setInterval(() => {
+    if (!document.hidden) {
+      sendHeartbeat(false);
+    }
+  }, 45000);
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      sendHeartbeat(false);
+    }
+  });
+
+  window.addEventListener("beforeunload", () => {
+    sendHeartbeat(true);
+  });
+})();
