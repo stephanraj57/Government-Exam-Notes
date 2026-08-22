@@ -341,6 +341,7 @@ async function loadDashboardData() {
   renderAnalysisView();
   renderInteractionsView();
   renderTagsView();
+  renderPublishTagSuggestions("");
   renderRecentNotes();
   renderTable();
 }
@@ -1387,19 +1388,27 @@ function setupFileDrop() {
   const msg = $("#studio-upload-msg");
 
   function processFile(file) {
-    msg.textContent = "";
-    msg.className = "form-message";
+    if (msg) {
+      msg.textContent = "";
+      msg.className = "form-message";
+    }
 
-    if (!file || (!file.type.match(/^image\/jpeg$/) && !/\.jpe?g$/i.test(file.name))) {
-      msg.textContent = "Please select a JPG or JPEG image.";
-      msg.className = "form-message error";
+    if (!file || !file.type.startsWith("image/")) {
+      showToast("Only image files (JPG, PNG, WEBP, SVG) can be uploaded.", "error");
+      if (msg) {
+        msg.textContent = "Only image files (JPG, PNG, WEBP, SVG) are allowed.";
+        msg.className = "form-message error";
+      }
       clearPreview();
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      msg.textContent = "File size exceeds 5 MB. Please select a smaller JPG image.";
-      msg.className = "form-message error";
+    if (file.size > 10 * 1024 * 1024) {
+      showToast("Image size exceeds 10 MB limit.", "error");
+      if (msg) {
+        msg.textContent = "File size exceeds 10 MB. Please select a smaller image.";
+        msg.className = "form-message error";
+      }
       clearPreview();
       return;
     }
@@ -1413,6 +1422,7 @@ function setupFileDrop() {
 
       promptBox.hidden = true;
       previewWrap.hidden = false;
+      if (msg) msg.textContent = "";
     };
     reader.readAsDataURL(file);
   }
@@ -1458,13 +1468,103 @@ function setupFileDrop() {
 // ==========================================
 // 5.1 Publishing Studio Interactive Preview & Tags
 // ==========================================
+function getExistingTagsWithCounts() {
+  const counts = new Map();
+  allNotes.forEach(n => {
+    (n.tags || []).forEach(t => {
+      const clean = (t || "").trim().replace(/^#/, "");
+      if (clean) {
+        counts.set(clean, (counts.get(clean) || 0) + 1);
+      }
+    });
+  });
+
+  if (counts.size === 0) {
+    const defaults = ["UPSC", "Prelims 2025", "Constitution", "Articles 12-35", "Fundamental Rights", "Modern History", "Geography", "Economy", "SSC CGL", "Formulas"];
+    defaults.forEach(d => counts.set(d, 1));
+  }
+
+  return [...counts.entries()]
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+function renderPublishTagSuggestions(filterQuery = "") {
+  const container = $("#publish-quick-tags-container");
+  const tagsInput = $("#studio-note-tags");
+  if (!container) return;
+
+  const allTagCounts = getExistingTagsWithCounts();
+  const q = (filterQuery || "").toLowerCase().trim();
+
+  // Get current active tags in input
+  const currentTags = (tagsInput ? tagsInput.value : "")
+    .split(",")
+    .map(s => s.trim().replace(/^#/, "").toLowerCase())
+    .filter(Boolean);
+
+  let filtered = allTagCounts;
+  if (q) {
+    filtered = allTagCounts.filter(item => item.tag.toLowerCase().includes(q));
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<span style="font-size: 0.68rem; color: var(--ink-muted); padding: 2px;">No matching tags. Type comma to separate.</span>`;
+    return;
+  }
+
+  container.innerHTML = filtered.slice(0, 16).map(item => {
+    const isAdded = currentTags.includes(item.tag.toLowerCase());
+    return `
+      <button type="button" class="quick-tag-btn ${isAdded ? "active-match" : ""}" data-add-tag="${escapeHtml(item.tag)}" title="Click to add #${escapeHtml(item.tag)}">
+        ${isAdded ? "✓" : "+"} #${escapeHtml(item.tag)}
+        <span class="tag-freq-badge">${item.count}</span>
+      </button>
+    `;
+  }).join("");
+
+  // Attach click handlers
+  container.querySelectorAll(".quick-tag-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const tagToAdd = btn.dataset.addTag;
+      if (!tagsInput || !tagToAdd) return;
+
+      const raw = tagsInput.value;
+      const parts = raw.split(",").map(s => s.trim().replace(/^#/, "")).filter(Boolean);
+
+      if (!parts.some(p => p.toLowerCase() === tagToAdd.toLowerCase())) {
+        const lastCommaIdx = raw.lastIndexOf(",");
+        if (lastCommaIdx !== -1) {
+          const prefix = raw.slice(0, lastCommaIdx).trim();
+          tagsInput.value = prefix ? `${prefix}, ${tagToAdd}, ` : `${tagToAdd}, `;
+        } else {
+          tagsInput.value = `${tagToAdd}, `;
+        }
+      }
+
+      // Update simulator tags
+      const simTagsRow = $("#sim-tags-row");
+      const updatedTags = tagsInput.value.split(",").map(t => t.trim().replace(/^#/, "")).filter(Boolean);
+      if (simTagsRow) {
+        if (updatedTags.length === 0) {
+          simTagsRow.innerHTML = `<span class="sim-tag">#UPSC</span><span class="sim-tag">#Constitution</span>`;
+        } else {
+          simTagsRow.innerHTML = updatedTags.map(t => `<span class="sim-tag">#${escapeHtml(t)}</span>`).join("");
+        }
+      }
+
+      renderPublishTagSuggestions("");
+      tagsInput.focus();
+    });
+  });
+}
+
 function setupPublishStudio() {
   const titleInput = $("#studio-note-title");
   const charCount = $("#studio-title-char-count");
   const subjectSelect = $("#studio-note-subject");
   const categoryPills = $$(".pub-cat-pill");
   const tagsInput = $("#studio-note-tags");
-  const quickTagBtns = $$(".quick-tag-btn");
   const simTitle = $("#sim-title-text");
   const simBadge = $("#sim-subject-badge");
   const simTagsRow = $("#sim-tags-row");
@@ -1504,36 +1604,34 @@ function setupPublishStudio() {
     });
   });
 
-  // 3. Live Tags Simulator Update
-  const updateSimTags = () => {
-    if (!simTagsRow) return;
-    const raw = tagsInput ? tagsInput.value : "";
+  // 3. Live Tags Simulator & Dynamic Quick Tag Filtering
+  const handleTagsInput = () => {
+    if (!tagsInput) return;
+    const raw = tagsInput.value;
     const tags = raw.split(",").map(t => t.trim().replace(/^#/, "")).filter(Boolean);
-    if (tags.length === 0) {
-      simTagsRow.innerHTML = `<span class="sim-tag">#UPSC</span><span class="sim-tag">#Constitution</span>`;
-    } else {
-      simTagsRow.innerHTML = tags.map(t => `<span class="sim-tag">#${escapeHtml(t)}</span>`).join("");
+    if (simTagsRow) {
+      if (tags.length === 0) {
+        simTagsRow.innerHTML = `<span class="sim-tag">#UPSC</span><span class="sim-tag">#Constitution</span>`;
+      } else {
+        simTagsRow.innerHTML = tags.map(t => `<span class="sim-tag">#${escapeHtml(t)}</span>`).join("");
+      }
     }
+
+    // Filter existing tag suggestions based on the last token being typed
+    const currentToken = raw.split(",").pop().trim().replace(/^#/, "");
+    renderPublishTagSuggestions(currentToken);
   };
 
-  tagsInput?.addEventListener("input", updateSimTags);
-
-  // 4. Quick Tag suggestion click
-  quickTagBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
-      const tagToAdd = btn.dataset.addTag;
-      if (!tagsInput || !tagToAdd) return;
-      const current = tagsInput.value.trim();
-      const existing = current.split(",").map(s => s.trim().replace(/^#/, "")).filter(Boolean);
-      if (!existing.includes(tagToAdd)) {
-        existing.push(tagToAdd);
-        tagsInput.value = existing.join(", ");
-        updateSimTags();
-      }
-    });
+  tagsInput?.addEventListener("input", handleTagsInput);
+  tagsInput?.addEventListener("focus", () => {
+    const currentToken = (tagsInput.value || "").split(",").pop().trim().replace(/^#/, "");
+    renderPublishTagSuggestions(currentToken);
   });
 
-  // 5. Verification Modal Zoom & Close Controls
+  // Initial tag render
+  renderPublishTagSuggestions("");
+
+  // 4. Verification Modal Zoom & Close Controls
   const verifyDialog = $("#admin-publish-verify-dialog");
   $("#verify-zoom-in")?.addEventListener("click", () => {
     currentVerifyZoom = Math.min(currentVerifyZoom + 0.25, 3);
@@ -1579,24 +1677,47 @@ function openPublishVerificationModal() {
   const dialog = $("#admin-publish-verify-dialog");
 
   const title = titleInput ? titleInput.value.trim() : "";
-  const subject = subjectInput ? subjectInput.value : "Polity";
+  const subject = subjectInput ? subjectInput.value : "";
   const rawTags = tagsInput ? tagsInput.value : "";
   const parsedTags = rawTags.split(",").map(s => s.trim().replace(/^#/, "")).filter(Boolean);
 
-  if (!title) {
+  // Strict Validation for all mandatory fields
+  if (!selectedImageData) {
+    showToast("Please upload a Note Image diagram.", "error");
     if (msg) {
-      msg.textContent = "Please enter a topic title.";
+      msg.textContent = "Note Image diagram is mandatory. Please upload an image file.";
+      msg.className = "form-message error";
+    }
+    $("#studio-dropzone")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+
+  if (!title) {
+    showToast("Topic Title is mandatory.", "error");
+    if (msg) {
+      msg.textContent = "Topic Title is mandatory. Please enter a title.";
       msg.className = "form-message error";
     }
     titleInput?.focus();
     return;
   }
 
-  if (!selectedImageData) {
+  if (!subject) {
+    showToast("Subject & Category is mandatory.", "error");
     if (msg) {
-      msg.textContent = "Please choose a JPG image to upload.";
+      msg.textContent = "Subject & Category is mandatory. Please choose a category.";
       msg.className = "form-message error";
     }
+    return;
+  }
+
+  if (parsedTags.length === 0) {
+    showToast("Multiple Tags is mandatory. Enter at least one tag.", "error");
+    if (msg) {
+      msg.textContent = "Multiple Tags is mandatory. Please enter at least one tag (e.g. UPSC, Polity).";
+      msg.className = "form-message error";
+    }
+    tagsInput?.focus();
     return;
   }
 

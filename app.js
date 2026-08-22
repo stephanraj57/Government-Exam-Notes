@@ -333,10 +333,6 @@ function render() {
         `;
       }).join("");
     }
-
-    if (pagedList.length > 0) {
-      trackSeenNotes(pagedList.map(n => n.id));
-    }
   }
 
   // Render Pagination Controls
@@ -556,19 +552,6 @@ function selectCategory(catName) {
 // ==========================================
 // 8.1 Real-Time Interaction Telemetry Tracker
 // ==========================================
-const sessionSeenNotes = new Set(JSON.parse(sessionStorage.getItem("exam_session_seen_notes") || "[]"));
-
-function trackSeenNotes(noteIds = []) {
-  const newNotes = noteIds.filter(id => id && !sessionSeenNotes.has(id));
-  if (newNotes.length > 0) {
-    newNotes.forEach(id => sessionSeenNotes.add(id));
-    try {
-      sessionStorage.setItem("exam_session_seen_notes", JSON.stringify([...sessionSeenNotes]));
-    } catch (e) {}
-    trackInteraction("impression", { noteIds: newNotes });
-  }
-}
-
 async function trackInteraction(type, payload = {}) {
   try {
     fetch("/api/interactions/track", {

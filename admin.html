@@ -177,6 +177,14 @@
             </div>
             <b id="dash-notes-badge" class="cat-count">0</b>
           </button>
+          <button class="category admin-nav-card" data-admin-view="interactions">
+            <span class="nav-icon-box interactions-box">⚡</span>
+            <div class="nav-text-col">
+              <span class="cat-name">Interactions</span>
+              <small class="nav-sub-desc">Likes, Downloads & Searches</small>
+            </div>
+            <b id="interactions-badge" class="cat-count">Live</b>
+          </button>
           <button class="category admin-nav-card" data-admin-view="analysis">
             <span class="nav-icon-box analysis-box">🥧</span>
             <div class="nav-text-col">
@@ -192,14 +200,6 @@
               <small class="nav-sub-desc">Tag Cloud & Frequency</small>
             </div>
             <b id="tags-count-badge" class="cat-count">0</b>
-          </button>
-          <button class="category admin-nav-card" data-admin-view="interactions">
-            <span class="nav-icon-box interactions-box">⚡</span>
-            <div class="nav-text-col">
-              <span class="cat-name">Interactions</span>
-              <small class="nav-sub-desc">Likes, Downloads & Searches</small>
-            </div>
-            <b id="interactions-badge" class="cat-count">Live</b>
           </button>
           <button class="category admin-nav-card" data-admin-view="publish">
             <span class="nav-icon-box publish-box">☁</span>
@@ -451,7 +451,7 @@
             <div class="metric-info">
               <p class="metric-label">Note Impressions</p>
               <h3 id="interaction-total-views" class="metric-value">0</h3>
-              <small class="metric-subtext"><span class="kpi-trend-up">↑ 31.6%</span> Fullscreen Reads</small>
+              <small class="metric-subtext"><span class="kpi-trend-up">↑ Live</span> Popup Window Opens</small>
             </div>
           </div>
 
@@ -675,7 +675,7 @@
                 <div class="publish-field-group">
                   <div class="publish-label-row">
                     <label for="studio-note-title" class="publish-field-label">
-                      <span class="label-icon">✍️</span> Topic Title
+                      <span class="label-icon">✍️</span> Topic Title <span class="req-star" title="Mandatory Field">*</span>
                     </label>
                     <span class="char-count" id="studio-title-char-count">0/80</span>
                   </div>
@@ -687,7 +687,7 @@
                 <!-- Subject Category Pill Selector -->
                 <div class="publish-field-group">
                   <label class="publish-field-label">
-                    <span class="label-icon">📚</span> Subject & Category
+                    <span class="label-icon">📚</span> Subject & Category <span class="req-star" title="Mandatory Field">*</span>
                   </label>
                   
                   <select id="studio-note-subject" class="studio-subject-hidden-select" required>
@@ -713,24 +713,21 @@
                   </div>
                 </div>
 
-                <!-- Tags Input & Quick Suggestion Chips -->
+                <!-- Tags Input & Quick Suggestion Chips with Live Counts & Filter -->
                 <div class="publish-field-group">
                   <label for="studio-note-tags" class="publish-field-label">
-                    <span class="label-icon">🏷️</span> Multiple Tags (Comma-separated)
+                    <span class="label-icon">🏷️</span> Multiple Tags (Comma-separated) <span class="req-star" title="Mandatory Field">*</span>
                   </label>
                   <div class="publish-input-wrap">
-                    <input id="studio-note-tags" class="publish-input" type="text" placeholder="e.g. UPSC, Constitution, Articles, Prelims 2025" autocomplete="off">
+                    <input id="studio-note-tags" class="publish-input" type="text" placeholder="e.g. UPSC, Constitution, Articles, Prelims 2025" required autocomplete="off">
                   </div>
                   
-                  <!-- Quick Tag Suggestion Chips -->
+                  <!-- Dynamic Quick Tag Suggestion Chips with Counts -->
                   <div class="quick-tag-suggestions">
-                    <span class="quick-tag-label">Quick Add:</span>
-                    <button type="button" class="quick-tag-btn" data-add-tag="UPSC">+ UPSC</button>
-                    <button type="button" class="quick-tag-btn" data-add-tag="Prelims 2025">+ Prelims 2025</button>
-                    <button type="button" class="quick-tag-btn" data-add-tag="Constitution">+ Constitution</button>
-                    <button type="button" class="quick-tag-btn" data-add-tag="Articles">+ Articles</button>
-                    <button type="button" class="quick-tag-btn" data-add-tag="SSC CGL">+ SSC CGL</button>
-                    <button type="button" class="quick-tag-btn" data-add-tag="Revision">+ Revision</button>
+                    <span class="quick-tag-label">Quick Add Existing Tags:</span>
+                    <div id="publish-quick-tags-container" class="quick-tags-flex-wrap">
+                      <!-- Dynamically populated existing tags with counts -->
+                    </div>
                   </div>
                 </div>
 
@@ -740,17 +737,17 @@
               <div class="publish-preview-pane">
                 
                 <label class="publish-field-label">
-                  <span class="label-icon">🖼️</span> Note Image & Live Student Card Simulator
+                  <span class="label-icon">🖼️</span> Note Image & Live Student Card Simulator <span class="req-star" title="Mandatory Field">*</span>
                 </label>
 
-                <!-- Enhanced Modern Dropzone -->
+                <!-- Enhanced Modern Image-Only Dropzone -->
                 <div id="studio-dropzone" class="studio-dropzone">
-                  <input id="studio-file-input" type="file" accept="image/jpeg,.jpg,.jpeg" required>
+                  <input id="studio-file-input" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.svg" required>
                   
                   <div id="dropzone-prompt" class="dropzone-prompt">
                     <div class="dropzone-cloud-icon">☁️</div>
-                    <strong class="dropzone-headline">Drag & drop JPG or click to upload</strong>
-                    <p class="dropzone-subline">High-resolution JPG diagram / notes, maximum 5 MB</p>
+                    <strong class="dropzone-headline">Drag & drop Image (JPG, PNG, WEBP, SVG) or click</strong>
+                    <p class="dropzone-subline">High-resolution image note / diagram (Max 10 MB)</p>
                   </div>
 
                   <!-- Live Preview File Overlay Bar -->
@@ -794,7 +791,6 @@
               <button id="studio-submit-btn" class="publish-action-button" type="submit">
                 <span class="pub-btn-icon">🚀</span>
                 <span class="pub-btn-text">Publish Note to Public Website</span>
-                <span class="pub-btn-hint">Instant Student Access</span>
               </button>
             </div>
           </form>
