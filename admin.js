@@ -199,10 +199,21 @@ function showLogin() {
     logoutBtn.setAttribute("hidden", "");
     logoutBtn.style.setProperty("display", "none", "important");
   }
-  $("#admin-page-password")?.focus();
+  const pwdInput = $("#admin-page-password");
+  if (pwdInput) {
+    pwdInput.value = "";
+    pwdInput.focus();
+  }
+  const loginMsg = $("#admin-page-login-msg");
+  if (loginMsg) {
+    loginMsg.textContent = "";
+    loginMsg.className = "form-message";
+  }
 }
 
 function showDashboard() {
+  const pwdInput = $("#admin-page-password");
+  if (pwdInput) pwdInput.value = "";
   const authContainer = $("#admin-auth-container");
   const authSec = $("#admin-auth-section");
   const dashSec = $("#admin-dashboard-section");
@@ -633,7 +644,7 @@ function renderAnalysisView() {
         : (count > 0 ? `<span class="analysis-status-pill active">Active (${count})</span>` : `<span class="analysis-status-pill empty">Empty</span>`);
 
       return `
-        <tr data-subject-row="${c.name}">
+        <tr data-subject-row="${c.name}" style="cursor: pointer;" title="Click to view ${c.name} notes in Content Library">
           <td>
             <div class="analysis-subject-cell">
               <span class="analysis-cat-icon">${c.icon}</span>
@@ -651,11 +662,6 @@ function renderAnalysisView() {
               <span class="analysis-pct-text">${pct}%</span>
             </div>
           </td>
-          <td>
-            <button type="button" class="analysis-filter-btn" data-drill-subject="${c.name}" title="View ${c.name} in Library">
-              <span>View Notes</span> →
-            </button>
-          </td>
         </tr>
       `;
     }).join("");
@@ -665,12 +671,7 @@ function renderAnalysisView() {
       const subj = row.dataset.subjectRow;
       row.addEventListener("mouseenter", () => highlightCategory(subj));
       row.addEventListener("mouseleave", clearHighlight);
-    });
-
-    tableBody.querySelectorAll("[data-drill-subject]").forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const subj = btn.dataset.drillSubject;
+      row.addEventListener("click", () => {
         const filterSelect = $("#admin-table-filter-subject");
         if (filterSelect) {
           filterSelect.value = subj;
@@ -2319,13 +2320,25 @@ function setupEventListeners() {
     }
   });
 
-  // Quick Autofill Pill Button
-  $("#quick-fill-btn")?.addEventListener("click", () => {
-    if (pwdInput) {
-      pwdInput.value = "admin123";
-      pwdInput.focus();
-      showToast("Auto-filled default password (admin123). Click Sign In to enter.", "info");
+  // Multi-stage aggressive password clearing on page load & refresh
+  const purgePasswordAutofill = () => {
+    const pInput = $("#admin-page-password");
+    if (pInput) {
+      pInput.value = "";
+      pInput.setAttribute("value", "");
     }
+    const lForm = $("#admin-page-login-form");
+    if (lForm) lForm.reset();
+  };
+
+  purgePasswordAutofill();
+  [30, 80, 150, 300, 600, 1000].forEach(delay => {
+    setTimeout(purgePasswordAutofill, delay);
+  });
+
+  // Always clear password input on window pageshow / back navigation
+  window.addEventListener("pageshow", () => {
+    purgePasswordAutofill();
   });
 
   // Login Form Submit
@@ -2337,6 +2350,8 @@ function setupEventListeners() {
     if (!pwdInput || !msg) return;
 
     const enteredPassword = pwdInput.value.trim();
+    // Instantly wipe password input field for security
+    pwdInput.value = "";
     msg.textContent = "Verifying credentials…";
     msg.className = "form-message";
     btn.disabled = true;
@@ -2358,15 +2373,18 @@ function setupEventListeners() {
           showToast("Signed in (Direct Browser Mode).", "success");
           showDashboard();
         } else {
-          msg.textContent = "Incorrect password. (Default is admin123 or check your server setup)";
+          msg.textContent = "Incorrect password.";
           msg.className = "form-message error";
+          pwdInput.focus();
         }
       } else {
         msg.textContent = err.message || "Invalid password.";
         msg.className = "form-message error";
+        pwdInput.focus();
       }
     } finally {
       btn.disabled = false;
+      if (pwdInput) pwdInput.value = "";
     }
   });
 
