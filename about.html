@@ -552,15 +552,27 @@
         }
 
         try {
-          const res = await fetch("/api/admin/profile");
-          const data = await res.json();
-          if (data && data.profile) {
-            localStorage.setItem("exam_admin_profile_data", JSON.stringify(data.profile));
-            applyProfileToAbout(data.profile);
+          let pData = null;
+          try {
+            const res = await fetch("/api/admin/profile");
+            if (res.ok) pData = await res.json();
+          } catch {}
+
+          if (!pData || !pData.profile) {
+            try {
+              const res2 = await fetch("data/profile.json");
+              if (res2.ok) {
+                const raw = await res2.json();
+                pData = { profile: raw };
+              }
+            } catch {}
           }
-        } catch (err) {
-          // Keep default static content if network offline
-        }
+
+          if (pData && pData.profile) {
+            localStorage.setItem("exam_admin_profile_data", JSON.stringify(pData.profile));
+            applyProfileToAbout(pData.profile);
+          }
+        } catch (err) {}
       }
 
       loadCreatorProfile();

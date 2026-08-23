@@ -800,21 +800,35 @@ async function handleApi(request, response, url) {
     }
 
     // Explicitly bundle Profile Picture (Avatar), Website Brand Logo, and Instagram QR Code
+    const avatarData = await getAssetDataUrl(profile.avatarUrl || "assets/admin.jpg");
+    const logoData = await getAssetDataUrl(profile.logoUrl || "assets/ailogo.png");
+    const instagramQrData = await getAssetDataUrl(profile.instagramQrUrl || "assets/instagram_qr.svg");
+
     const profileAssets = {
-      avatarData: await getAssetDataUrl(profile.avatarUrl || "assets/admin.jpg"),
-      logoData: await getAssetDataUrl(profile.logoUrl || "assets/ailogo.png"),
-      instagramQrData: await getAssetDataUrl(profile.instagramQrUrl || "assets/instagram_qr.svg")
+      avatarData,
+      logoData,
+      instagramQrData
     };
 
     const backupPayload = {
-      version: "2.1",
-      type: "ExamAlertIndiaFullBackup",
+      version: "3.0",
+      type: "ExamAlertIndiaMasterBackup",
       exportedAt: new Date().toISOString(),
+      system: {
+        platform: "Exam Alert India",
+        generator: "Admin Studio Unified Backup Engine v3.0",
+        notesCount: exportedNotes.length
+      },
       notes: exportedNotes,
-      visits,
-      interactions,
-      profile,
+      profile: {
+        ...profile,
+        avatarData,
+        logoData,
+        instagramQrData
+      },
       profileAssets,
+      interactions,
+      visits,
       images
     };
 
@@ -825,7 +839,7 @@ async function handleApi(request, response, url) {
   if (request.method === "POST" && url.pathname === "/api/admin/backup/restore") {
     if (!isAdmin(request)) return sendUnauthorized(response), true;
 
-    const body = await readBody(request, 80 * 1024 * 1024).catch(() => ({}));
+    const body = await readBody(request, 100 * 1024 * 1024).catch(() => ({}));
     const backup = body.backup || body;
 
     if (!backup || typeof backup !== "object") {
@@ -841,7 +855,7 @@ async function handleApi(request, response, url) {
       for (const [filename, dataUrl] of Object.entries(backup.images)) {
         if (!filename || !dataUrl || typeof dataUrl !== "string") continue;
         const cleanName = path.basename(filename.split("?")[0]);
-        const match = dataUrl.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
+        const match = dataUrl.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=\r\n\s]+)$/);
         if (match) {
           try {
             const buf = Buffer.from(match[2].replace(/[\r\n\s]/g, ""), "base64");
@@ -861,7 +875,7 @@ async function handleApi(request, response, url) {
         const rawData = cleanNote.imageData || cleanNote.image || "";
         
         if (typeof rawData === "string" && rawData.startsWith("data:image/")) {
-          const match = rawData.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
+          const match = rawData.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=\r\n\s]+)$/);
           if (match) {
             const ext = match[1].includes("png") ? "png" : match[1].includes("webp") ? "webp" : "jpg";
             const filename = `${cleanNote.id || crypto.randomUUID()}.${ext}`;
@@ -873,9 +887,9 @@ async function handleApi(request, response, url) {
           }
         } else if (cleanNote.imageUrl) {
           const cleanName = path.basename(cleanNote.imageUrl.split("?")[0]);
-          if (backup.images && (backup.images[cleanName] || backup.images[cleanNote.imageUrl])) {
-            const dataUrl = backup.images[cleanName] || backup.images[cleanNote.imageUrl];
-            const match = String(dataUrl).match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
+          const dataUrl = (backup.images && (backup.images[cleanName] || backup.images[cleanNote.imageUrl])) || restoredImagesMap[cleanName];
+          if (dataUrl && typeof dataUrl === "string") {
+            const match = dataUrl.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=\r\n\s]+)$/);
             if (match) {
               try {
                 const buf = Buffer.from(match[2].replace(/[\r\n\s]/g, ""), "base64");
@@ -885,7 +899,7 @@ async function handleApi(request, response, url) {
             }
           }
         }
-        delete cleanNote.imageData; // Keep notes.json lightweight
+        delete cleanNote.imageData; // Keep notes.json clean & lightweight
         finalNotes.push(cleanNote);
       }
       await writeJson(NOTES_FILE, finalNotes);
@@ -932,13 +946,17 @@ async function handleApi(request, response, url) {
     }
 
     if (profile) {
+      delete profile.avatarData;
+      delete profile.logoData;
+      delete profile.instagramQrData;
+      profile.updatedAt = new Date().toISOString();
       await writeJson(PROFILE_FILE, profile);
     }
 
     sendJson(response, 200, {
       success: true,
       message: `Restored ${(backup.notes || []).length} notes, administrator avatar, site logo, and Instagram QR barcode successfully.`,
-      noteCount: (backup.notes || []).length,
+      notesCount: (backup.notes || []).length,
       profile
     });
     return true;

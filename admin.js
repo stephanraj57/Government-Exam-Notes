@@ -3793,6 +3793,19 @@ function setupEventListeners() {
         };
       }
 
+      if (selectedProfileAvatarData) {
+        await ImageStore.set("admin_avatar", selectedProfileAvatarData);
+        if (adminProfileState.avatarUrl) await ImageStore.set(adminProfileState.avatarUrl, selectedProfileAvatarData);
+      }
+      if (selectedLogoData) {
+        await ImageStore.set("site_logo", selectedLogoData);
+        if (adminProfileState.logoUrl) await ImageStore.set(adminProfileState.logoUrl, selectedLogoData);
+      }
+      if (selectedIgQrData) {
+        await ImageStore.set("instagram_qr", selectedIgQrData);
+        if (adminProfileState.instagramQrUrl) await ImageStore.set(adminProfileState.instagramQrUrl, selectedIgQrData);
+      }
+
       localStorage.setItem("exam_admin_profile_data", JSON.stringify(adminProfileState));
       applyAdminProfileUI(adminProfileState);
       
@@ -4119,6 +4132,7 @@ function setupEventListeners() {
       }
       if (backupObj.profile || backupObj.profileAssets) {
         const pObj = backupObj.profile || {};
+        const pAssets = backupObj.profileAssets || backupObj.profile || {};
         adminProfileState = {
           ...adminProfileState,
           ...pObj,
@@ -4126,6 +4140,20 @@ function setupEventListeners() {
           ...(pObj.logoUrl ? { logoUrl: pObj.logoUrl } : {}),
           ...(pObj.instagramQrUrl ? { instagramQrUrl: pObj.instagramQrUrl } : {})
         };
+
+        if (pAssets.avatarData) {
+          await ImageStore.set("admin_avatar", pAssets.avatarData);
+          if (adminProfileState.avatarUrl) await ImageStore.set(adminProfileState.avatarUrl, pAssets.avatarData);
+        }
+        if (pAssets.logoData) {
+          await ImageStore.set("site_logo", pAssets.logoData);
+          if (adminProfileState.logoUrl) await ImageStore.set(adminProfileState.logoUrl, pAssets.logoData);
+        }
+        if (pAssets.instagramQrData) {
+          await ImageStore.set("instagram_qr", pAssets.instagramQrData);
+          if (adminProfileState.instagramQrUrl) await ImageStore.set(adminProfileState.instagramQrUrl, pAssets.instagramQrData);
+        }
+
         safeSetLocalStorage("exam_admin_profile_data", adminProfileState);
         applyAdminProfileUI(adminProfileState);
       }
