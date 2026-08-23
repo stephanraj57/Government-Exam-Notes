@@ -154,7 +154,7 @@ async function loadNotes() {
       })
       .catch(() => {});
 
-    // Hydrate Admin Profile Avatar & Name
+    // Hydrate Brand Logo & Admin Profile Avatar
     fetch("/api/admin/profile")
       .then(r => r.json())
       .then(d => {
@@ -163,6 +163,12 @@ async function loadNotes() {
           if (avatar) {
             document.querySelectorAll(".avatar-img").forEach(img => {
               img.src = avatar;
+            });
+          }
+          const logo = d.profile.logoUrl;
+          if (logo) {
+            document.querySelectorAll(".brand-logo").forEach(img => {
+              img.src = logo;
             });
           }
         }

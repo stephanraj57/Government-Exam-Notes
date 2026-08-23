@@ -385,7 +385,12 @@ function applyAdminProfileUI(profile) {
   const phone = profile.phone || "+91 98765 43210";
   const role = profile.role || "Super Administrator";
   const avatar = profile.avatarUrl || "assets/admin.jpg";
+  const logo = profile.logoUrl || "assets/ailogo.png";
   const initials = name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "SR";
+
+  // Update Brand Logos across admin portal
+  $$(".brand-logo").forEach(el => { el.src = logo; });
+  $$(".edit-modal-brand-logo").forEach(el => { el.src = logo; });
 
   // Sidebar profile card
   $$(".portal-user-name").forEach(el => el.textContent = name);
@@ -2644,29 +2649,51 @@ function setupEventListeners() {
 
   // Profile View Event Listeners
   let selectedProfileAvatarData = null;
+  let selectedLogoData = null;
+  let selectedIgQrData = null;
+
   const editProfileDialog = $("#admin-edit-profile-dialog");
   const editProfileForm = $("#admin-edit-profile-form");
   const editProfileMsg = $("#edit-admin-profile-msg");
   const editAvatarFileInput = $("#edit-avatar-file-input");
   const editAvatarPreviewImg = $("#edit-avatar-preview-img");
+  const editLogoFileInput = $("#edit-logo-file-input");
+  const editLogoPreviewImg = $("#edit-logo-preview-img");
+  const editIgQrFileInput = $("#edit-ig-qr-file-input");
+  const editIgQrImg = $("#edit-ig-qr-img");
 
   const openProfileEditDialog = () => {
     selectedProfileAvatarData = null;
+    selectedLogoData = null;
+    selectedIgQrData = null;
+
     if (editProfileMsg) {
       editProfileMsg.textContent = "";
       editProfileMsg.className = "form-message";
     }
     const nameInput = $("#edit-admin-name");
     const roleInput = $("#edit-admin-role");
+    const igInput = $("#edit-admin-instagram");
     const bioInput = $("#edit-admin-bio");
     const emailInput = $("#edit-admin-email");
     const phoneInput = $("#edit-admin-phone");
 
+    const currentIg = (adminProfileState.instagram || "smart_ai_notes").replace(/^@/, "");
+
     if (nameInput) nameInput.value = adminProfileState.name || "Stephanraj";
     if (roleInput) roleInput.value = adminProfileState.role || "Master Admin & Platform Creator";
+    if (igInput) igInput.value = currentIg;
     if (bioInput) bioInput.value = adminProfileState.bio || "";
     if (emailInput) emailInput.value = adminProfileState.email || "admin@examalertindia.com";
     if (phoneInput) phoneInput.value = adminProfileState.phone || "+91 98765 43210";
+
+    // Update Live IG Preview in dialog
+    const igHandlePreview = $("#edit-preview-ig-handle");
+    const igTestLink = $("#edit-ig-test-link");
+    if (igHandlePreview) igHandlePreview.textContent = `@${currentIg}`;
+    if (igTestLink) igTestLink.href = `https://www.instagram.com/${currentIg}/`;
+
+    // Avatar preview
     if (editAvatarPreviewImg) {
       editAvatarPreviewImg.style.display = "block";
       editAvatarPreviewImg.src = adminProfileState.avatarUrl || "assets/admin.jpg";
@@ -2675,11 +2702,33 @@ function setupEventListeners() {
     }
     if (editAvatarFileInput) editAvatarFileInput.value = "";
 
+    // Logo preview
+    if (editLogoPreviewImg) {
+      editLogoPreviewImg.src = adminProfileState.logoUrl || "assets/ailogo.png";
+    }
+    if (editLogoFileInput) editLogoFileInput.value = "";
+
+    // QR Image preview
+    if (editIgQrImg) {
+      editIgQrImg.src = adminProfileState.instagramQrUrl || "assets/instagram_qr.svg?v=3.1";
+    }
+    if (editIgQrFileInput) editIgQrFileInput.value = "";
+
     editProfileDialog?.showModal();
     nameInput?.focus();
   };
 
   $("#profile-open-edit-btn")?.addEventListener("click", openProfileEditDialog);
+
+  // Live Instagram typing preview inside modal
+  $("#edit-admin-instagram")?.addEventListener("input", e => {
+    const rawVal = e.target.value.trim().replace(/^@/, "");
+    const handle = rawVal || "smart_ai_notes";
+    const igHandlePreview = $("#edit-preview-ig-handle");
+    const igTestLink = $("#edit-ig-test-link");
+    if (igHandlePreview) igHandlePreview.textContent = `@${handle}`;
+    if (igTestLink) igTestLink.href = `https://www.instagram.com/${handle}/`;
+  });
 
   // Avatar file picker triggers
   $("#edit-avatar-trigger-btn")?.addEventListener("click", () => {
@@ -2707,7 +2756,7 @@ function setupEventListeners() {
         const fb = $("#edit-avatar-preview-fallback");
         if (fb) fb.style.display = "none";
       }
-      showToast("✓ Profile photo chosen! Click 'Save Changes' to apply.", "info");
+      showToast("✓ Profile photo chosen! Click 'Save Profile Changes' to apply.", "info");
     } catch {
       const reader = new FileReader();
       reader.onload = evt => {
@@ -2718,7 +2767,55 @@ function setupEventListeners() {
           const fb = $("#edit-avatar-preview-fallback");
           if (fb) fb.style.display = "none";
         }
-        showToast("✓ Profile photo chosen! Click 'Save Changes' to apply.", "info");
+        showToast("✓ Profile photo chosen! Click 'Save Profile Changes' to apply.", "info");
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // Logo file picker trigger
+  $("#edit-logo-trigger-btn")?.addEventListener("click", () => {
+    editLogoFileInput?.click();
+  });
+
+  editLogoFileInput?.addEventListener("change", async e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const dataUrl = await optimizeImageFile(file, 400, 0.92);
+      selectedLogoData = dataUrl;
+      if (editLogoPreviewImg) editLogoPreviewImg.src = dataUrl;
+      showToast("✓ Website logo selected! Click 'Save Profile Changes' to apply across all pages.", "info");
+    } catch {
+      const reader = new FileReader();
+      reader.onload = evt => {
+        selectedLogoData = evt.target.result;
+        if (editLogoPreviewImg) editLogoPreviewImg.src = evt.target.result;
+        showToast("✓ Website logo selected! Click 'Save Profile Changes' to apply across all pages.", "info");
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // Instagram QR file picker trigger
+  $("#edit-ig-qr-trigger-btn")?.addEventListener("click", () => {
+    editIgQrFileInput?.click();
+  });
+
+  editIgQrFileInput?.addEventListener("change", async e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const dataUrl = await optimizeImageFile(file, 600, 0.95);
+      selectedIgQrData = dataUrl;
+      if (editIgQrImg) editIgQrImg.src = dataUrl;
+      showToast("✓ Instagram QR image selected! Click 'Save Profile Changes' to apply to About Us page.", "info");
+    } catch {
+      const reader = new FileReader();
+      reader.onload = evt => {
+        selectedIgQrData = evt.target.result;
+        if (editIgQrImg) editIgQrImg.src = evt.target.result;
+        showToast("✓ Instagram QR image selected! Click 'Save Profile Changes' to apply to About Us page.", "info");
       };
       reader.readAsDataURL(file);
     }
@@ -2732,6 +2829,7 @@ function setupEventListeners() {
     e.preventDefault();
     const name = $("#edit-admin-name")?.value.trim();
     const role = $("#edit-admin-role")?.value.trim() || "Master Admin & Platform Creator";
+    const instagram = $("#edit-admin-instagram")?.value.trim().replace(/^@/, "") || "smart_ai_notes";
     const bio = $("#edit-admin-bio")?.value.trim() || "";
     const email = $("#edit-admin-email")?.value.trim();
     const phone = $("#edit-admin-phone")?.value.trim();
@@ -2747,22 +2845,27 @@ function setupEventListeners() {
 
     if (submitBtn) submitBtn.disabled = true;
     if (editProfileMsg) {
-      editProfileMsg.textContent = "Saving profile details…";
+      editProfileMsg.textContent = "Saving profile & branding details…";
       editProfileMsg.className = "form-message";
     }
 
     try {
+      const payload = {
+        name,
+        role,
+        instagram,
+        bio,
+        email,
+        phone
+      };
+      if (selectedProfileAvatarData) payload.avatarData = selectedProfileAvatarData;
+      if (selectedLogoData) payload.logoData = selectedLogoData;
+      if (selectedIgQrData) payload.instagramQrData = selectedIgQrData;
+
       const res = await api("/api/admin/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          role,
-          bio,
-          email,
-          phone,
-          avatarData: selectedProfileAvatarData
-        })
+        body: JSON.stringify(payload)
       });
 
       if (res && res.profile) {
@@ -2772,27 +2875,33 @@ function setupEventListeners() {
           ...adminProfileState,
           name,
           role,
+          instagram,
           bio,
           email,
           phone,
-          ...(selectedProfileAvatarData ? { avatarUrl: selectedProfileAvatarData } : {})
+          ...(selectedProfileAvatarData ? { avatarUrl: selectedProfileAvatarData } : {}),
+          ...(selectedLogoData ? { logoUrl: selectedLogoData } : {}),
+          ...(selectedIgQrData ? { instagramQrUrl: selectedIgQrData } : {})
         };
       }
 
       localStorage.setItem("exam_admin_profile_data", JSON.stringify(adminProfileState));
       applyAdminProfileUI(adminProfileState);
       editProfileDialog?.close();
-      showToast("✓ Administrator profile updated successfully!", "success");
+      showToast("✓ Administrator profile, logo & Instagram QR updated successfully!", "success");
     } catch (err) {
       // Local mode fallback
       adminProfileState = {
         ...adminProfileState,
         name,
         role,
+        instagram,
         bio,
         email,
         phone,
-        ...(selectedProfileAvatarData ? { avatarUrl: selectedProfileAvatarData } : {})
+        ...(selectedProfileAvatarData ? { avatarUrl: selectedProfileAvatarData } : {}),
+        ...(selectedLogoData ? { logoUrl: selectedLogoData } : {}),
+        ...(selectedIgQrData ? { instagramQrUrl: selectedIgQrData } : {})
       };
       localStorage.setItem("exam_admin_profile_data", JSON.stringify(adminProfileState));
       applyAdminProfileUI(adminProfileState);
@@ -2801,6 +2910,8 @@ function setupEventListeners() {
     } finally {
       if (submitBtn) submitBtn.disabled = false;
       selectedProfileAvatarData = null;
+      selectedLogoData = null;
+      selectedIgQrData = null;
     }
   });
 

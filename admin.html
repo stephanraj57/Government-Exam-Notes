@@ -1418,67 +1418,168 @@
     </form>
   </dialog>
 
-  <!-- Edit Admin Profile Details Modal Dialog -->
-  <dialog id="admin-edit-profile-dialog" class="dialog edit-dialog edit-profile-dialog">
-    <form id="admin-edit-profile-form" class="edit-dialog-content" style="max-width: 480px;">
+  <!-- Edit Admin Profile Details Modal Dialog (Spacious Studio Modal) -->
+  <dialog id="admin-edit-profile-dialog" class="dialog edit-dialog edit-profile-dialog edit-profile-dialog-spacious">
+    <form id="admin-edit-profile-form" class="edit-dialog-content edit-dialog-spacious-content">
       <button class="close-button" type="button" data-close title="Close">×</button>
       
-      <div class="edit-dialog-header">
-        <p class="eyebrow" style="color: var(--primary);">👤 Admin Identity Studio</p>
-        <h2>Edit Profile Details</h2>
-        <p class="dialog-sub">Update your name, contact information, and administrator avatar photo.</p>
-      </div>
-
-      <!-- Profile Photo Upload & Live Preview -->
-      <div class="edit-avatar-center-wrap">
-        <div class="edit-avatar-preview-ring" id="edit-avatar-preview-ring" role="button" tabindex="0" title="Click to choose a new photo">
-          <img id="edit-avatar-preview-img" src="assets/admin.jpg" alt="Admin Avatar" class="edit-avatar-preview-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
-          <div id="edit-avatar-preview-fallback" class="edit-avatar-preview-fallback" style="display:none;">SR</div>
-          <div class="edit-avatar-upload-overlay" title="Upload New Profile Picture">
-            <span class="camera-icon">📷</span>
-            <small>Change</small>
+      <!-- Top Brand Header Bar with Home Page Logo -->
+      <div class="edit-dialog-brand-header">
+        <div class="edit-dialog-brand-left">
+          <img src="assets/ailogo.png" alt="Free AI Govt Exam Notes Logo" class="edit-modal-brand-logo" onerror="this.style.display='none'">
+          <div class="edit-modal-brand-text">
+            <div class="edit-modal-brand-name">
+              <strong>Free AI</strong> Govt Exam Notes
+            </div>
+            <small class="edit-modal-brand-tagline">Platform Identity & Creator Control Center</small>
           </div>
         </div>
-        <input type="file" id="edit-avatar-file-input" accept="image/png,image/jpeg,image/webp,image/jpg" style="display:none;">
-        <button type="button" id="edit-avatar-trigger-btn" class="profile-act-btn secondary" style="margin-top: 6px; font-size: 0.76rem; padding: 5px 12px; cursor: pointer;">
-          <span>📷</span> Choose New Photo
-        </button>
-        <p class="avatar-upload-hint">Click avatar or button above to select photo (JPG, PNG, WebP)</p>
-      </div>
-
-      <div class="edit-fields-grid" style="margin-top: 14px; display: flex; flex-direction: column; gap: 12px;">
-        <div class="form-group">
-          <label class="form-label-title" for="edit-admin-name">Full Name <span class="req-star" style="color: var(--primary);">*</span></label>
-          <input id="edit-admin-name" class="form-control" type="text" maxlength="50" placeholder="e.g. Stephanraj" required autocomplete="name">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label-title" for="edit-admin-role">Role & Designation</label>
-          <input id="edit-admin-role" class="form-control" type="text" maxlength="60" placeholder="e.g. Master Admin & Platform Creator">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label-title" for="edit-admin-bio">Founder's Vision / Creator Bio (Shown on About Us)</label>
-          <textarea id="edit-admin-bio" class="form-control" rows="3" style="height: auto; padding: 8px 11px; resize: vertical; line-height: 1.45;" placeholder="Enter your vision or founder's message for students"></textarea>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label-title" for="edit-admin-email">Email Address <span class="req-star" style="color: var(--primary);">*</span></label>
-          <input id="edit-admin-email" class="form-control" type="email" maxlength="80" placeholder="e.g. stephanraj@examalertindia.com" required autocomplete="email">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label-title" for="edit-admin-phone">Mobile Number <span class="req-star" style="color: var(--primary);">*</span></label>
-          <input id="edit-admin-phone" class="form-control" type="tel" maxlength="20" placeholder="e.g. +91 98765 43210" required autocomplete="tel">
+        <div class="edit-dialog-header-meta">
+          <span class="edit-modal-badge">✦ Admin Profile Studio ✦</span>
         </div>
       </div>
 
-      <p id="edit-admin-profile-msg" class="form-message" style="margin-top: 8px;"></p>
+      <!-- 2-Column Main Studio Grid -->
+      <div class="edit-profile-grid-2col">
+        
+        <!-- Left Column: Visual Identity, Logo, Avatar & Instagram Barcode Uploaders -->
+        <div class="edit-profile-left-col">
+          
+          <!-- Creator Avatar Preview Card -->
+          <div class="edit-profile-card-box">
+            <span class="edit-box-label">📸 Creator Profile Photo</span>
+            
+            <div class="edit-avatar-center-wrap">
+              <div class="edit-avatar-preview-ring" id="edit-avatar-preview-ring" role="button" tabindex="0" title="Click to choose a new photo">
+                <img id="edit-avatar-preview-img" src="assets/admin.jpg" alt="Admin Avatar" class="edit-avatar-preview-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
+                <div id="edit-avatar-preview-fallback" class="edit-avatar-preview-fallback" style="display:none;">SR</div>
+                <div class="edit-avatar-upload-overlay" title="Upload New Profile Picture">
+                  <span class="camera-icon">📷</span>
+                  <small>Change</small>
+                </div>
+              </div>
+              <input type="file" id="edit-avatar-file-input" accept="image/png,image/jpeg,image/webp,image/jpg" style="display:none;">
+              <button type="button" id="edit-avatar-trigger-btn" class="profile-act-btn secondary edit-photo-btn">
+                <span>📷</span> Change Photo
+              </button>
+              <p class="avatar-upload-hint">Updates avatar across About Us and Admin Header</p>
+            </div>
+          </div>
 
-      <div class="modal-btn-row" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 10px;">
+          <!-- Website Brand Logo Uploader Card (All Pages) -->
+          <div class="edit-profile-card-box edit-logo-showcase-box">
+            <div class="edit-logo-box-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span class="edit-box-label" style="margin-bottom: 0;">🖼️ Website Brand Logo</span>
+              <span class="edit-asset-badge">All Pages</span>
+            </div>
+
+            <div class="edit-logo-preview-body" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px;">
+              <div class="edit-logo-preview-frame">
+                <img id="edit-logo-preview-img" src="assets/ailogo.png" alt="Website Logo Preview" class="edit-logo-preview-img" onerror="this.src='assets/ailogo.png'">
+              </div>
+              <input type="file" id="edit-logo-file-input" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/jpg" style="display:none;">
+              <button type="button" id="edit-logo-trigger-btn" class="profile-act-btn secondary edit-photo-btn" style="width: 100%; margin-top: 4px;">
+                <span>🎨</span> Upload New Logo
+              </button>
+              <p class="avatar-upload-hint" style="margin-top: 2px;">Updates brand logo across Home, About Us, and Admin</p>
+            </div>
+          </div>
+
+          <!-- Official Instagram Community & Scannable QR / Barcode Card (About Us Page) -->
+          <div class="edit-profile-card-box edit-ig-showcase-box">
+            <div class="edit-ig-box-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="edit-ig-pulse-dot"></span>
+                <span class="edit-ig-box-title">INSTAGRAM QR & BARCODE</span>
+              </div>
+              <span class="edit-asset-badge ig-badge">About Us</span>
+            </div>
+
+            <div class="edit-ig-preview-body">
+              <div class="edit-ig-qr-frame">
+                <img id="edit-ig-qr-img" src="assets/instagram_qr.svg?v=3.1" alt="Instagram Barcode QR Code" class="edit-ig-qr-img" width="120" height="120">
+              </div>
+              
+              <div class="edit-ig-meta-wrap">
+                <strong id="edit-preview-ig-handle" class="edit-ig-handle-text">@smart_ai_notes</strong>
+                <input type="file" id="edit-ig-qr-file-input" accept="image/svg+xml,image/png,image/jpeg,image/webp,image/jpg" style="display:none;">
+                <button type="button" id="edit-ig-qr-trigger-btn" class="profile-act-btn secondary edit-photo-btn" style="width: 100%; margin-top: 5px;">
+                  <span>🔄</span> Change QR Image
+                </button>
+                <p class="avatar-upload-hint" style="margin-top: 3px;">Replaces QR barcode on About Us page</p>
+                <a id="edit-ig-test-link" href="https://www.instagram.com/smart_ai_notes/" target="_blank" rel="noopener noreferrer" class="edit-ig-test-btn" style="margin-top: 6px;" title="Test Instagram Link in new tab">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                  </svg>
+                  <span>Test Link ↗</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Profile Credentials & Vision Details Form -->
+        <div class="edit-profile-right-col">
+          
+          <div class="form-group">
+            <label class="form-label-title" for="edit-admin-name">
+              <span>👤</span> Full Name <span class="req-star" style="color: var(--primary);">*</span>
+            </label>
+            <input id="edit-admin-name" class="form-control" type="text" maxlength="50" placeholder="e.g. Stephanraj" required autocomplete="name">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label-title" for="edit-admin-role">
+              <span>🛡️</span> Role & Designation
+            </label>
+            <input id="edit-admin-role" class="form-control" type="text" maxlength="60" placeholder="e.g. Master Admin & Platform Creator">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label-title" for="edit-admin-instagram">
+              <span>📷</span> Instagram Handle / Username
+            </label>
+            <div class="input-prefix-wrap">
+              <span class="input-prefix">@</span>
+              <input id="edit-admin-instagram" class="form-control input-with-prefix" type="text" maxlength="50" placeholder="smart_ai_notes">
+            </div>
+            <small class="field-subtext">Automatically updates QR link and Instagram follow buttons across the website</small>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label-title" for="edit-admin-bio">
+              <span>💡</span> Founder's Vision & Bio Statement (Shown on About Us)
+            </label>
+            <textarea id="edit-admin-bio" class="form-control edit-bio-textarea" rows="3" placeholder="Enter your vision or founder's message for students"></textarea>
+          </div>
+
+          <div class="edit-fields-row-2col">
+            <div class="form-group">
+              <label class="form-label-title" for="edit-admin-email">
+                <span>✉️</span> Email Address <span class="req-star" style="color: var(--primary);">*</span>
+              </label>
+              <input id="edit-admin-email" class="form-control" type="email" maxlength="80" placeholder="e.g. stephanraj@examalertindia.com" required autocomplete="email">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label-title" for="edit-admin-phone">
+                <span>📱</span> Mobile Number <span class="req-star" style="color: var(--primary);">*</span>
+              </label>
+              <input id="edit-admin-phone" class="form-control" type="tel" maxlength="20" placeholder="e.g. +91 98765 43210" required autocomplete="tel">
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <p id="edit-admin-profile-msg" class="form-message" style="margin-top: 10px;"></p>
+
+      <div class="modal-btn-row edit-modal-footer" style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 12px;">
         <button class="outline-button" type="button" data-close>Cancel</button>
-        <button id="edit-admin-profile-submit" class="upload-button" type="submit" style="padding: 10px 20px; font-weight: 700;">
-          <span>💾</span> Save Changes
+        <button id="edit-admin-profile-submit" class="upload-button" type="submit" style="padding: 11px 24px; font-weight: 800;">
+          <span>💾</span> Save Profile Changes
         </button>
       </div>
     </form>

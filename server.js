@@ -48,8 +48,11 @@ const DEFAULT_PROFILE = {
   email: "admin@examalertindia.com",
   phone: "+91 98765 43210",
   role: "Master Admin & Platform Creator",
+  instagram: "smart_ai_notes",
   bio: "Every student preparing for competitive examinations deserves access to clean, high-retention study resources without financial barriers. Free AI Govt Exam Notes was founded on the philosophy that visual synthesis, structured mind maps, and concept clarity can transform preparation outcomes. Our commitment is to keep this knowledge base 100% free, updated, and accessible to every aspirant in India.",
   avatarUrl: "assets/admin.jpg",
+  logoUrl: "assets/ailogo.png",
+  instagramQrUrl: "assets/instagram_qr.svg?v=3.1",
   updatedAt: new Date().toISOString()
 };
 
@@ -407,6 +410,7 @@ async function handleApi(request, response, url) {
     if (body.email) profile.email = String(body.email).trim().slice(0, 100);
     if (body.phone !== undefined) profile.phone = String(body.phone).trim().slice(0, 30);
     if (body.role) profile.role = String(body.role).trim().slice(0, 80);
+    if (body.instagram !== undefined) profile.instagram = String(body.instagram).trim().replace(/^@/, "").slice(0, 50);
     if (body.bio !== undefined) profile.bio = String(body.bio).trim().slice(0, 800);
 
     if (body.avatarData) {
@@ -428,6 +432,52 @@ async function handleApi(request, response, url) {
           } catch {}
           await fs.writeFile(path.join(UPLOAD_DIR, fileName), imageBuffer);
           profile.avatarUrl = `/uploads/${fileName}?t=${Date.now()}`;
+        }
+      }
+    }
+
+    if (body.logoData) {
+      const rawImage = String(body.logoData).trim();
+      const imageMatch = rawImage.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=\r\n\s]+)$/);
+      if (imageMatch) {
+        const rawType = imageMatch[1].toLowerCase();
+        const ext = rawType.includes("svg") ? "svg" : rawType.includes("png") ? "png" : rawType.includes("webp") ? "webp" : "png";
+        const imageBuffer = Buffer.from(imageMatch[2].replace(/[\r\n\s]/g, ""), "base64");
+        if (imageBuffer.length >= 4 && imageBuffer.length <= 12 * 1024 * 1024) {
+          const fileName = `site_logo_${Date.now()}.${ext}`;
+          try {
+            const files = await fs.readdir(UPLOAD_DIR);
+            for (const f of files) {
+              if (f.startsWith("site_logo_")) {
+                await fs.unlink(path.join(UPLOAD_DIR, f)).catch(() => {});
+              }
+            }
+          } catch {}
+          await fs.writeFile(path.join(UPLOAD_DIR, fileName), imageBuffer);
+          profile.logoUrl = `/uploads/${fileName}?t=${Date.now()}`;
+        }
+      }
+    }
+
+    if (body.instagramQrData) {
+      const rawImage = String(body.instagramQrData).trim();
+      const imageMatch = rawImage.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=\r\n\s]+)$/);
+      if (imageMatch) {
+        const rawType = imageMatch[1].toLowerCase();
+        const ext = rawType.includes("svg") ? "svg" : rawType.includes("png") ? "png" : rawType.includes("webp") ? "webp" : "jpg";
+        const imageBuffer = Buffer.from(imageMatch[2].replace(/[\r\n\s]/g, ""), "base64");
+        if (imageBuffer.length >= 4 && imageBuffer.length <= 12 * 1024 * 1024) {
+          const fileName = `instagram_qr_${Date.now()}.${ext}`;
+          try {
+            const files = await fs.readdir(UPLOAD_DIR);
+            for (const f of files) {
+              if (f.startsWith("instagram_qr_")) {
+                await fs.unlink(path.join(UPLOAD_DIR, f)).catch(() => {});
+              }
+            }
+          } catch {}
+          await fs.writeFile(path.join(UPLOAD_DIR, fileName), imageBuffer);
+          profile.instagramQrUrl = `/uploads/${fileName}?t=${Date.now()}`;
         }
       }
     }
