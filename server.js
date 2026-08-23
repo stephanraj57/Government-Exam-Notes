@@ -764,10 +764,24 @@ async function handleApi(request, response, url) {
           const buf = await fs.readFile(filePath);
           const ext = path.extname(file).toLowerCase();
           const mime = mimeTypes[ext] || (ext === ".svg" ? "image/svg+xml" : "image/jpeg");
-          images[file] = `data:${mime};base64,${buf.toString("base64")}`;
+          const dataUrl = `data:${mime};base64,${buf.toString("base64")}`;
+          images[file] = dataUrl;
+          images[`/uploads/${file}`] = dataUrl;
         }
       }
     } catch {}
+
+    // Embed image data directly into notes array for bulletproof portability
+    const exportedNotes = notes.map(n => {
+      const noteCopy = { ...n };
+      if (noteCopy.imageUrl) {
+        const cleanName = path.basename(noteCopy.imageUrl.split("?")[0]);
+        if (images[cleanName]) {
+          noteCopy.imageData = images[cleanName];
+        }
+      }
+      return noteCopy;
+    });
 
     // Helper to convert any asset or upload path to Base64 Data URL
     async function getAssetDataUrl(urlOrPath) {
@@ -796,7 +810,7 @@ async function handleApi(request, response, url) {
       version: "2.1",
       type: "ExamAlertIndiaFullBackup",
       exportedAt: new Date().toISOString(),
-      notes,
+      notes: exportedNotes,
       visits,
       interactions,
       profile,
@@ -811,7 +825,7 @@ async function handleApi(request, response, url) {
   if (request.method === "POST" && url.pathname === "/api/admin/backup/restore") {
     if (!isAdmin(request)) return sendUnauthorized(response), true;
 
-    const body = await readBody(request, 60 * 1024 * 1024).catch(() => ({}));
+    const body = await readBody(request, 80 * 1024 * 1024).catch(() => ({}));
     const backup = body.backup || body;
 
     if (!backup || typeof backup !== "object") {
@@ -819,31 +833,69 @@ async function handleApi(request, response, url) {
       return true;
     }
 
-    if (Array.isArray(backup.notes)) {
-      await writeJson(NOTES_FILE, backup.notes);
+    await fs.mkdir(UPLOAD_DIR, { recursive: true });
+
+    // 1. Restore all images from images dictionary into /uploads/
+    const restoredImagesMap = {};
+    if (backup.images && typeof backup.images === "object") {
+      for (const [filename, dataUrl] of Object.entries(backup.images)) {
+        if (!filename || !dataUrl || typeof dataUrl !== "string") continue;
+        const cleanName = path.basename(filename.split("?")[0]);
+        const match = dataUrl.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
+        if (match) {
+          try {
+            const buf = Buffer.from(match[2].replace(/[\r\n\s]/g, ""), "base64");
+            await fs.writeFile(path.join(UPLOAD_DIR, cleanName), buf);
+            restoredImagesMap[cleanName] = `/uploads/${cleanName}`;
+            restoredImagesMap[`/uploads/${cleanName}`] = `/uploads/${cleanName}`;
+          } catch {}
+        }
+      }
     }
+
+    // 2. Process and restore notes, extracting any embedded imageData
+    if (Array.isArray(backup.notes)) {
+      const finalNotes = [];
+      for (const note of backup.notes) {
+        const cleanNote = { ...note };
+        const rawData = cleanNote.imageData || cleanNote.image || "";
+        
+        if (typeof rawData === "string" && rawData.startsWith("data:image/")) {
+          const match = rawData.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
+          if (match) {
+            const ext = match[1].includes("png") ? "png" : match[1].includes("webp") ? "webp" : "jpg";
+            const filename = `${cleanNote.id || crypto.randomUUID()}.${ext}`;
+            try {
+              const buf = Buffer.from(match[2].replace(/[\r\n\s]/g, ""), "base64");
+              await fs.writeFile(path.join(UPLOAD_DIR, filename), buf);
+              cleanNote.imageUrl = `/uploads/${filename}`;
+            } catch {}
+          }
+        } else if (cleanNote.imageUrl) {
+          const cleanName = path.basename(cleanNote.imageUrl.split("?")[0]);
+          if (backup.images && (backup.images[cleanName] || backup.images[cleanNote.imageUrl])) {
+            const dataUrl = backup.images[cleanName] || backup.images[cleanNote.imageUrl];
+            const match = String(dataUrl).match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
+            if (match) {
+              try {
+                const buf = Buffer.from(match[2].replace(/[\r\n\s]/g, ""), "base64");
+                await fs.writeFile(path.join(UPLOAD_DIR, cleanName), buf);
+                cleanNote.imageUrl = `/uploads/${cleanName}`;
+              } catch {}
+            }
+          }
+        }
+        delete cleanNote.imageData; // Keep notes.json lightweight
+        finalNotes.push(cleanNote);
+      }
+      await writeJson(NOTES_FILE, finalNotes);
+    }
+
     if (backup.visits && typeof backup.visits === "object") {
       await writeJson(VISITS_FILE, backup.visits);
     }
     if (backup.interactions && typeof backup.interactions === "object") {
       await writeJson(INTERACTIONS_FILE, backup.interactions);
-    }
-
-    await fs.mkdir(UPLOAD_DIR, { recursive: true });
-
-    // Restore images from images dictionary into /uploads/
-    if (backup.images && typeof backup.images === "object") {
-      for (const [filename, dataUrl] of Object.entries(backup.images)) {
-        if (!filename || !dataUrl || typeof dataUrl !== "string") continue;
-        const cleanName = path.basename(filename);
-        const match = dataUrl.match(/^data:image\/[a-zA-Z0-9+.-]+;base64,(.+)$/);
-        if (match) {
-          try {
-            const buf = Buffer.from(match[1], "base64");
-            await fs.writeFile(path.join(UPLOAD_DIR, cleanName), buf);
-          } catch {}
-        }
-      }
     }
 
     let profile = backup.profile && typeof backup.profile === "object" ? { ...backup.profile } : null;

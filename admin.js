@@ -1694,7 +1694,7 @@ function renderTable() {
       const isUploaded = Boolean(n.imageUrl);
       const isSelected = tableState.selectedIds.has(n.id);
       const thumb = n.imageUrl
-        ? `<img src="${n.imageUrl}" alt="${escapeHtml(n.title)}" class="grid-card-img" data-preview-id="${n.id}">`
+        ? `<img src="${n.imageUrl}" alt="${escapeHtml(n.title)}" class="grid-card-img" data-preview-id="${n.id}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'grid-card-img placeholder\\' data-preview-id=\\'${n.id}\\'>📖</div>';">`
         : `<div class="grid-card-img placeholder" data-preview-id="${n.id}">📖</div>`;
 
       const tagsHtml = (n.tags && n.tags.length > 0)
@@ -3723,11 +3723,22 @@ function setupEventListeners() {
 
       // Fallback if local or api error
       if (!backupData) {
+        const clientImages = {};
+        const clientNotes = allNotes.map(n => {
+          const copy = { ...n };
+          if (copy.imageUrl && copy.imageUrl.startsWith("data:image/")) {
+            const imgKey = `${copy.id || Date.now()}.jpg`;
+            clientImages[imgKey] = copy.imageUrl;
+            copy.imageData = copy.imageUrl;
+          }
+          return copy;
+        });
+
         backupData = {
           version: "2.1",
           type: "ExamAlertIndiaFullBackup",
           exportedAt: new Date().toISOString(),
-          notes: allNotes,
+          notes: clientNotes,
           visits: {
             count: Number(localStorage.getItem("exam_notes_local_visits") || "0"),
             today: Number(localStorage.getItem("exam_notes_local_visits_today") || "0")
@@ -3739,7 +3750,7 @@ function setupEventListeners() {
             logoData: adminProfileState.logoUrl || null,
             instagramQrData: adminProfileState.instagramQrUrl || null
           },
-          images: {}
+          images: clientImages
         };
       }
 
@@ -3922,8 +3933,22 @@ function setupEventListeners() {
       await progressModal.animateTo(98, 500, "Applying branding assets & search indexes...", "Syncing logo, avatar and Instagram QR...", "Time remaining: Almost done", "Speed: 45.0 MB/s");
 
       if (Array.isArray(backupObj.notes)) {
-        localStorage.setItem("exam_notes_custom_uploads", JSON.stringify(backupObj.notes));
-        allNotes = backupObj.notes;
+        const clientNotes = backupObj.notes.map(n => {
+          const c = { ...n };
+          if (backupObj.images && c.imageUrl) {
+            const cleanName = c.imageUrl.split("?")[0].replace(/^\/uploads\//, "");
+            const base64 = backupObj.images[cleanName] || backupObj.images[c.imageUrl] || backupObj.images[`/uploads/${cleanName}`];
+            if (base64) {
+              c.imageData = base64;
+              if (window.location.protocol === "file:" || isLocalClientMode) {
+                c.imageUrl = base64;
+              }
+            }
+          }
+          return c;
+        });
+        localStorage.setItem("exam_notes_custom_uploads", JSON.stringify(clientNotes));
+        allNotes = clientNotes;
       }
       if (backupObj.profile || backupObj.profileAssets) {
         adminProfileState = {
