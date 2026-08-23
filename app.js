@@ -122,24 +122,44 @@ function setTheme(theme, save = true) {
 // 4. Data Loading & Persistence
 // ==========================================
 async function loadNotes() {
+  let serverNotes = [];
   try {
     const [notesRes, visitsRes, meRes] = await Promise.all([
-      fetch("/api/notes").then(r => r.ok ? r.json() : { notes: [] }),
+      fetch("/api/notes").then(r => r.ok ? r.json() : { notes: [] }).catch(() => ({ notes: [] })),
       fetch("/api/visits").then(r => r.ok ? r.json() : { count: 0 }).catch(() => ({ count: 0 })),
       fetch("/api/admin/me").then(r => r.ok ? r.json() : { admin: false }).catch(() => ({ admin: false }))
     ]);
 
-    notes = notesRes.notes || [];
+    serverNotes = notesRes.notes || [];
     isAdmin = Boolean(meRes.admin);
   } catch {
-    notes = [];
+    serverNotes = [];
     isAdmin = false;
   }
+
+  // Merge server notes and local storage custom uploads (ensuring restored backup notes always appear on home page)
+  const localUploads = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
+  const mergedNotes = [...localUploads.filter(l => !serverNotes.some(s => s.id === l.id)), ...serverNotes];
+
+  notes = mergedNotes;
 
   // Prune any stale bookmark IDs that no longer exist in current library
   const noteIdSet = new Set(notes.map(n => n.id));
   bookmarks = new Set([...bookmarks].filter(id => noteIdSet.has(id)));
-  localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
+  try {
+    localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
+  } catch {}
+
+  // Hydrate Brand Logo & Admin Profile Avatar immediately from LocalStorage
+  const localProfile = JSON.parse(localStorage.getItem("exam_admin_profile_data") || "null");
+  if (localProfile) {
+    if (localProfile.avatarUrl) {
+      document.querySelectorAll(".avatar-img").forEach(img => { img.src = localProfile.avatarUrl; });
+    }
+    if (localProfile.logoUrl) {
+      document.querySelectorAll(".brand-logo").forEach(img => { img.src = localProfile.logoUrl; });
+    }
+  }
 
   // Track genuine student homepage visit (recording daily & total website traffic)
   if (!sessionStorage.getItem("exam_student_session_visit")) {
@@ -154,13 +174,14 @@ async function loadNotes() {
       })
       .catch(() => {});
 
-    // Hydrate Brand Logo & Admin Profile Avatar
+    // Hydrate Brand Logo & Admin Profile Avatar from server
     fetch("/api/admin/profile")
       .then(r => r.json())
       .then(d => {
         if (d && d.profile) {
           const avatar = d.profile.avatarUrl;
           if (avatar) {
+            localStorage.setItem("exam_admin_profile_data", JSON.stringify(d.profile));
             document.querySelectorAll(".avatar-img").forEach(img => {
               img.src = avatar;
             });
@@ -203,10 +224,15 @@ function updatePopularTags() {
   if (!tagsContainer) return;
 
   const allTags = new Set();
-  notes.forEach(n => (n.tags || []).forEach(t => allTags.add(t)));
-  
+  notes.forEach(n => {
+    if (Array.isArray(n.tags)) {
+      n.tags.forEach(t => allTags.add(t));
+    }
+  });
+
   if (allTags.size === 0) {
-    ["UPSC", "Constitution", "Modern History", "Geography", "GDP", "Dance", "Shortcuts", "Biology"].forEach(t => allTags.add(t));
+    tagsContainer.innerHTML = `<span style="color: var(--ink-muted); font-size: 0.8rem; padding: 4px 8px;">No tags yet</span>`;
+    return;
   }
 
   tagsContainer.innerHTML = [...allTags].slice(0, 14).map(t =>
@@ -219,7 +245,7 @@ function renderCardMedia(note, pIndex = 0) {
     const priorityAttr = pIndex < 2 ? 'fetchpriority="high"' : 'fetchpriority="low"';
     return `
       <div class="card-media">
-        <img class="note-image" src="${note.imageUrl}" alt="${escapeHtml(note.title)}" loading="lazy" decoding="async" ${priorityAttr}>
+        <img class="note-image" src="${note.imageUrl}" alt="${escapeHtml(note.title)}" loading="lazy" decoding="async" ${priorityAttr} onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'preview\\'><h3>${escapeHtml(note.title)}</h3><p>${escapeHtml(note.subject)}</p><div class=\\'diagram\\'>📖</div></div>';">
       </div>
     `;
   }
