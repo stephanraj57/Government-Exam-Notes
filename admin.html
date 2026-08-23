@@ -144,10 +144,11 @@
   <main id="admin-dashboard-section" class="app-shell" hidden>
     <!-- Left Sidebar: Dashboard Portal Navigation -->
     <aside id="portal-sidebar" class="sidebar portal-sidebar">
-      <!-- Admin Profile Card (Top of Sidebar) -->
-      <div class="portal-profile-card">
+      <!-- Admin Profile Card (Top of Sidebar) - Clickable to open Admin Profile -->
+      <div class="portal-profile-card" data-admin-view="profile" role="button" tabindex="0" title="Click to view Admin Profile & Platform Settings">
         <div class="portal-avatar-wrap">
-          <img src="assets/admin.jpg" alt="Stephanraj" class="portal-avatar-img">
+          <img src="assets/admin.jpg" alt="Stephanraj" class="portal-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
+          <div class="portal-avatar-fallback" style="display:none;">SR</div>
           <span class="portal-status-dot" title="Administrator Online"></span>
         </div>
         <div class="portal-user-meta">
@@ -156,6 +157,9 @@
             <span class="portal-verified-badge" title="Verified Super Admin">✓</span>
           </div>
           <span class="portal-user-role">Super Administrator</span>
+        </div>
+        <div class="portal-profile-arrow" title="View Profile">
+          <span>›</span>
         </div>
       </div>
 
@@ -1041,6 +1045,195 @@
           </div>
         </div>
       </div>
+
+      <!-- 8. Admin Profile & System Settings Pane -->
+      <div id="admin-view-profile" class="admin-view-pane profile-view-pane" hidden>
+        <div class="admin-profile-container">
+        
+        <!-- Profile Hero Header Banner -->
+        <div class="profile-hero-card">
+          <div class="profile-hero-bg"></div>
+          <div class="profile-hero-content">
+            <div class="profile-avatar-super-wrap">
+              <div class="profile-avatar-large-ring">
+                <img src="assets/admin.jpg" alt="Stephanraj" class="profile-avatar-large-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
+                <div class="profile-avatar-large-fallback" style="display:none;">SR</div>
+              </div>
+              <span class="profile-live-indicator" title="Active Administrator Session">
+                <span class="live-dot-pulse"></span> Online
+              </span>
+              <span class="profile-verified-shield" title="Verified Master Super Administrator">✓</span>
+            </div>
+
+            <div class="profile-hero-meta">
+              <div class="profile-name-title-wrap">
+                <h1 class="profile-full-name">Stephanraj</h1>
+                <span class="profile-master-badge">
+                  <span class="sparkle-icon">✦</span> Super Administrator <span class="sparkle-icon">✦</span>
+                </span>
+              </div>
+              <p class="profile-bio-text">Chief Content Curator & Systems Administrator at <strong>Exam Alert India</strong>. Managing revision notes, visitor metrics, subject taxonomies, and search telemetry.</p>
+              
+              <div class="profile-tags-row">
+                <span class="profile-pill-tag">🛡️ Master Access</span>
+                <span class="profile-pill-tag">⚡ Full Operational Rights</span>
+                <span class="profile-pill-tag">📁 Editorial Control</span>
+                <span class="profile-pill-tag">🔒 Password Protected</span>
+              </div>
+            </div>
+
+            <div class="profile-hero-actions">
+              <button type="button" class="profile-act-btn edit-prof-btn" id="profile-open-edit-btn" title="Edit Administrator Profile">
+                <span>✏️</span> Edit Profile
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3-Column Profile Dashboard Grid -->
+        <div class="profile-grid-layout">
+          
+          <!-- Column 1: Live Platform Overview & Administrative Metrics -->
+          <div class="profile-card">
+            <div class="profile-card-header">
+              <span class="p-card-icon">📊</span>
+              <div>
+                <h3>Platform Statistics</h3>
+                <p class="p-card-sub">Live metrics managed under this account</p>
+              </div>
+            </div>
+
+            <div class="profile-stats-vertical-list">
+              <div class="profile-stat-row">
+                <div class="p-stat-left">
+                  <span class="p-stat-icon notes-bg">📖</span>
+                  <div>
+                    <strong id="profile-stat-notes">--</strong>
+                    <small>Total Revision Notes</small>
+                  </div>
+                </div>
+                <button type="button" class="p-stat-link" data-admin-view="modify">View ›</button>
+              </div>
+
+              <div class="profile-stat-row">
+                <div class="p-stat-left">
+                  <span class="p-stat-icon visits-bg">👥</span>
+                  <div>
+                    <strong id="profile-stat-visits">--</strong>
+                    <small>Lifetime Platform Visits</small>
+                  </div>
+                </div>
+                <button type="button" class="p-stat-link" data-admin-view="dashboard">View ›</button>
+              </div>
+
+              <div class="profile-stat-row">
+                <div class="p-stat-left">
+                  <span class="p-stat-icon today-bg">📅</span>
+                  <div>
+                    <strong id="profile-stat-today">--</strong>
+                    <small>Student Visits Today</small>
+                  </div>
+                </div>
+                <span class="p-stat-badge">Live</span>
+              </div>
+
+              <div class="profile-stat-row">
+                <div class="p-stat-left">
+                  <span class="p-stat-icon inter-bg">⚡</span>
+                  <div>
+                    <strong id="profile-stat-interactions">--</strong>
+                    <small>Likes & Downloads</small>
+                  </div>
+                </div>
+                <button type="button" class="p-stat-link" data-admin-view="interactions">View ›</button>
+              </div>
+
+              <div class="profile-stat-row">
+                <div class="p-stat-left">
+                  <span class="p-stat-icon demands-bg">🔎</span>
+                  <div>
+                    <strong id="profile-stat-demands">--</strong>
+                    <small>In-Demand Topics</small>
+                  </div>
+                </div>
+                <button type="button" class="p-stat-link" data-admin-view="missing-searches">View ›</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 2: Administrator Profile Details & Contact Info -->
+          <div class="profile-card">
+            <div class="profile-card-header">
+              <span class="p-card-icon">👤</span>
+              <div>
+                <h3>Admin Identity & Contact</h3>
+                <p class="p-card-sub">Personal credentials and contact details</p>
+              </div>
+            </div>
+
+            <div class="profile-info-table">
+              <div class="p-info-row">
+                <span class="p-info-label">Full Name</span>
+                <strong class="p-info-value" id="profile-display-name">Stephanraj</strong>
+              </div>
+              <div class="p-info-row">
+                <span class="p-info-label">Email Address</span>
+                <strong class="p-info-value" id="profile-display-email">admin@examalertindia.com</strong>
+              </div>
+              <div class="p-info-row">
+                <span class="p-info-label">Mobile Number</span>
+                <strong class="p-info-value" id="profile-display-phone">+91 98765 43210</strong>
+              </div>
+              <div class="p-info-row">
+                <span class="p-info-label">Access Level</span>
+                <span class="p-info-tag super-admin" id="profile-display-role">Super Administrator</span>
+              </div>
+              <div class="p-info-row">
+                <span class="p-info-label">Session Status</span>
+                <span class="p-info-tag session-active">🟢 Active (Authenticated)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 3: System Environment & Hosting Specifications -->
+          <div class="profile-card">
+            <div class="profile-card-header">
+              <span class="p-card-icon">⚙️</span>
+              <div>
+                <h3>System Environment</h3>
+                <p class="p-card-sub">Engine & hosting specifications</p>
+              </div>
+            </div>
+
+            <div class="profile-env-list">
+              <div class="p-env-row">
+                <span class="p-env-key">Platform Engine:</span>
+                <span class="p-env-val">Node.js Zero-Dependency</span>
+              </div>
+              <div class="p-env-row">
+                <span class="p-env-key">Database Storage:</span>
+                <span class="p-env-val">JSON Disk (data/notes.json)</span>
+              </div>
+              <div class="p-env-row">
+                <span class="p-env-key">Image Uploads:</span>
+                <span class="p-env-val">Persistent Local /uploads/</span>
+              </div>
+              <div class="p-env-row">
+                <span class="p-env-key">Heartbeat Telemetry:</span>
+                <span class="p-env-val">Real-Time (Rolling 90s Window)</span>
+              </div>
+            </div>
+
+            <div class="profile-footer-links" style="margin-top: 16px;">
+              <a href="index.html" class="outline-button" style="text-decoration: none; width: 100%; text-align: center; display: block; font-size: 0.82rem;">
+                🏠 Return to Public Website
+              </a>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
     </section>
   </main>
 
@@ -1089,6 +1282,148 @@
         <button class="outline-button" type="button" data-close>Cancel</button>
         <button id="edit-submit-btn" class="upload-button" type="submit">
           <span>✓</span> Save Changes
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- High-Security Clean All Data Confirmation Modal Dialog -->
+  <dialog id="admin-clean-data-dialog" class="dialog edit-dialog clean-data-dialog">
+    <form id="admin-clean-data-form" class="edit-dialog-content" style="max-width: 460px;">
+      <button class="close-button" type="button" data-close title="Close">×</button>
+      
+      <div class="edit-dialog-header">
+        <p class="eyebrow" style="color: #ef4444;">⚠️ High-Security Action</p>
+        <h2>Clean All Website Data</h2>
+        <p class="dialog-sub">Permanently wipe all revision notes, visitor metrics, search demands, and local caches.</p>
+      </div>
+
+      <div class="clean-data-warning-box">
+        <span class="warning-icon" style="font-size: 1.5rem;">🚨</span>
+        <div class="warning-text">
+          <strong style="color: #ef4444; font-size: 0.9rem;">Irreversible Operation</strong>
+          <p style="margin: 3px 0 0; font-size: 0.82rem; color: var(--ink-sub); line-height: 1.4;">Enter your Super Administrator password to authorize wiping all platform data.</p>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top: 16px;">
+        <label class="form-label-title" for="clean-data-password-input">Super Admin Password <span class="req-star" style="color: #ef4444;">*</span></label>
+        <div class="pwd-input-wrap">
+          <input id="clean-data-password-input" class="form-control" type="password" placeholder="Enter admin password to confirm" required autocomplete="current-password">
+          <button type="button" id="toggle-clean-pwd-visibility" class="pwd-visibility-btn" title="Toggle password visibility">
+            <svg id="clean-pwd-eye-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <p id="clean-data-error-msg" class="form-message" style="margin-top: 8px;"></p>
+
+      <div class="modal-btn-row" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="outline-button" type="button" data-close>Cancel</button>
+        <button id="clean-data-submit-btn" class="danger-btn bulk-btn" type="submit" style="padding: 10px 18px; font-weight: 700; background: #ef4444; color: #fff; border: 0; border-radius: var(--radius-md); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+          <span>🗑️</span> Confirm & Wipe All Data
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- High-Security Delete Note Confirmation Modal Dialog -->
+  <dialog id="admin-delete-note-dialog" class="dialog edit-dialog delete-note-dialog">
+    <form id="admin-delete-note-form" class="edit-dialog-content" style="max-width: 460px;">
+      <button class="close-button" type="button" data-close title="Close">×</button>
+      
+      <div class="edit-dialog-header">
+        <p class="eyebrow" style="color: #ef4444;">⚠️ Permanent Removal</p>
+        <h2 id="delete-note-modal-heading">Delete Note from Library</h2>
+        <p id="delete-note-modal-desc" class="dialog-sub">Permanently delete note and its diagram from the student revision library.</p>
+      </div>
+
+      <div class="clean-data-warning-box">
+        <span class="warning-icon" style="font-size: 1.5rem;">🗑️</span>
+        <div class="warning-text">
+          <strong id="delete-note-target-name" style="color: var(--ink); font-size: 0.9rem; display: block; word-break: break-word;">Note Title</strong>
+          <p style="margin: 3px 0 0; font-size: 0.82rem; color: var(--ink-sub); line-height: 1.4;">Enter your Super Administrator password to authorize this deletion.</p>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top: 16px;">
+        <label class="form-label-title" for="delete-note-password-input">Super Admin Password <span class="req-star" style="color: #ef4444;">*</span></label>
+        <div class="pwd-input-wrap">
+          <input id="delete-note-password-input" class="form-control" type="password" placeholder="Enter admin password to confirm" required autocomplete="current-password">
+          <button type="button" id="toggle-delete-pwd-visibility" class="pwd-visibility-btn" title="Toggle password visibility">
+            <svg id="delete-pwd-eye-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <p id="delete-note-error-msg" class="form-message" style="margin-top: 8px;"></p>
+
+      <div class="modal-btn-row" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="outline-button" type="button" data-close>Cancel</button>
+        <button id="delete-note-submit-btn" class="danger-btn bulk-btn" type="submit" style="padding: 10px 18px; font-weight: 700; background: #ef4444; color: #fff; border: 0; border-radius: var(--radius-md); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+          <span>🗑️</span> Confirm Delete
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Edit Admin Profile Details Modal Dialog -->
+  <dialog id="admin-edit-profile-dialog" class="dialog edit-dialog edit-profile-dialog">
+    <form id="admin-edit-profile-form" class="edit-dialog-content" style="max-width: 480px;">
+      <button class="close-button" type="button" data-close title="Close">×</button>
+      
+      <div class="edit-dialog-header">
+        <p class="eyebrow" style="color: var(--primary);">👤 Admin Identity Studio</p>
+        <h2>Edit Profile Details</h2>
+        <p class="dialog-sub">Update your name, contact information, and administrator avatar photo.</p>
+      </div>
+
+      <!-- Profile Photo Upload & Live Preview -->
+      <div class="edit-avatar-center-wrap">
+        <div class="edit-avatar-preview-ring" id="edit-avatar-preview-ring" role="button" tabindex="0" title="Click to choose a new photo">
+          <img id="edit-avatar-preview-img" src="assets/admin.jpg" alt="Admin Avatar" class="edit-avatar-preview-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
+          <div id="edit-avatar-preview-fallback" class="edit-avatar-preview-fallback" style="display:none;">SR</div>
+          <div class="edit-avatar-upload-overlay" title="Upload New Profile Picture">
+            <span class="camera-icon">📷</span>
+            <small>Change</small>
+          </div>
+        </div>
+        <input type="file" id="edit-avatar-file-input" accept="image/png,image/jpeg,image/webp,image/jpg" style="display:none;">
+        <button type="button" id="edit-avatar-trigger-btn" class="profile-act-btn secondary" style="margin-top: 6px; font-size: 0.76rem; padding: 5px 12px; cursor: pointer;">
+          <span>📷</span> Choose New Photo
+        </button>
+        <p class="avatar-upload-hint">Click avatar or button above to select photo (JPG, PNG, WebP)</p>
+      </div>
+
+      <div class="edit-fields-grid" style="margin-top: 14px; display: flex; flex-direction: column; gap: 12px;">
+        <div class="form-group">
+          <label class="form-label-title" for="edit-admin-name">Full Name <span class="req-star" style="color: var(--primary);">*</span></label>
+          <input id="edit-admin-name" class="form-control" type="text" maxlength="50" placeholder="e.g. Stephanraj" required autocomplete="name">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label-title" for="edit-admin-email">Email Address <span class="req-star" style="color: var(--primary);">*</span></label>
+          <input id="edit-admin-email" class="form-control" type="email" maxlength="80" placeholder="e.g. stephanraj@examalertindia.com" required autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label-title" for="edit-admin-phone">Mobile Number <span class="req-star" style="color: var(--primary);">*</span></label>
+          <input id="edit-admin-phone" class="form-control" type="tel" maxlength="20" placeholder="e.g. +91 98765 43210" required autocomplete="tel">
+        </div>
+      </div>
+
+      <p id="edit-admin-profile-msg" class="form-message" style="margin-top: 8px;"></p>
+
+      <div class="modal-btn-row" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="outline-button" type="button" data-close>Cancel</button>
+        <button id="edit-admin-profile-submit" class="upload-button" type="submit" style="padding: 10px 20px; font-weight: 700;">
+          <span>💾</span> Save Changes
         </button>
       </div>
     </form>

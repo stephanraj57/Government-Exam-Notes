@@ -142,25 +142,102 @@ function setTheme(theme, save = true) {
 }
 
 // ==========================================
-// 3. Authentication & View Switch
+// 3. Real-Time Cross-Tab Authentication & View Switch
 // ==========================================
-async function checkAuth() {
-  if (sessionStorage.getItem("exam_admin_local_session") === "true") {
-    isLocalClientMode = true;
-    showDashboard();
-    return;
+let authBroadcastChannel = null;
+try {
+  if (typeof BroadcastChannel !== "undefined") {
+    authBroadcastChannel = new BroadcastChannel("exam_admin_auth_sync_channel");
+    authBroadcastChannel.onmessage = (event) => {
+      if (event.data?.type === "LOGOUT") {
+        executeLogout(false);
+        showToast("🔒 Signed out from another tab.", "info");
+      } else if (event.data?.type === "LOGIN") {
+        checkAuth();
+        showToast("✓ Authenticated in another tab. Session synced.", "success");
+      }
+    };
   }
+} catch {}
+
+// Cross-tab storage event listener for broad browser compatibility
+window.addEventListener("storage", (e) => {
+  if (e.key === "exam_admin_auth_sync_event") {
+    try {
+      const data = JSON.parse(e.newValue || "{}");
+      if (data.action === "logout") {
+        executeLogout(false);
+        showToast("🔒 Signed out from another tab.", "info");
+      } else if (data.action === "login") {
+        checkAuth();
+        showToast("✓ Authenticated in another tab. Session synced.", "success");
+      }
+    } catch {}
+  }
+});
+
+// Auto re-verify session with server whenever tab gains focus or becomes visible
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    verifySessionWithServer();
+  }
+});
+
+window.addEventListener("focus", () => {
+  verifySessionWithServer();
+});
+
+async function verifySessionWithServer() {
+  const dashSec = $("#admin-dashboard-section");
+  if (!dashSec || dashSec.hidden) return; // already in logged-out state
 
   try {
     const res = await api("/api/admin/me");
-    if (res.admin) {
+    if (!res || !res.admin) {
+      executeLogout(false);
+      showToast("🔒 Signed out from another tab.", "info");
+    }
+  } catch (err) {
+    if (!err.message?.includes("Failed to fetch") && window.location.protocol !== "file:") {
+      executeLogout(false);
+    }
+  }
+}
+
+async function checkAuth() {
+  try {
+    const res = await api("/api/admin/me");
+    if (res && res.admin) {
+      sessionStorage.setItem("exam_admin_local_session", "true");
       showDashboard();
     } else {
-      showLogin();
+      executeLogout(false);
     }
-  } catch {
-    showLogin();
+  } catch (err) {
+    if (window.location.protocol === "file:" || err.message?.includes("Failed to fetch")) {
+      if (sessionStorage.getItem("exam_admin_local_session") === "true") {
+        showDashboard();
+      } else {
+        showLogin();
+      }
+    } else {
+      executeLogout(false);
+    }
   }
+}
+
+function executeLogout(notifyServer = true) {
+  if (notifyServer) {
+    api("/api/admin/logout", { method: "POST" }).catch(() => {});
+    try {
+      localStorage.setItem("exam_admin_auth_sync_event", JSON.stringify({ action: "logout", time: Date.now() }));
+      if (authBroadcastChannel) {
+        authBroadcastChannel.postMessage({ type: "LOGOUT", time: Date.now() });
+      }
+    } catch {}
+  }
+  sessionStorage.removeItem("exam_admin_local_session");
+  showLogin();
 }
 
 function showLogin() {
@@ -202,7 +279,6 @@ function showLogin() {
   const pwdInput = $("#admin-page-password");
   if (pwdInput) {
     pwdInput.value = "";
-    pwdInput.focus();
   }
   const loginMsg = $("#admin-page-login-msg");
   if (loginMsg) {
@@ -251,7 +327,7 @@ function showDashboard() {
   }
 
   // Restore user's current view from URL hash, sessionStorage or localStorage
-  const validViews = ["dashboard", "analysis", "interactions", "tags", "missing-searches", "publish", "modify"];
+  const validViews = ["dashboard", "analysis", "interactions", "tags", "missing-searches", "publish", "modify", "profile"];
   const hash = window.location.hash.replace(/^#/, "");
   const savedView = sessionStorage.getItem("exam_admin_active_view") || localStorage.getItem("exam_admin_active_view") || "dashboard";
   const targetView = validViews.includes(hash) ? hash : (validViews.includes(savedView) ? savedView : "dashboard");
@@ -276,7 +352,82 @@ let liveInteractions = {
   searches: {}
 };
 
+let adminProfileState = {
+  name: "Stephanraj",
+  email: "admin@examalertindia.com",
+  phone: "+91 98765 43210",
+  role: "Super Administrator",
+  avatarUrl: "assets/admin.jpg"
+};
+
+async function loadAdminProfile() {
+  try {
+    const res = await api("/api/admin/profile");
+    if (res && res.profile) {
+      adminProfileState = { ...adminProfileState, ...res.profile };
+      localStorage.setItem("exam_admin_profile_data", JSON.stringify(adminProfileState));
+    }
+  } catch {
+    const saved = localStorage.getItem("exam_admin_profile_data");
+    if (saved) {
+      try {
+        adminProfileState = { ...adminProfileState, ...JSON.parse(saved) };
+      } catch {}
+    }
+  }
+  applyAdminProfileUI(adminProfileState);
+}
+
+function applyAdminProfileUI(profile) {
+  if (!profile) return;
+  const name = profile.name || "Stephanraj";
+  const email = profile.email || "admin@examalertindia.com";
+  const phone = profile.phone || "+91 98765 43210";
+  const role = profile.role || "Super Administrator";
+  const avatar = profile.avatarUrl || "assets/admin.jpg";
+  const initials = name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "SR";
+
+  // Sidebar profile card
+  $$(".portal-user-name").forEach(el => el.textContent = name);
+  $$(".portal-user-role").forEach(el => el.textContent = role);
+  $$(".portal-avatar-img").forEach(el => {
+    el.style.display = "block";
+    el.src = avatar;
+    if (el.nextElementSibling) el.nextElementSibling.style.display = "none";
+  });
+  $$(".portal-avatar-fallback").forEach(el => el.textContent = initials);
+
+  // Profile View
+  const pName = $(".profile-full-name");
+  if (pName) pName.textContent = name;
+  const dName = $("#profile-display-name");
+  if (dName) dName.textContent = name;
+  const dEmail = $("#profile-display-email");
+  if (dEmail) dEmail.textContent = email;
+  const dPhone = $("#profile-display-phone");
+  if (dPhone) dPhone.textContent = phone;
+  const dRole = $("#profile-display-role");
+  if (dRole) dRole.textContent = role;
+  
+  $$(".profile-avatar-large-img").forEach(el => {
+    el.style.display = "block";
+    el.src = avatar;
+    if (el.nextElementSibling) el.nextElementSibling.style.display = "none";
+  });
+  $$(".profile-avatar-large-fallback").forEach(el => el.textContent = initials);
+
+  // Login Screen identity card
+  $$(".admin-name-text").forEach(el => el.textContent = name);
+  $$(".identity-avatar-photo").forEach(el => {
+    el.style.display = "block";
+    el.src = avatar;
+    if (el.nextElementSibling) el.nextElementSibling.style.display = "none";
+  });
+  $$(".identity-avatar-fallback").forEach(el => el.textContent = initials);
+}
+
 async function loadDashboardData() {
+  loadAdminProfile();
   let uploaded = [];
   let visitsCount = 0;
   let todayVisits = 0;
@@ -1494,36 +1645,49 @@ function renderTable() {
   renderPagination(totalCount, totalPages, startIndex, endIndex);
 }
 
-async function deleteNotesByIds(ids) {
+let pendingDeleteNoteIds = [];
+
+function promptDeleteNotes(ids) {
   if (!ids || ids.length === 0) return;
-  const count = ids.length;
-  const confirmMsg = count === 1 
-    ? "Are you sure you want to permanently delete this note?"
-    : `Are you sure you want to permanently delete ${count} selected notes?`;
+  pendingDeleteNoteIds = Array.isArray(ids) ? ids : [ids];
+  const count = pendingDeleteNoteIds.length;
 
-  if (!confirm(confirmMsg)) return;
+  const dialog = $("#admin-delete-note-dialog");
+  const heading = $("#delete-note-modal-heading");
+  const desc = $("#delete-note-modal-desc");
+  const targetName = $("#delete-note-target-name");
+  const pwdInput = $("#delete-note-password-input");
+  const msg = $("#delete-note-error-msg");
 
-  for (const id of ids) {
-    try {
-      await api("/api/admin/notes/" + id, { method: "DELETE" });
-    } catch {}
-
-    const existingLocal = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
-    const filteredLocal = existingLocal.filter(x => x.id !== id);
-    localStorage.setItem("exam_notes_custom_uploads", JSON.stringify(filteredLocal));
-
-    const deletedSamples = JSON.parse(localStorage.getItem("exam_notes_deleted_sample_ids") || "[]");
-    if (!deletedSamples.includes(id)) {
-      deletedSamples.push(id);
-      localStorage.setItem("exam_notes_deleted_sample_ids", JSON.stringify(deletedSamples));
+  if (heading) {
+    heading.textContent = count === 1 ? "Delete Note from Library" : `Delete ${count} Selected Notes`;
+  }
+  if (desc) {
+    desc.textContent = count === 1 
+      ? "Permanently delete this revision note and its diagram from the student library."
+      : `Permanently delete ${count} selected revision notes from the student library.`;
+  }
+  if (targetName) {
+    if (count === 1) {
+      const targetNote = allNotes.find(n => n.id === pendingDeleteNoteIds[0]);
+      targetName.textContent = targetNote ? targetNote.title : "1 Revision Note";
+    } else {
+      targetName.textContent = `${count} Selected Revision Notes`;
     }
-
-    sampleNotes = sampleNotes.filter(x => x.id !== id);
-    tableState.selectedIds.delete(id);
   }
 
-  showToast(`✓ ${count} note${count > 1 ? 's' : ''} deleted from library.`, "success");
-  await loadDashboardData();
+  if (pwdInput) pwdInput.value = "";
+  if (msg) {
+    msg.textContent = "";
+    msg.className = "form-message";
+  }
+
+  dialog?.showModal();
+  pwdInput?.focus();
+}
+
+function deleteNotesByIds(ids) {
+  promptDeleteNotes(ids);
 }
 
 // ==========================================
@@ -2098,7 +2262,7 @@ function openEditModal(noteId) {
 let currentAdminView = "dashboard";
 
 function switchAdminView(viewName, updateHash = true) {
-  const validViews = ["dashboard", "analysis", "interactions", "tags", "missing-searches", "publish", "modify"];
+  const validViews = ["dashboard", "analysis", "interactions", "tags", "missing-searches", "publish", "modify", "profile"];
   if (!validViews.includes(viewName)) {
     viewName = "dashboard";
   }
@@ -2147,7 +2311,9 @@ function switchAdminView(viewName, updateHash = true) {
                     ? "Search Demands"
                     : (viewName === "publish" 
                         ? "Publish Studio" 
-                        : "Content Library")))));
+                        : (viewName === "modify"
+                            ? "Content Library"
+                            : "Admin Profile"))))));
             
   const secEl = $("#portal-current-section");
   if (secEl) secEl.textContent = secName;
@@ -2165,7 +2331,9 @@ function switchAdminView(viewName, updateHash = true) {
                       ? "Student Search Demands & Content Gaps 🔎"
                       : (viewName === "publish" 
                           ? "Publish Revision Note ☁" 
-                          : "Content Library Management ✏️")))));
+                          : (viewName === "modify"
+                              ? "Content Library Management ✏️"
+                              : "Administrator Profile & Platform Settings 👤"))))));
   }
 
   if (viewName === "dashboard") {
@@ -2181,7 +2349,31 @@ function switchAdminView(viewName, updateHash = true) {
     renderMissingSearchesView();
   } else if (viewName === "modify") {
     renderTable();
+  } else if (viewName === "profile") {
+    renderProfileView();
   }
+}
+
+function renderProfileView() {
+  const notesCountEl = $("#profile-stat-notes");
+  const visitsEl = $("#profile-stat-visits");
+  const todayEl = $("#profile-stat-today");
+  const interEl = $("#profile-stat-interactions");
+  const demandsEl = $("#profile-stat-demands");
+
+  if (notesCountEl) notesCountEl.textContent = `${allNotes.length} Notes`;
+  
+  const visitsTotal = Number($("#metric-visitors-count")?.textContent?.replace(/,/g, "")) || 0;
+  if (visitsEl) visitsEl.textContent = `${visitsTotal.toLocaleString("en-IN")} Total`;
+
+  const todayTotal = Number($("#metric-visitors-today")?.textContent?.replace(/,/g, "")) || 0;
+  if (todayEl) todayEl.textContent = `${todayTotal.toLocaleString("en-IN")} Today`;
+
+  const totalInteractions = (liveInteractions.totalLikes || 0) + (liveInteractions.totalDownloads || 0);
+  if (interEl) interEl.textContent = `${totalInteractions.toLocaleString("en-IN")} Actions`;
+
+  const missingKeys = Object.keys(liveInteractions.missingSearches || {});
+  if (demandsEl) demandsEl.textContent = `${missingKeys.length} Topics`;
 }
 
 // ==========================================
@@ -2440,9 +2632,170 @@ function setupEventListeners() {
   // Handle browser back/forward and hash changes
   window.addEventListener("hashchange", () => {
     const hash = window.location.hash.replace(/^#/, "");
-    const validViews = ["dashboard", "analysis", "interactions", "tags", "missing-searches", "publish", "modify"];
+    const validViews = ["dashboard", "analysis", "interactions", "tags", "missing-searches", "publish", "modify", "profile"];
     if (validViews.includes(hash) && sessionStorage.getItem("exam_admin_local_session") === "true") {
       switchAdminView(hash, false);
+    }
+  });
+
+  // Profile View Event Listeners
+  let selectedProfileAvatarData = null;
+  const editProfileDialog = $("#admin-edit-profile-dialog");
+  const editProfileForm = $("#admin-edit-profile-form");
+  const editProfileMsg = $("#edit-admin-profile-msg");
+  const editAvatarFileInput = $("#edit-avatar-file-input");
+  const editAvatarPreviewImg = $("#edit-avatar-preview-img");
+
+  const openProfileEditDialog = () => {
+    selectedProfileAvatarData = null;
+    if (editProfileMsg) {
+      editProfileMsg.textContent = "";
+      editProfileMsg.className = "form-message";
+    }
+    const nameInput = $("#edit-admin-name");
+    const emailInput = $("#edit-admin-email");
+    const phoneInput = $("#edit-admin-phone");
+
+    if (nameInput) nameInput.value = adminProfileState.name || "Stephanraj";
+    if (emailInput) emailInput.value = adminProfileState.email || "admin@examalertindia.com";
+    if (phoneInput) phoneInput.value = adminProfileState.phone || "+91 98765 43210";
+    if (editAvatarPreviewImg) {
+      editAvatarPreviewImg.style.display = "block";
+      editAvatarPreviewImg.src = adminProfileState.avatarUrl || "assets/admin.jpg";
+      const fb = $("#edit-avatar-preview-fallback");
+      if (fb) fb.style.display = "none";
+    }
+    if (editAvatarFileInput) editAvatarFileInput.value = "";
+
+    editProfileDialog?.showModal();
+    nameInput?.focus();
+  };
+
+  $("#profile-open-edit-btn")?.addEventListener("click", openProfileEditDialog);
+
+  // Avatar file picker triggers
+  $("#edit-avatar-trigger-btn")?.addEventListener("click", () => {
+    editAvatarFileInput?.click();
+  });
+  $("#edit-avatar-preview-ring")?.addEventListener("click", () => {
+    editAvatarFileInput?.click();
+  });
+  $("#edit-avatar-preview-ring")?.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      editAvatarFileInput?.click();
+    }
+  });
+
+  editAvatarFileInput?.addEventListener("change", async e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const dataUrl = await optimizeImageFile(file, 600, 0.88);
+      selectedProfileAvatarData = dataUrl;
+      if (editAvatarPreviewImg) {
+        editAvatarPreviewImg.style.display = "block";
+        editAvatarPreviewImg.src = dataUrl;
+        const fb = $("#edit-avatar-preview-fallback");
+        if (fb) fb.style.display = "none";
+      }
+      showToast("✓ Profile photo chosen! Click 'Save Changes' to apply.", "info");
+    } catch {
+      const reader = new FileReader();
+      reader.onload = evt => {
+        selectedProfileAvatarData = evt.target.result;
+        if (editAvatarPreviewImg) {
+          editAvatarPreviewImg.style.display = "block";
+          editAvatarPreviewImg.src = evt.target.result;
+          const fb = $("#edit-avatar-preview-fallback");
+          if (fb) fb.style.display = "none";
+        }
+        showToast("✓ Profile photo chosen! Click 'Save Changes' to apply.", "info");
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  editProfileDialog?.querySelectorAll("[data-close]").forEach(btn => {
+    btn.addEventListener("click", () => editProfileDialog.close());
+  });
+
+  editProfileForm?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const name = $("#edit-admin-name")?.value.trim();
+    const email = $("#edit-admin-email")?.value.trim();
+    const phone = $("#edit-admin-phone")?.value.trim();
+    const submitBtn = $("#edit-admin-profile-submit");
+
+    if (!name || !email) {
+      if (editProfileMsg) {
+        editProfileMsg.textContent = "Name and Email are required.";
+        editProfileMsg.className = "form-message error";
+      }
+      return;
+    }
+
+    if (submitBtn) submitBtn.disabled = true;
+    if (editProfileMsg) {
+      editProfileMsg.textContent = "Saving profile details…";
+      editProfileMsg.className = "form-message";
+    }
+
+    try {
+      const res = await api("/api/admin/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          avatarData: selectedProfileAvatarData
+        })
+      });
+
+      if (res && res.profile) {
+        adminProfileState = { ...adminProfileState, ...res.profile };
+      } else {
+        adminProfileState = {
+          ...adminProfileState,
+          name,
+          email,
+          phone,
+          ...(selectedProfileAvatarData ? { avatarUrl: selectedProfileAvatarData } : {})
+        };
+      }
+
+      localStorage.setItem("exam_admin_profile_data", JSON.stringify(adminProfileState));
+      applyAdminProfileUI(adminProfileState);
+      editProfileDialog?.close();
+      showToast("✓ Administrator profile updated successfully!", "success");
+    } catch (err) {
+      // Local mode fallback
+      adminProfileState = {
+        ...adminProfileState,
+        name,
+        email,
+        phone,
+        ...(selectedProfileAvatarData ? { avatarUrl: selectedProfileAvatarData } : {})
+      };
+      localStorage.setItem("exam_admin_profile_data", JSON.stringify(adminProfileState));
+      applyAdminProfileUI(adminProfileState);
+      editProfileDialog?.close();
+      showToast("✓ Administrator profile updated locally!", "success");
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+      selectedProfileAvatarData = null;
+    }
+  });
+
+  // Keyboard accessibility for interactive profile card in sidebar
+  $(".portal-profile-card")?.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      switchAdminView("profile");
+      if (isMobile()) {
+        hideSidebar();
+      }
     }
   });
 
@@ -2506,37 +2859,184 @@ function setupEventListeners() {
     }
   });
 
-  // Clean / Reset All Data Button
-  $("#admin-clean-data-btn")?.addEventListener("click", async () => {
-    if (!confirm("Are you sure you want to clean all test data, custom notes, and local cache? This will reset the website to a clean state for testing.")) {
+  // Clean / Reset All Data Modal & Password Verification
+  const cleanDialog = $("#admin-clean-data-dialog");
+  const cleanForm = $("#admin-clean-data-form");
+  const cleanPwd = $("#clean-data-password-input");
+  const cleanMsg = $("#clean-data-error-msg");
+
+  $("#admin-clean-data-btn")?.addEventListener("click", () => {
+    if (cleanPwd) cleanPwd.value = "";
+    if (cleanMsg) {
+      cleanMsg.textContent = "";
+      cleanMsg.className = "form-message";
+    }
+    cleanDialog?.showModal();
+    cleanPwd?.focus();
+  });
+
+  $("#toggle-clean-pwd-visibility")?.addEventListener("click", () => {
+    if (!cleanPwd) return;
+    const isPassword = cleanPwd.type === "password";
+    cleanPwd.type = isPassword ? "text" : "password";
+    const eyeSvg = $("#clean-pwd-eye-icon");
+    if (eyeSvg) {
+      if (isPassword) {
+        eyeSvg.innerHTML = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>`;
+      } else {
+        eyeSvg.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
+      }
+    }
+  });
+
+  cleanDialog?.querySelectorAll("[data-close]").forEach(btn => {
+    btn.addEventListener("click", () => cleanDialog.close());
+  });
+
+  cleanForm?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const enteredPassword = cleanPwd?.value.trim();
+    if (!enteredPassword) {
+      if (cleanMsg) {
+        cleanMsg.textContent = "Please enter your admin password.";
+        cleanMsg.className = "form-message error";
+      }
       return;
     }
 
+    const submitBtn = $("#clean-data-submit-btn");
+    if (submitBtn) submitBtn.disabled = true;
+    if (cleanMsg) {
+      cleanMsg.textContent = "Verifying admin credentials…";
+      cleanMsg.className = "form-message";
+    }
+
     try {
-      await api("/api/admin/reset-data", { method: "POST" });
-    } catch {}
+      await api("/api/admin/reset-data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: enteredPassword })
+      });
 
-    localStorage.removeItem("exam_notes_custom_uploads");
-    localStorage.removeItem("exam_notes_deleted_sample_ids");
-    localStorage.removeItem("exam_notes_local_visits");
-    localStorage.removeItem("exam_notes_bookmarks");
-    localStorage.removeItem("exam_notes_recent");
-    localStorage.removeItem("exam_notes_favorites");
-    localStorage.removeItem("exam_notes_offline_queue");
-    localStorage.removeItem("exam_notes_interactions_data");
+      localStorage.removeItem("exam_notes_custom_uploads");
+      localStorage.removeItem("exam_notes_deleted_sample_ids");
+      localStorage.removeItem("exam_notes_local_visits");
+      localStorage.removeItem("exam_notes_bookmarks");
+      localStorage.removeItem("exam_notes_recent");
+      localStorage.removeItem("exam_notes_favorites");
+      localStorage.removeItem("exam_notes_offline_queue");
+      localStorage.removeItem("exam_notes_interactions_data");
 
-    liveInteractions = {
-      totalLikes: 0,
-      totalDownloads: 0,
-      totalSearches: 0,
-      totalImpressions: 0,
-      notes: {},
-      searches: {},
-      missingSearches: {}
-    };
+      liveInteractions = {
+        totalLikes: 0,
+        totalDownloads: 0,
+        totalSearches: 0,
+        totalImpressions: 0,
+        notes: {},
+        searches: {},
+        missingSearches: {}
+      };
 
-    showToast("✓ All test data, interactions & local caches have been wiped clean!", "success");
-    await loadDashboardData();
+      if (cleanDialog) cleanDialog.close();
+      showToast("✓ All website data & local caches have been securely wiped clean!", "success");
+      await loadDashboardData();
+    } catch (err) {
+      if (cleanMsg) {
+        cleanMsg.textContent = err.message || "Incorrect admin password. Data wipe was rejected.";
+        cleanMsg.className = "form-message error";
+      }
+      cleanPwd?.focus();
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+      if (cleanPwd) cleanPwd.value = "";
+    }
+  });
+
+  // Delete Note Password Verification Modal
+  const deleteDialog = $("#admin-delete-note-dialog");
+  const deleteForm = $("#admin-delete-note-form");
+  const deletePwd = $("#delete-note-password-input");
+  const deleteMsg = $("#delete-note-error-msg");
+
+  $("#toggle-delete-pwd-visibility")?.addEventListener("click", () => {
+    if (!deletePwd) return;
+    const isPassword = deletePwd.type === "password";
+    deletePwd.type = isPassword ? "text" : "password";
+    const eyeSvg = $("#delete-pwd-eye-icon");
+    if (eyeSvg) {
+      if (isPassword) {
+        eyeSvg.innerHTML = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>`;
+      } else {
+        eyeSvg.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
+      }
+    }
+  });
+
+  deleteDialog?.querySelectorAll("[data-close]").forEach(btn => {
+    btn.addEventListener("click", () => deleteDialog.close());
+  });
+
+  deleteForm?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const enteredPassword = deletePwd?.value.trim();
+    if (!enteredPassword) {
+      if (deleteMsg) {
+        deleteMsg.textContent = "Please enter your admin password.";
+        deleteMsg.className = "form-message error";
+      }
+      return;
+    }
+
+    if (pendingDeleteNoteIds.length === 0) {
+      deleteDialog?.close();
+      return;
+    }
+
+    const submitBtn = $("#delete-note-submit-btn");
+    if (submitBtn) submitBtn.disabled = true;
+    if (deleteMsg) {
+      deleteMsg.textContent = "Verifying admin credentials…";
+      deleteMsg.className = "form-message";
+    }
+
+    try {
+      await api("/api/admin/notes/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ids: pendingDeleteNoteIds,
+          password: enteredPassword
+        })
+      });
+
+      // Update local storage and in-memory collections
+      const existingLocal = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
+      const filteredLocal = existingLocal.filter(x => !pendingDeleteNoteIds.includes(x.id));
+      localStorage.setItem("exam_notes_custom_uploads", JSON.stringify(filteredLocal));
+
+      const deletedSamples = JSON.parse(localStorage.getItem("exam_notes_deleted_sample_ids") || "[]");
+      pendingDeleteNoteIds.forEach(id => {
+        if (!deletedSamples.includes(id)) deletedSamples.push(id);
+        sampleNotes = sampleNotes.filter(x => x.id !== id);
+        tableState.selectedIds.delete(id);
+      });
+      localStorage.setItem("exam_notes_deleted_sample_ids", JSON.stringify(deletedSamples));
+
+      const count = pendingDeleteNoteIds.length;
+      deleteDialog?.close();
+      showToast(`✓ ${count} note${count > 1 ? "s" : ""} permanently deleted from library.`, "success");
+      pendingDeleteNoteIds = [];
+      await loadDashboardData();
+    } catch (err) {
+      if (deleteMsg) {
+        deleteMsg.textContent = err.message || "Incorrect admin password. Deletion was rejected.";
+        deleteMsg.className = "form-message error";
+      }
+      deletePwd?.focus();
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+      if (deletePwd) deletePwd.value = "";
+    }
   });
 
   // Recent notes delegation click to preview
@@ -2619,6 +3119,12 @@ function setupEventListeners() {
         body: JSON.stringify({ password: enteredPassword })
       });
       sessionStorage.setItem("exam_admin_local_session", "true");
+      try {
+        localStorage.setItem("exam_admin_auth_sync_event", JSON.stringify({ action: "login", time: Date.now() }));
+        if (authBroadcastChannel) {
+          authBroadcastChannel.postMessage({ type: "LOGIN", time: Date.now() });
+        }
+      } catch {}
       showToast("Authentication successful! Welcome to Admin Studio.", "success");
       showDashboard();
     } catch (err) {
@@ -2647,12 +3153,8 @@ function setupEventListeners() {
   // Logout Buttons (Header & Sidebar)
   const handleLogout = async () => {
     if (confirm("Sign out from the Admin session?")) {
-      try {
-        await api("/api/admin/logout", { method: "POST" });
-      } catch {}
-      sessionStorage.removeItem("exam_admin_local_session");
+      executeLogout(true);
       showToast("Signed out successfully.", "info");
-      showLogin();
     }
   };
 
@@ -3119,15 +3621,28 @@ setupEventListeners();
 checkAuth();
 
 // ==========================================
-// Real-Time Active Users Presence Poller
+// Real-Time Active Users Presence & Auth Security Poller
 // ==========================================
 setInterval(async () => {
-  if (sessionStorage.getItem("exam_admin_local_session") === "true" || document.visibilityState === "visible") {
+  const dashSec = $("#admin-dashboard-section");
+  const isDashboardActive = dashSec && !dashSec.hidden;
+
+  if (isDashboardActive || document.visibilityState === "visible") {
     try {
       const res = await api("/api/heartbeat");
       if (res && res.activeUsers !== undefined) {
         updateActiveUsersDisplay(res.activeUsers);
       }
     } catch {}
+
+    if (isDashboardActive && window.location.protocol !== "file:") {
+      try {
+        const authCheck = await api("/api/admin/me");
+        if (!authCheck || !authCheck.admin) {
+          executeLogout(false);
+          showToast("🔒 Signed out from another tab.", "info");
+        }
+      } catch {}
+    }
   }
-}, 10000);
+}, 4000);
