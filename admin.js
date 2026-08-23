@@ -38,6 +38,119 @@ function safeSetLocalStorage(key, val) {
   }
 }
 
+// ==========================================
+// IndexedDB Universal Portable Image Store (Unlimited Capacity)
+// ==========================================
+const ImageStore = {
+  dbName: "ExamAlertIndia_ImagesDB",
+  storeName: "note_images",
+  dbPromise: null,
+
+  getDB() {
+    if (this.dbPromise) return this.dbPromise;
+    this.dbPromise = new Promise((resolve) => {
+      if (typeof indexedDB === "undefined") return resolve(null);
+      const req = indexedDB.open(this.dbName, 1);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(this.storeName)) {
+          db.createObjectStore(this.storeName);
+        }
+      };
+      req.onsuccess = (e) => resolve(e.target.result);
+      req.onerror = () => resolve(null);
+    });
+    return this.dbPromise;
+  },
+
+  async set(key, dataUrl) {
+    if (!key || !dataUrl) return;
+    const db = await this.getDB();
+    if (!db) return;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(this.storeName, "readwrite");
+        tx.objectStore(this.storeName).put(dataUrl, key);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+      } catch {
+        resolve(false);
+      }
+    });
+  },
+
+  async get(key) {
+    if (!key) return null;
+    const db = await this.getDB();
+    if (!db) return null;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(this.storeName, "readonly");
+        const req = tx.objectStore(this.storeName).get(key);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+      } catch {
+        resolve(null);
+      }
+    });
+  },
+
+  async getAll() {
+    const db = await this.getDB();
+    if (!db) return {};
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(this.storeName, "readonly");
+        const store = tx.objectStore(this.storeName);
+        const req = store.openCursor();
+        const results = {};
+        req.onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (cursor) {
+            results[cursor.key] = cursor.value;
+            cursor.continue();
+          } else {
+            resolve(results);
+          }
+        };
+        req.onerror = () => resolve({});
+      } catch {
+        resolve({});
+      }
+    });
+  },
+
+  async clear() {
+    const db = await this.getDB();
+    if (!db) return;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(this.storeName, "readwrite");
+        tx.objectStore(this.storeName).clear();
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+      } catch {
+        resolve(false);
+      }
+    });
+  }
+};
+
+window.handleAdminNoteImageError = async function(imgEl, noteId, imgUrl) {
+  imgEl.onerror = null;
+  try {
+    const cleanName = (imgUrl || "").split("?")[0].replace(/^\/uploads\//, "");
+    const stored = await ImageStore.get(imgUrl) || await ImageStore.get(cleanName) || await ImageStore.get(noteId);
+    if (stored) {
+      imgEl.src = stored;
+      return;
+    }
+  } catch {}
+  if (imgEl.parentElement) {
+    imgEl.parentElement.innerHTML = `<div class="grid-card-img placeholder" data-preview-id="${noteId}">📖</div>`;
+  }
+};
+
 function normalizeSubject(subject = "") {
   const s = (subject || "").toLowerCase().trim();
   if (s.includes("art") || s.includes("culture")) return "Art and Culture";
@@ -1708,7 +1821,7 @@ function renderTable() {
       const isUploaded = Boolean(n.imageUrl);
       const isSelected = tableState.selectedIds.has(n.id);
       const thumb = n.imageUrl
-        ? `<img src="${n.imageUrl}" alt="${escapeHtml(n.title)}" class="grid-card-img" data-preview-id="${n.id}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'grid-card-img placeholder\\' data-preview-id=\\'${n.id}\\'>📖</div>';">`
+        ? `<img src="${n.imageUrl}" alt="${escapeHtml(n.title)}" class="grid-card-img" data-preview-id="${n.id}" onerror="handleAdminNoteImageError(this, '${n.id}', '${n.imageUrl}')">`
         : `<div class="grid-card-img placeholder" data-preview-id="${n.id}">📖</div>`;
 
       const tagsHtml = (n.tags && n.tags.length > 0)
@@ -3735,15 +3848,19 @@ function setupEventListeners() {
         }
       } catch {}
 
+      const idbImages = await ImageStore.getAll();
+
       // Fallback if local or api error
       if (!backupData) {
-        const clientImages = {};
+        const clientImages = { ...idbImages };
         const clientNotes = allNotes.map(n => {
           const copy = { ...n };
-          if (copy.imageUrl && copy.imageUrl.startsWith("data:image/")) {
-            const imgKey = `${copy.id || Date.now()}.jpg`;
-            clientImages[imgKey] = copy.imageUrl;
-            copy.imageData = copy.imageUrl;
+          const cleanName = (copy.imageUrl || "").split("?")[0].replace(/^\/uploads\//, "");
+          const base64 = clientImages[cleanName] || clientImages[copy.imageUrl] || clientImages[copy.id] || (copy.imageUrl?.startsWith("data:image/") ? copy.imageUrl : null);
+          if (base64) {
+            const imgKey = cleanName || `${copy.id || Date.now()}.jpg`;
+            clientImages[imgKey] = base64;
+            copy.imageData = base64;
           }
           return copy;
         });
@@ -3766,6 +3883,23 @@ function setupEventListeners() {
           },
           images: clientImages
         };
+      } else {
+        // Enrich server backup with any client-stored IndexedDB images
+        if (!backupData.images) backupData.images = {};
+        for (const [k, v] of Object.entries(idbImages)) {
+          if (!backupData.images[k]) backupData.images[k] = v;
+        }
+        if (Array.isArray(backupData.notes)) {
+          backupData.notes = backupData.notes.map(n => {
+            const copy = { ...n };
+            if (!copy.imageData && copy.imageUrl) {
+              const clean = copy.imageUrl.split("?")[0].replace(/^\/uploads\//, "");
+              const base64 = backupData.images[clean] || backupData.images[copy.imageUrl] || idbImages[clean] || idbImages[copy.id];
+              if (base64) copy.imageData = base64;
+            }
+            return copy;
+          });
+        }
       }
 
       const jsonStr = JSON.stringify(backupData, null, 2);
@@ -3945,6 +4079,31 @@ function setupEventListeners() {
 
       // Stage 4: Apply branding and search indices (80% -> 98%)
       await progressModal.animateTo(98, 500, "Applying branding assets & search indexes...", "Syncing logo, avatar and Instagram QR...", "Time remaining: Almost done", "Speed: 45.0 MB/s");
+
+      // Save all backup images into IndexedDB (persists locally across all hosts with zero server dependencies)
+      if (backupObj.images && typeof backupObj.images === "object") {
+        for (const [key, dataUrl] of Object.entries(backupObj.images)) {
+          if (key && dataUrl && typeof dataUrl === "string") {
+            await ImageStore.set(key, dataUrl);
+            const clean = key.split("?")[0].replace(/^\/uploads\//, "");
+            await ImageStore.set(clean, dataUrl);
+            await ImageStore.set(`/uploads/${clean}`, dataUrl);
+          }
+        }
+      }
+      if (Array.isArray(backupObj.notes)) {
+        for (const n of backupObj.notes) {
+          const raw = n.imageData || n.image || "";
+          if (raw && typeof raw === "string" && raw.startsWith("data:image/")) {
+            await ImageStore.set(n.id, raw);
+            if (n.imageUrl) {
+              await ImageStore.set(n.imageUrl, raw);
+              const clean = n.imageUrl.split("?")[0].replace(/^\/uploads\//, "");
+              await ImageStore.set(clean, raw);
+            }
+          }
+        }
+      }
 
       if (Array.isArray(backupObj.notes)) {
         const clientNotes = backupObj.notes.map(n => {
@@ -4752,7 +4911,7 @@ function updateLightboxContent(note) {
     if (note.imageUrl) {
       mediaContainer.innerHTML = `
         <div class="lightbox-img-transform-layer">
-          <img src="${note.imageUrl}" alt="${escapeHtml(note.title)}" class="lightbox-img" decoding="sync">
+          <img src="${note.imageUrl}" alt="${escapeHtml(note.title)}" class="lightbox-img" decoding="sync" onerror="handleAdminNoteImageError(this, '${note.id}', '${note.imageUrl}')">
         </div>
       `;
     } else {

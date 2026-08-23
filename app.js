@@ -34,12 +34,66 @@ let bookmarks = new Set(JSON.parse(localStorage.getItem("exam_notes_bookmarks") 
 let recentViewed = JSON.parse(localStorage.getItem("exam_notes_recent") || "[]");
 
 // ==========================================
-// 2. Utility Helpers
+// 2. Utility Helpers & Universal Portable Image Store (IndexedDB)
 // ==========================================
 const escapeHtml = v => {
   const e = document.createElement("div");
   e.textContent = v || "";
   return e.innerHTML;
+};
+
+const ImageStore = {
+  dbName: "ExamAlertIndia_ImagesDB",
+  storeName: "note_images",
+  dbPromise: null,
+
+  getDB() {
+    if (this.dbPromise) return this.dbPromise;
+    this.dbPromise = new Promise((resolve) => {
+      if (typeof indexedDB === "undefined") return resolve(null);
+      const req = indexedDB.open(this.dbName, 1);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(this.storeName)) {
+          db.createObjectStore(this.storeName);
+        }
+      };
+      req.onsuccess = (e) => resolve(e.target.result);
+      req.onerror = () => resolve(null);
+    });
+    return this.dbPromise;
+  },
+
+  async get(key) {
+    if (!key) return null;
+    const db = await this.getDB();
+    if (!db) return null;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(this.storeName, "readonly");
+        const req = tx.objectStore(this.storeName).get(key);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+      } catch {
+        resolve(null);
+      }
+    });
+  }
+};
+
+window.handleNoteImageError = async function(imgEl, noteId, imgUrl, title, subject) {
+  imgEl.onerror = null;
+  try {
+    const cleanName = (imgUrl || "").split("?")[0].replace(/^\/uploads\//, "");
+    const stored = await ImageStore.get(imgUrl) || await ImageStore.get(cleanName) || await ImageStore.get(noteId);
+    if (stored) {
+      imgEl.src = stored;
+      return;
+    }
+  } catch {}
+  if (imgEl.parentElement) {
+    imgEl.parentElement.innerHTML = `<div class="preview"><h3>${title}</h3><p>${subject}</p><div class="diagram">📖</div></div>`;
+  }
 };
 
 function getSubjectKey(subject = "") {
@@ -245,7 +299,7 @@ function renderCardMedia(note, pIndex = 0) {
     const priorityAttr = pIndex < 2 ? 'fetchpriority="high"' : 'fetchpriority="low"';
     return `
       <div class="card-media">
-        <img class="note-image" src="${note.imageUrl}" alt="${escapeHtml(note.title)}" loading="lazy" decoding="async" ${priorityAttr} onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'preview\\'><h3>${escapeHtml(note.title)}</h3><p>${escapeHtml(note.subject)}</p><div class=\\'diagram\\'>📖</div></div>';">
+        <img class="note-image" src="${note.imageUrl}" alt="${escapeHtml(note.title)}" loading="lazy" decoding="async" ${priorityAttr} onerror="handleNoteImageError(this, '${note.id}', '${note.imageUrl}', '${escapeHtml(note.title)}', '${escapeHtml(note.subject)}')">
       </div>
     `;
   }
@@ -821,7 +875,7 @@ function updateLightboxContent(note) {
     if (note.imageUrl) {
       mediaContainer.innerHTML = `
         <div class="lightbox-img-transform-layer">
-          <img src="${note.imageUrl}" alt="${escapeHtml(note.title)}" class="lightbox-img" decoding="sync">
+          <img src="${note.imageUrl}" alt="${escapeHtml(note.title)}" class="lightbox-img" decoding="sync" onerror="handleNoteImageError(this, '${note.id}', '${note.imageUrl}', '${escapeHtml(note.title)}', '${escapeHtml(note.subject)}')">
         </div>
       `;
     } else {
