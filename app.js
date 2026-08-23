@@ -527,10 +527,10 @@ function updateCategoryCounts() {
 }
 
 // ==========================================
-// 8. Navigation & View Handling
+// 8. Navigation & View Handling (Unified SPA Panel)
 // ==========================================
 function switchView(viewName, updateHash = true) {
-  if (!["notes", "bookmarks", "recent"].includes(viewName)) {
+  if (!["notes", "bookmarks", "recent", "about"].includes(viewName)) {
     viewName = "notes";
   }
   currentView = viewName;
@@ -553,6 +553,28 @@ function switchView(viewName, updateHash = true) {
     btn.classList.toggle("active", btn.dataset.view === viewName);
   });
 
+  const appShell = $(".app-shell");
+  const aboutViewPanel = $("#about-view-panel");
+  const mobileCatStrip = $(".mobile-category-strip");
+
+  if (viewName === "about") {
+    document.body.classList.add("about-mode");
+    if (appShell) appShell.style.display = "none";
+    if (aboutViewPanel) {
+      aboutViewPanel.style.display = "block";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    if (mobileCatStrip) mobileCatStrip.style.display = "none";
+    document.title = "About Us | Free AI Govt Exam Notes";
+    return;
+  } else {
+    document.body.classList.remove("about-mode");
+    if (appShell) appShell.style.display = "";
+    if (aboutViewPanel) aboutViewPanel.style.display = "none";
+    if (mobileCatStrip && window.innerWidth <= 768) mobileCatStrip.style.display = "block";
+    document.title = "Free AI Govt Exam Notes - Smart Notes · Clear Concepts · Better Revision";
+  }
+
   render();
 }
 
@@ -562,7 +584,9 @@ function handleUrlHash() {
     switchView("bookmarks", false);
   } else if (rawHash === "recent" || rawHash === "recently-viewed") {
     switchView("recent", false);
-  } else if (rawHash === "notes" || rawHash === "all") {
+  } else if (rawHash === "about" || rawHash === "about-us") {
+    switchView("about", false);
+  } else if (rawHash === "notes" || rawHash === "all" || !rawHash) {
     switchView("notes", false);
   }
 }
@@ -1186,23 +1210,52 @@ function setupEventListeners() {
   });
 }
 
-// Instant Branding & Logo Hydration
+// Instant Branding & Profile Hydration
+function applyProfileState(p) {
+  if (!p) return;
+  if (p.logoUrl) {
+    document.querySelectorAll(".brand-logo").forEach(img => {
+      img.style.display = "block";
+      img.src = p.logoUrl;
+    });
+  }
+  if (p.avatarUrl) {
+    document.querySelectorAll(".avatar-img").forEach(img => {
+      img.style.display = "block";
+      img.src = p.avatarUrl;
+      if (img.nextElementSibling) img.nextElementSibling.style.display = "none";
+    });
+  }
+  if (p.name) {
+    document.querySelectorAll(".creator-name").forEach(el => el.textContent = p.name);
+  }
+  if (p.role) {
+    document.querySelectorAll(".creator-role-title").forEach(el => el.textContent = p.role);
+  }
+  if (p.bio) {
+    const bioEl = document.querySelector(".creator-bio");
+    if (bioEl) bioEl.textContent = `"${p.bio}"`;
+  }
+  if (p.instagram) {
+    const igHandle = p.instagram.replace(/^@/, "");
+    document.querySelectorAll(".ig-qr-handle").forEach(el => el.textContent = `@${igHandle}`);
+    document.querySelectorAll(".ig-handle-text").forEach(el => el.textContent = `Instagram @${igHandle}`);
+    document.querySelectorAll(".ig-follow-btn-link").forEach(el => {
+      el.href = `https://www.instagram.com/${igHandle}/`;
+    });
+  }
+  if (p.instagramQrUrl) {
+    document.querySelectorAll(".ig-qr-img").forEach(img => {
+      img.src = p.instagramQrUrl;
+    });
+  }
+}
+
 function initBranding() {
   const saved = localStorage.getItem("exam_admin_profile_data");
   if (saved) {
     try {
-      const p = JSON.parse(saved);
-      if (p.logoUrl) {
-        document.querySelectorAll(".brand-logo").forEach(img => {
-          img.style.display = "block";
-          img.src = p.logoUrl;
-        });
-      }
-      if (p.avatarUrl) {
-        document.querySelectorAll(".avatar-img").forEach(img => {
-          img.src = p.avatarUrl;
-        });
-      }
+      applyProfileState(JSON.parse(saved));
     } catch {}
   }
 
@@ -1210,19 +1263,8 @@ function initBranding() {
     .then(r => r.json())
     .then(d => {
       if (d && d.profile) {
-        const p = d.profile;
-        localStorage.setItem("exam_admin_profile_data", JSON.stringify(p));
-        if (p.logoUrl) {
-          document.querySelectorAll(".brand-logo").forEach(img => {
-            img.style.display = "block";
-            img.src = p.logoUrl;
-          });
-        }
-        if (p.avatarUrl) {
-          document.querySelectorAll(".avatar-img").forEach(img => {
-            img.src = p.avatarUrl;
-          });
-        }
+        localStorage.setItem("exam_admin_profile_data", JSON.stringify(d.profile));
+        applyProfileState(d.profile);
       }
     })
     .catch(() => {});
