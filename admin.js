@@ -138,6 +138,26 @@ const ImageStore = {
 
 window.handleAdminNoteImageError = async function(imgEl, noteId, imgUrl) {
   imgEl.onerror = null;
+  if (imgUrl && imgUrl.startsWith("/")) {
+    const relUrl = imgUrl.replace(/^\/+/, "");
+    const testImg = new Image();
+    testImg.onload = () => { imgEl.src = relUrl; };
+    testImg.onerror = async () => {
+      try {
+        const cleanName = (imgUrl || "").split("?")[0].replace(/^\/uploads\//, "");
+        const stored = await ImageStore.get(imgUrl) || await ImageStore.get(cleanName) || await ImageStore.get(noteId);
+        if (stored) {
+          imgEl.src = stored;
+          return;
+        }
+      } catch {}
+      if (imgEl.parentElement) {
+        imgEl.parentElement.innerHTML = `<div class="grid-card-img placeholder" data-preview-id="${noteId}">📖</div>`;
+      }
+    };
+    testImg.src = relUrl;
+    return;
+  }
   try {
     const cleanName = (imgUrl || "").split("?")[0].replace(/^\/uploads\//, "");
     const stored = await ImageStore.get(imgUrl) || await ImageStore.get(cleanName) || await ImageStore.get(noteId);
@@ -583,7 +603,7 @@ async function loadDashboardData() {
 
   try {
     const [notesData, visitsData, interData] = await Promise.all([
-      api("/api/notes").catch(() => fetch("data/notes.json").then(r => r.ok ? r.json() : []).then(d => ({ notes: Array.isArray(d) ? d : (d.notes || []) })).catch(() => ({ notes: [] }))),
+      api(`/api/notes?_t=${Date.now()}`).catch(() => fetch(`data/notes.json?_t=${Date.now()}`, { cache: "no-store" }).then(r => r.ok ? r.json() : []).then(d => ({ notes: Array.isArray(d) ? d : (d.notes || []) })).catch(() => ({ notes: [] }))),
       api("/api/visits").catch(() => ({ count: 0, today: 0 })),
       api("/api/interactions").catch(() => null)
     ]);
@@ -3989,15 +4009,68 @@ function setupEventListeners() {
       await progressModal.animateTo(55, 700, "Decoding note records & diagram buffers...", `Validating ${notesCount} revision note cards...`, "Time remaining: ~2 seconds", "Speed: 27.5 MB/s");
 
       // Stage 3: Server synchronization (55% -> 80%)
-      const restorePromise = api("/api/admin/backup/restore", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ backup: backupObj })
-      }).catch(() => null);
+      let restoreRes = null;
+      let serverSaved = false;
+      try {
+        restoreRes = await api("/api/admin/backup/restore", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ backup: backupObj })
+        });
+        if (restoreRes && restoreRes.success) serverSaved = true;
+      } catch (e1) {
+        console.warn("[Restore] Full payload failed, retrying with lightweight schema + asset uploads...", e1);
+        try {
+          const lightBackup = {
+            ...backupObj,
+            notes: (backupObj.notes || []).map(n => {
+              const cp = { ...n };
+              delete cp.imageData;
+              delete cp.image;
+              return cp;
+            }),
+            images: {}
+          };
+          restoreRes = await api("/api/admin/backup/restore", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ backup: lightBackup })
+          });
+          if (restoreRes && restoreRes.success) {
+            serverSaved = true;
+            if (backupObj.images && typeof backupObj.images === "object") {
+              for (const [fn, dataUrl] of Object.entries(backupObj.images)) {
+                if (fn && dataUrl && typeof dataUrl === "string") {
+                  await api("/api/admin/backup/upload-asset", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ filename: fn, dataUrl })
+                  }).catch(() => {});
+                }
+              }
+            }
+            if (Array.isArray(backupObj.notes)) {
+              for (const n of backupObj.notes) {
+                const raw = n.imageData || n.image || "";
+                if (raw && typeof raw === "string" && raw.startsWith("data:image/")) {
+                  const ext = raw.includes("png") ? "png" : raw.includes("webp") ? "webp" : "jpg";
+                  const filename = `${n.id || "note"}.${ext}`;
+                  await api("/api/admin/backup/upload-asset", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ filename, dataUrl: raw })
+                  }).catch(() => {});
+                }
+              }
+            }
+          }
+        } catch (e2) {
+          console.warn("[Restore] Server API not reachable (static host mode):", e2);
+        }
+      }
 
       await progressModal.animateTo(80, 650, "Uploading & committing database records...", "Writing database snapshot to server storage...", "Time remaining: ~1 second", "Speed: 36.0 MB/s");
 
-      const restoreRes = await restorePromise;
       if (restoreRes && restoreRes.profile) {
         adminProfileState = { ...adminProfileState, ...restoreRes.profile };
       }
@@ -4078,7 +4151,11 @@ function setupEventListeners() {
       await progressModal.animateTo(100, 300, "Restore Complete!", `Successfully synchronized ${notesCount} notes & assets`, "Complete", "100% Synced");
       await progressModal.complete(notesCount);
       await loadDashboardData();
-      showToast(`✓ Website data successfully restored! (${notesCount} notes, logo & QR code loaded)`, "success");
+      if (serverSaved) {
+        showToast(`✓ Website data published to server! All users on this domain will see ${notesCount} notes.`, "success");
+      } else {
+        showToast(`✓ Website data restored! (${notesCount} notes loaded)`, "success");
+      }
     } catch (err) {
       if (progressModal) progressModal.close();
       showToast("Restore failed: " + (err.message || "Invalid file format"), "error");

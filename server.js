@@ -948,6 +948,25 @@ async function handleApi(request, response, url) {
     return true;
   }
 
+  if (request.method === "POST" && url.pathname === "/api/admin/backup/upload-asset") {
+    if (!isAdmin(request)) return sendUnauthorized(response), true;
+    const body = await readBody(request, 15 * 1024 * 1024).catch(() => ({}));
+    const filename = body.filename ? path.basename(body.filename) : "";
+    const dataUrl = body.dataUrl || "";
+    if (filename && dataUrl) {
+      const match = dataUrl.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=\r\n\s]+)$/);
+      if (match) {
+        await fs.mkdir(UPLOAD_DIR, { recursive: true });
+        const buf = Buffer.from(match[2].replace(/[\r\n\s]/g, ""), "base64");
+        await fs.writeFile(path.join(UPLOAD_DIR, filename), buf);
+        sendJson(response, 200, { success: true, filename });
+        return true;
+      }
+    }
+    sendJson(response, 400, { error: "Invalid asset data." });
+    return true;
+  }
+
   if (request.method === "POST" && url.pathname === "/api/admin/reset-data") {
     const body = await readBody(request).catch(() => ({}));
     const enteredPassword = String(body.password || "").trim();

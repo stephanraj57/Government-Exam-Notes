@@ -83,6 +83,26 @@ const ImageStore = {
 
 window.handleNoteImageError = async function(imgEl, noteId, imgUrl, title, subject) {
   imgEl.onerror = null;
+  if (imgUrl && imgUrl.startsWith("/")) {
+    const relUrl = imgUrl.replace(/^\/+/, "");
+    const testImg = new Image();
+    testImg.onload = () => { imgEl.src = relUrl; };
+    testImg.onerror = async () => {
+      try {
+        const cleanName = (imgUrl || "").split("?")[0].replace(/^\/uploads\//, "");
+        const stored = await ImageStore.get(imgUrl) || await ImageStore.get(cleanName) || await ImageStore.get(noteId);
+        if (stored) {
+          imgEl.src = stored;
+          return;
+        }
+      } catch {}
+      if (imgEl.parentElement) {
+        imgEl.parentElement.innerHTML = `<div class="preview"><h3>${title}</h3><p>${subject}</p><div class="diagram">📖</div></div>`;
+      }
+    };
+    testImg.src = relUrl;
+    return;
+  }
   try {
     const cleanName = (imgUrl || "").split("?")[0].replace(/^\/uploads\//, "");
     const stored = await ImageStore.get(imgUrl) || await ImageStore.get(cleanName) || await ImageStore.get(noteId);
@@ -180,14 +200,14 @@ async function loadNotes() {
   try {
     let notesData = null;
     try {
-      const res = await fetch("/api/notes");
+      const res = await fetch(`/api/notes?_t=${Date.now()}`, { cache: "no-store" });
       if (res.ok) notesData = await res.json();
     } catch {}
 
     // Fall back to static data/notes.json for mobile devices & static cloud hosting
     if (!notesData || !Array.isArray(notesData.notes) || notesData.notes.length === 0) {
       try {
-        const staticRes = await fetch("data/notes.json");
+        const staticRes = await fetch(`data/notes.json?_t=${Date.now()}`, { cache: "no-store" });
         if (staticRes.ok) {
           const raw = await staticRes.json();
           notesData = { notes: Array.isArray(raw) ? raw : (raw.notes || []) };
@@ -198,7 +218,7 @@ async function loadNotes() {
     serverNotes = (notesData && notesData.notes) || [];
     isAdmin = false;
     try {
-      const meRes = await fetch("/api/admin/me").then(r => r.ok ? r.json() : { admin: false });
+      const meRes = await fetch(`/api/admin/me?_t=${Date.now()}`, { cache: "no-store" }).then(r => r.ok ? r.json() : { admin: false });
       isAdmin = Boolean(meRes.admin);
     } catch {}
   } catch {
@@ -231,8 +251,8 @@ async function loadNotes() {
   }
 
   // Fetch from API or fallback to static data/profile.json
-  fetch("/api/admin/profile")
-    .then(r => r.ok ? r.json() : fetch("data/profile.json").then(r2 => r2.ok ? r2.json() : null).then(d => ({ profile: d })))
+  fetch(`/api/admin/profile?_t=${Date.now()}`, { cache: "no-store" })
+    .then(r => r.ok ? r.json() : fetch(`data/profile.json?_t=${Date.now()}`, { cache: "no-store" }).then(r2 => r2.ok ? r2.json() : null).then(d => ({ profile: d })))
     .then(d => {
       if (d && d.profile) {
         const avatar = d.profile.avatarUrl;
