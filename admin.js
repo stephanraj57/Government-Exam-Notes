@@ -2799,6 +2799,128 @@ function setupEventListeners() {
     }
   });
 
+  // ==========================================
+  // 1-Click Backup Export & Restore Listeners
+  // ==========================================
+  const backupExportBtn = $("#backup-export-btn");
+  backupExportBtn?.addEventListener("click", async () => {
+    backupExportBtn.disabled = true;
+    const origHtml = backupExportBtn.innerHTML;
+    backupExportBtn.innerHTML = `<span>⏳</span> Generating Backup…`;
+
+    try {
+      let backupData = null;
+      try {
+        const res = await api("/api/admin/backup/export");
+        if (res && res.backup) {
+          backupData = res.backup;
+        }
+      } catch {}
+
+      // Fallback if local or api error
+      if (!backupData) {
+        backupData = {
+          version: "2.0",
+          type: "ExamAlertIndiaFullBackup",
+          exportedAt: new Date().toISOString(),
+          notes: allNotes,
+          visits: {
+            count: Number(localStorage.getItem("exam_notes_local_visits") || "0"),
+            today: Number(localStorage.getItem("exam_notes_local_visits_today") || "0")
+          },
+          interactions: liveInteractions,
+          profile: adminProfileState,
+          images: {}
+        };
+      }
+
+      const jsonStr = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      const dlUrl = URL.createObjectURL(blob);
+      const dlLink = document.createElement("a");
+      const dateTag = new Date().toISOString().slice(0, 10);
+      dlLink.href = dlUrl;
+      dlLink.download = `exam_alert_india_backup_${dateTag}.json`;
+      document.body.appendChild(dlLink);
+      dlLink.click();
+      document.body.removeChild(dlLink);
+      URL.revokeObjectURL(dlUrl);
+
+      showToast(`✓ Backup downloaded: ${backupData.notes?.length || 0} notes & system data saved!`, "success");
+    } catch (err) {
+      showToast("Failed to create backup file: " + err.message, "error");
+    } finally {
+      backupExportBtn.disabled = false;
+      backupExportBtn.innerHTML = origHtml;
+    }
+  });
+
+  const backupRestoreFileInput = $("#backup-restore-file-input");
+  const backupRestoreTriggerBtn = $("#backup-restore-trigger-btn");
+
+  backupRestoreTriggerBtn?.addEventListener("click", () => {
+    backupRestoreFileInput?.click();
+  });
+
+  backupRestoreFileInput?.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!confirm(`Restore website data from "${file.name}"? This will reload all saved notes, images, metrics, and profile details.`)) {
+      backupRestoreFileInput.value = "";
+      return;
+    }
+
+    if (backupRestoreTriggerBtn) {
+      backupRestoreTriggerBtn.disabled = true;
+      backupRestoreTriggerBtn.innerHTML = `<span>⏳</span> Restoring data…`;
+    }
+
+    try {
+      const text = await file.text();
+      const backupObj = JSON.parse(text);
+
+      if (!backupObj || (!backupObj.notes && !backupObj.type)) {
+        throw new Error("The selected file is not a valid Exam Alert India backup file.");
+      }
+
+      // Send to server
+      try {
+        await api("/api/admin/backup/restore", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ backup: backupObj })
+        });
+      } catch {}
+
+      // Update local storage caches
+      if (Array.isArray(backupObj.notes)) {
+        localStorage.setItem("exam_notes_custom_uploads", JSON.stringify(backupObj.notes));
+        allNotes = backupObj.notes;
+      }
+      if (backupObj.profile) {
+        adminProfileState = { ...adminProfileState, ...backupObj.profile };
+        localStorage.setItem("exam_admin_profile_data", JSON.stringify(adminProfileState));
+        applyAdminProfileUI(adminProfileState);
+      }
+      if (backupObj.interactions) {
+        liveInteractions = backupObj.interactions;
+        localStorage.setItem("exam_notes_interactions_data", JSON.stringify(liveInteractions));
+      }
+
+      await loadDashboardData();
+      showToast(`✓ Website data successfully restored! (${(backupObj.notes || []).length} notes loaded)`, "success");
+    } catch (err) {
+      showToast("Restore failed: " + (err.message || "Invalid file format"), "error");
+    } finally {
+      if (backupRestoreTriggerBtn) {
+        backupRestoreTriggerBtn.disabled = false;
+        backupRestoreTriggerBtn.innerHTML = `<span>🔄</span> Select Backup File to Restore`;
+      }
+      backupRestoreFileInput.value = "";
+    }
+  });
+
   // Missing Demands Filter & Sort listeners
   $("#missing-demands-search-input")?.addEventListener("input", e => {
     missingSearchesState.filter = e.target.value;

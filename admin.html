@@ -1233,6 +1233,51 @@
 
         </div>
 
+        <!-- 1-Click Full Website Data Backup & Restore Card -->
+        <div class="profile-card backup-management-card" style="margin-top: 16px;">
+          <div class="profile-card-header" style="justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="p-card-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">💾</span>
+              <div>
+                <h3>1-Click Full Website Data Backup & Restore</h3>
+                <p class="p-card-sub">Export and reload all revision notes, diagram images, visitor counts, and admin profile across Render redeployments</p>
+              </div>
+            </div>
+            <span class="p-stat-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">Safe Snapshot</span>
+          </div>
+
+          <div class="backup-actions-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 10px;">
+            <!-- Export Card -->
+            <div class="backup-action-box" style="padding: 14px 16px; background: var(--surface-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--ink); font-size: 0.9rem;">
+                  <span>📥</span> Download Full Data Backup
+                </div>
+                <p style="font-size: 0.76rem; color: var(--ink-muted); margin: 4px 0 0; line-height: 1.45;">Downloads a portable JSON snapshot package containing all notes, uploaded diagram pictures (Base64 encoded), live visitor analytics, and settings.</p>
+              </div>
+              <button type="button" id="backup-export-btn" class="profile-act-btn primary" style="width: 100%; font-size: 0.82rem; padding: 9px 16px;">
+                <span>💾</span> Export Backup File (.json)
+              </button>
+            </div>
+
+            <!-- Restore Card -->
+            <div class="backup-action-box" style="padding: 14px 16px; background: var(--surface-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--ink); font-size: 0.9rem;">
+                  <span>📤</span> Restore Website from Backup
+                </div>
+                <p style="font-size: 0.76rem; color: var(--ink-muted); margin: 4px 0 0; line-height: 1.45;">Select any previously exported backup file to immediately restore all your notes, images, and data after a new Render build or redeployment.</p>
+              </div>
+              <div>
+                <input type="file" id="backup-restore-file-input" accept=".json,application/json" style="display:none;">
+                <button type="button" id="backup-restore-trigger-btn" class="profile-act-btn secondary" style="width: 100%; font-size: 0.82rem; padding: 9px 16px; border-color: var(--primary); color: var(--primary); font-weight: 700; cursor: pointer;">
+                  <span>🔄</span> Select Backup File to Restore
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
   </main>

@@ -9901,3 +9901,19 @@ button {
   margin: 0;
 }
 
+/* 1-Click Backup & Restore Card Responsive Styles */
+.backup-management-card {
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: var(--surface);
+}
+
+[data-theme="dark"] .backup-management-card {
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+@media (max-width: 768px) {
+  .backup-actions-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+

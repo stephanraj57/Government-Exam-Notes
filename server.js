@@ -606,6 +606,95 @@ async function handleApi(request, response, url) {
     return true;
   }
 
+  // ==========================================
+  // 1-Click Full Website Data Backup & Restore
+  // ==========================================
+  if ((request.method === "GET" || request.method === "POST") && url.pathname === "/api/admin/backup/export") {
+    if (!isAdmin(request)) return sendUnauthorized(response), true;
+
+    const notes = await readJson(NOTES_FILE).catch(() => []);
+    const visits = await readJson(VISITS_FILE).catch(() => ({ count: 0, daily: {} }));
+    const interactions = await readJson(INTERACTIONS_FILE).catch(() => ({}));
+    const profile = await readJson(PROFILE_FILE).catch(() => DEFAULT_PROFILE);
+
+    // Read all uploaded images into a base64 dictionary for complete portable backup
+    const images = {};
+    try {
+      const files = await fs.readdir(UPLOAD_DIR);
+      for (const file of files) {
+        if (/\.(jpe?g|png|webp|svg)$/i.test(file)) {
+          const filePath = path.join(UPLOAD_DIR, file);
+          const buf = await fs.readFile(filePath);
+          const ext = path.extname(file).toLowerCase();
+          const mime = mimeTypes[ext] || "image/jpeg";
+          images[file] = `data:${mime};base64,${buf.toString("base64")}`;
+        }
+      }
+    } catch {}
+
+    const backupPayload = {
+      version: "2.0",
+      type: "ExamAlertIndiaFullBackup",
+      exportedAt: new Date().toISOString(),
+      notes,
+      visits,
+      interactions,
+      profile,
+      images
+    };
+
+    sendJson(response, 200, { success: true, backup: backupPayload });
+    return true;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/admin/backup/restore") {
+    if (!isAdmin(request)) return sendUnauthorized(response), true;
+
+    const body = await readBody(request, 50 * 1024 * 1024).catch(() => ({}));
+    const backup = body.backup || body;
+
+    if (!backup || typeof backup !== "object") {
+      sendJson(response, 400, { error: "Invalid backup file format." });
+      return true;
+    }
+
+    if (Array.isArray(backup.notes)) {
+      await writeJson(NOTES_FILE, backup.notes);
+    }
+    if (backup.visits && typeof backup.visits === "object") {
+      await writeJson(VISITS_FILE, backup.visits);
+    }
+    if (backup.interactions && typeof backup.interactions === "object") {
+      await writeJson(INTERACTIONS_FILE, backup.interactions);
+    }
+    if (backup.profile && typeof backup.profile === "object") {
+      await writeJson(PROFILE_FILE, backup.profile);
+    }
+
+    // Restore images from images dictionary into /uploads/
+    if (backup.images && typeof backup.images === "object") {
+      await fs.mkdir(UPLOAD_DIR, { recursive: true });
+      for (const [filename, dataUrl] of Object.entries(backup.images)) {
+        if (!filename || !dataUrl || typeof dataUrl !== "string") continue;
+        const cleanName = path.basename(filename);
+        const match = dataUrl.match(/^data:image\/[a-zA-Z0-9+.-]+;base64,(.+)$/);
+        if (match) {
+          try {
+            const buf = Buffer.from(match[1], "base64");
+            await fs.writeFile(path.join(UPLOAD_DIR, cleanName), buf);
+          } catch {}
+        }
+      }
+    }
+
+    sendJson(response, 200, {
+      success: true,
+      message: `Restored ${(backup.notes || []).length} notes and website data successfully.`,
+      noteCount: (backup.notes || []).length
+    });
+    return true;
+  }
+
   if (request.method === "POST" && url.pathname === "/api/admin/reset-data") {
     const body = await readBody(request).catch(() => ({}));
     const enteredPassword = String(body.password || "").trim();
