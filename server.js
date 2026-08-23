@@ -36,10 +36,11 @@ const NOTES_FILE = path.join(DATA_DIR, "notes.json");
 const VISITS_FILE = path.join(DATA_DIR, "visits.json");
 const INTERACTIONS_FILE = path.join(DATA_DIR, "interactions.json");
 const PROFILE_FILE = path.join(DATA_DIR, "profile.json");
+const SESSIONS_FILE = path.join(DATA_DIR, "sessions.json");
 const environment = globalThis.process?.env || {};
 const previewConfig = globalThis.__EXAM_ALERT_CONFIG || {};
 const PORT = Number(previewConfig.port || environment.PORT || 4173);
-const ADMIN_PASSWORD = previewConfig.adminPassword || environment.ADMIN_PASSWORD || "";
+const ADMIN_PASSWORD = previewConfig.adminPassword || environment.ADMIN_PASSWORD || "admin123";
 const sessions = new Map();
 
 const DEFAULT_PROFILE = {
@@ -79,6 +80,30 @@ async function ensureStorage() {
     missingSearches: {}
   });
   await createJsonIfMissing(PROFILE_FILE, DEFAULT_PROFILE);
+  await createJsonIfMissing(SESSIONS_FILE, {});
+
+  try {
+    const savedSessions = await readJson(SESSIONS_FILE);
+    if (savedSessions && typeof savedSessions === "object") {
+      const now = Date.now();
+      for (const [t, exp] of Object.entries(savedSessions)) {
+        if (typeof exp === "number" && exp > now && t.length >= 16) {
+          sessions.set(t, exp);
+        }
+      }
+    }
+  } catch {}
+}
+
+async function persistSessions() {
+  const now = Date.now();
+  const obj = {};
+  for (const [t, exp] of sessions.entries()) {
+    if (typeof exp === "number" && exp > now) {
+      obj[t] = exp;
+    }
+  }
+  await writeJson(SESSIONS_FILE, obj).catch(() => {});
 }
 
 async function createJsonIfMissing(filePath, value) {
@@ -112,22 +137,23 @@ function parseCookies(request) {
 
 function isAdmin(request) {
   const token = parseCookies(request).examAdminSession;
-  if (token && token.length >= 16) {
-    sessions.set(token, Date.now());
+  if (!token || typeof token !== "string" || token.length < 16) {
+    return false;
+  }
+  const expiry = sessions.get(token);
+  if (typeof expiry === "number" && expiry > Date.now()) {
     return true;
   }
-  if (!ADMIN_PASSWORD) return true;
   return false;
 }
 
 function safePasswordMatch(value) {
   const suppliedStr = String(value || "").trim();
-  if (ADMIN_PASSWORD) {
-    const supplied = Buffer.from(suppliedStr);
-    const expected = Buffer.from(ADMIN_PASSWORD);
-    return supplied.length === expected.length && crypto.timingSafeEqual(supplied, expected);
-  }
-  return suppliedStr === "admin123" || suppliedStr.length > 0;
+  if (!suppliedStr) return false;
+  const targetPassword = String(ADMIN_PASSWORD || "admin123").trim();
+  const supplied = Buffer.from(suppliedStr);
+  const expected = Buffer.from(targetPassword);
+  return supplied.length === expected.length && crypto.timingSafeEqual(supplied, expected);
 }
 
 function readBody(request, limit = 15 * 1024 * 1024) {
@@ -418,14 +444,19 @@ async function handleApi(request, response, url) {
       return true;
     }
     const token = crypto.randomBytes(32).toString("hex");
-    sessions.set(token, Date.now());
+    const expires = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    sessions.set(token, expires);
+    await persistSessions();
     sendJson(response, 200, { admin: true }, { "Set-Cookie": `examAdminSession=${token}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax` });
     return true;
   }
 
   if (request.method === "POST" && url.pathname === "/api/admin/logout") {
     const token = parseCookies(request).examAdminSession;
-    if (token) sessions.delete(token);
+    if (token) {
+      sessions.delete(token);
+      await persistSessions();
+    }
     sendJson(response, 200, { admin: false }, { "Set-Cookie": "examAdminSession=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax" });
     return true;
   }
