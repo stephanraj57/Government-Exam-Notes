@@ -14,7 +14,7 @@
   <!-- Admin Header -->
   <header class="site-header admin-header">
     <a class="brand" id="admin-brand-link" href="index.html" title="Go to Free AI Govt Exam Notes Home">
-      <img class="brand-logo" src="assets/ailogo.png" alt="Logo" onerror="this.style.display='none'">
+      <img class="brand-logo" src="assets/ailogo.png" alt="Logo" onerror="this.src='assets/ailogo.png'; this.style.display='block';">
       <span class="brand-text" id="admin-brand-text">
         <strong>Free AI</strong> Govt Exam Notes
         <small>Smart Notes · Clear Concepts · Better Revision</small>
@@ -1253,7 +1253,7 @@
                 <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--ink); font-size: 0.9rem;">
                   <span>📥</span> Download Full Data Backup
                 </div>
-                <p style="font-size: 0.76rem; color: var(--ink-muted); margin: 4px 0 0; line-height: 1.45;">Downloads a portable JSON snapshot package containing all notes, uploaded diagram pictures (Base64 encoded), live visitor analytics, and settings.</p>
+                <p style="font-size: 0.76rem; color: var(--ink-muted); margin: 4px 0 0; line-height: 1.45;">Downloads a portable JSON snapshot package containing all notes, diagram images, administrator profile picture, custom website logo, Instagram QR code, live analytics, and platform settings.</p>
               </div>
               <button type="button" id="backup-export-btn" class="profile-act-btn primary" style="width: 100%; font-size: 0.82rem; padding: 9px 16px;">
                 <span>💾</span> Export Backup File (.json)
@@ -1266,7 +1266,7 @@
                 <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--ink); font-size: 0.9rem;">
                   <span>📤</span> Restore Website from Backup
                 </div>
-                <p style="font-size: 0.76rem; color: var(--ink-muted); margin: 4px 0 0; line-height: 1.45;">Select any previously exported backup file to immediately restore all your notes, images, and data after a new Render build or redeployment.</p>
+                <p style="font-size: 0.76rem; color: var(--ink-muted); margin: 4px 0 0; line-height: 1.45;">Select any backup JSON file to immediately restore all notes, profile pictures, website logo, Instagram QR barcode, and telemetry data.</p>
               </div>
               <div>
                 <input type="file" id="backup-restore-file-input" accept=".json,application/json" style="display:none;">
@@ -1568,6 +1568,20 @@
               </label>
               <input id="edit-admin-phone" class="form-control" type="tel" maxlength="20" placeholder="e.g. +91 98765 43210" required autocomplete="tel">
             </div>
+          <div class="form-group edit-profile-pwd-box" style="margin-top: 10px; padding: 10px 14px; background: rgba(59, 130, 246, 0.06); border: 1px solid rgba(59, 130, 246, 0.22); border-radius: 12px;">
+            <label class="form-label-title" for="edit-admin-password" style="display: flex; align-items: center; justify-content: space-between; font-weight: 700; margin-bottom: 5px;">
+              <span><span style="color: var(--primary);">🔒</span> Admin Password Confirmation <span class="req-star" style="color: #ef4444;">*</span></span>
+              <small style="font-size: 0.7rem; color: var(--ink-muted);">Required to save changes</small>
+            </label>
+            <div class="pwd-input-wrap" style="position: relative; display: flex; align-items: center;">
+              <input id="edit-admin-password" class="form-control" type="password" placeholder="Enter your admin password" required autocomplete="current-password" style="padding-right: 38px;">
+              <button type="button" id="toggle-edit-profile-pwd-visibility" class="pwd-toggle-btn" title="Toggle password visibility" style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: var(--ink-muted); display: flex; align-items: center; padding: 4px;">
+                <svg id="edit-profile-pwd-eye-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            </div>
           </div>
 
         </div>
@@ -1576,11 +1590,16 @@
 
       <p id="edit-admin-profile-msg" class="form-message" style="margin-top: 10px;"></p>
 
-      <div class="modal-btn-row edit-modal-footer" style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 12px;">
-        <button class="outline-button" type="button" data-close>Cancel</button>
-        <button id="edit-admin-profile-submit" class="upload-button" type="submit" style="padding: 11px 24px; font-weight: 800;">
-          <span>💾</span> Save Profile Changes
+      <div class="modal-btn-row edit-modal-footer" style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <button id="modal-quick-backup-btn" class="profile-act-btn secondary" type="button" title="Download backup including profile picture, website logo, and Instagram QR barcode" style="font-size: 0.78rem; padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: var(--ink);">
+          <span>📥</span> Download Full Backup (Includes Logo & QR)
         </button>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button class="outline-button" type="button" data-close>Cancel</button>
+          <button id="edit-admin-profile-submit" class="upload-button" type="submit" style="padding: 11px 24px; font-weight: 800;">
+            <span>💾</span> Save Profile Changes
+          </button>
+        </div>
       </div>
     </form>
   </dialog>

@@ -403,6 +403,14 @@ async function handleApi(request, response, url) {
   if ((request.method === "PUT" || request.method === "POST") && url.pathname === "/api/admin/profile") {
     if (!isAdmin(request)) return sendUnauthorized(response), true;
     const body = await readBody(request).catch(() => ({}));
+    
+    // Strict Admin Password Confirmation Required to Edit Profile & Branding
+    const enteredPassword = String(body.password || "").trim();
+    if (!safePasswordMatch(enteredPassword)) {
+      sendJson(response, 403, { error: "Incorrect admin password. Profile and branding changes were rejected." });
+      return true;
+    }
+
     let profile = await readJson(PROFILE_FILE).catch(() => ({ ...DEFAULT_PROFILE }));
     if (!profile) profile = { ...DEFAULT_PROFILE };
 
@@ -698,7 +706,8 @@ async function handleApi(request, response, url) {
     const notes = await readJson(NOTES_FILE).catch(() => []);
     const visits = await readJson(VISITS_FILE).catch(() => ({ count: 0, daily: {} }));
     const interactions = await readJson(INTERACTIONS_FILE).catch(() => ({}));
-    const profile = await readJson(PROFILE_FILE).catch(() => DEFAULT_PROFILE);
+    let profile = await readJson(PROFILE_FILE).catch(() => ({ ...DEFAULT_PROFILE }));
+    if (!profile) profile = { ...DEFAULT_PROFILE };
 
     // Read all uploaded images into a base64 dictionary for complete portable backup
     const images = {};
@@ -709,20 +718,44 @@ async function handleApi(request, response, url) {
           const filePath = path.join(UPLOAD_DIR, file);
           const buf = await fs.readFile(filePath);
           const ext = path.extname(file).toLowerCase();
-          const mime = mimeTypes[ext] || "image/jpeg";
+          const mime = mimeTypes[ext] || (ext === ".svg" ? "image/svg+xml" : "image/jpeg");
           images[file] = `data:${mime};base64,${buf.toString("base64")}`;
         }
       }
     } catch {}
 
+    // Helper to convert any asset or upload path to Base64 Data URL
+    async function getAssetDataUrl(urlOrPath) {
+      if (!urlOrPath || typeof urlOrPath !== "string") return null;
+      if (urlOrPath.startsWith("data:image/")) return urlOrPath;
+      try {
+        const cleanRel = urlOrPath.split("?")[0].replace(/^\/+/, "");
+        const absPath = path.join(ROOT, cleanRel);
+        const buf = await fs.readFile(absPath);
+        const ext = path.extname(cleanRel).toLowerCase();
+        const mime = mimeTypes[ext] || (ext === ".svg" ? "image/svg+xml" : "image/jpeg");
+        return `data:${mime};base64,${buf.toString("base64")}`;
+      } catch {
+        return null;
+      }
+    }
+
+    // Explicitly bundle Profile Picture (Avatar), Website Brand Logo, and Instagram QR Code
+    const profileAssets = {
+      avatarData: await getAssetDataUrl(profile.avatarUrl || "assets/admin.jpg"),
+      logoData: await getAssetDataUrl(profile.logoUrl || "assets/ailogo.png"),
+      instagramQrData: await getAssetDataUrl(profile.instagramQrUrl || "assets/instagram_qr.svg")
+    };
+
     const backupPayload = {
-      version: "2.0",
+      version: "2.1",
       type: "ExamAlertIndiaFullBackup",
       exportedAt: new Date().toISOString(),
       notes,
       visits,
       interactions,
       profile,
+      profileAssets,
       images
     };
 
@@ -733,7 +766,7 @@ async function handleApi(request, response, url) {
   if (request.method === "POST" && url.pathname === "/api/admin/backup/restore") {
     if (!isAdmin(request)) return sendUnauthorized(response), true;
 
-    const body = await readBody(request, 50 * 1024 * 1024).catch(() => ({}));
+    const body = await readBody(request, 60 * 1024 * 1024).catch(() => ({}));
     const backup = body.backup || body;
 
     if (!backup || typeof backup !== "object") {
@@ -750,13 +783,11 @@ async function handleApi(request, response, url) {
     if (backup.interactions && typeof backup.interactions === "object") {
       await writeJson(INTERACTIONS_FILE, backup.interactions);
     }
-    if (backup.profile && typeof backup.profile === "object") {
-      await writeJson(PROFILE_FILE, backup.profile);
-    }
+
+    await fs.mkdir(UPLOAD_DIR, { recursive: true });
 
     // Restore images from images dictionary into /uploads/
     if (backup.images && typeof backup.images === "object") {
-      await fs.mkdir(UPLOAD_DIR, { recursive: true });
       for (const [filename, dataUrl] of Object.entries(backup.images)) {
         if (!filename || !dataUrl || typeof dataUrl !== "string") continue;
         const cleanName = path.basename(filename);
@@ -770,10 +801,48 @@ async function handleApi(request, response, url) {
       }
     }
 
+    let profile = backup.profile && typeof backup.profile === "object" ? { ...backup.profile } : null;
+    if (!profile) profile = await readJson(PROFILE_FILE).catch(() => ({ ...DEFAULT_PROFILE }));
+
+    // Restore Profile Assets (Avatar, Logo, QR) if bundled in profileAssets or profile
+    const assetsSource = backup.profileAssets || backup.profile || {};
+    if (assetsSource.avatarData) {
+      const match = String(assetsSource.avatarData).match(/^data:image\/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=\r\n\s]+)$/);
+      if (match) {
+        const ext = match[1].includes("png") ? "png" : match[1].includes("webp") ? "webp" : "jpg";
+        const fileName = `admin_avatar_${Date.now()}.${ext}`;
+        await fs.writeFile(path.join(UPLOAD_DIR, fileName), Buffer.from(match[2].replace(/[\r\n\s]/g, ""), "base64"));
+        profile.avatarUrl = `/uploads/${fileName}?t=${Date.now()}`;
+      }
+    }
+    if (assetsSource.logoData) {
+      const match = String(assetsSource.logoData).match(/^data:image\/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=\r\n\s]+)$/);
+      if (match) {
+        const ext = match[1].includes("svg") ? "svg" : match[1].includes("png") ? "png" : match[1].includes("webp") ? "webp" : "png";
+        const fileName = `site_logo_${Date.now()}.${ext}`;
+        await fs.writeFile(path.join(UPLOAD_DIR, fileName), Buffer.from(match[2].replace(/[\r\n\s]/g, ""), "base64"));
+        profile.logoUrl = `/uploads/${fileName}?t=${Date.now()}`;
+      }
+    }
+    if (assetsSource.instagramQrData) {
+      const match = String(assetsSource.instagramQrData).match(/^data:image\/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=\r\n\s]+)$/);
+      if (match) {
+        const ext = match[1].includes("svg") ? "svg" : match[1].includes("png") ? "png" : match[1].includes("webp") ? "webp" : "jpg";
+        const fileName = `instagram_qr_${Date.now()}.${ext}`;
+        await fs.writeFile(path.join(UPLOAD_DIR, fileName), Buffer.from(match[2].replace(/[\r\n\s]/g, ""), "base64"));
+        profile.instagramQrUrl = `/uploads/${fileName}?t=${Date.now()}`;
+      }
+    }
+
+    if (profile) {
+      await writeJson(PROFILE_FILE, profile);
+    }
+
     sendJson(response, 200, {
       success: true,
-      message: `Restored ${(backup.notes || []).length} notes and website data successfully.`,
-      noteCount: (backup.notes || []).length
+      message: `Restored ${(backup.notes || []).length} notes, administrator avatar, site logo, and Instagram QR barcode successfully.`,
+      noteCount: (backup.notes || []).length,
+      profile
     });
     return true;
   }

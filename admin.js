@@ -2714,11 +2714,36 @@ function setupEventListeners() {
     }
     if (editIgQrFileInput) editIgQrFileInput.value = "";
 
+    // Password input
+    const pwdInput = $("#edit-admin-password");
+    if (pwdInput) {
+      pwdInput.value = "";
+      pwdInput.type = "password";
+      const eyeSvg = $("#edit-profile-pwd-eye-icon");
+      if (eyeSvg) eyeSvg.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
+    }
+
     editProfileDialog?.showModal();
     nameInput?.focus();
   };
 
   $("#profile-open-edit-btn")?.addEventListener("click", openProfileEditDialog);
+
+  // Toggle password visibility in profile modal
+  $("#toggle-edit-profile-pwd-visibility")?.addEventListener("click", () => {
+    const pwdInput = $("#edit-admin-password");
+    if (!pwdInput) return;
+    const isPassword = pwdInput.type === "password";
+    pwdInput.type = isPassword ? "text" : "password";
+    const eyeSvg = $("#edit-profile-pwd-eye-icon");
+    if (eyeSvg) {
+      if (isPassword) {
+        eyeSvg.innerHTML = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>`;
+      } else {
+        eyeSvg.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
+      }
+    }
+  });
 
   // Live Instagram typing preview inside modal
   $("#edit-admin-instagram")?.addEventListener("input", e => {
@@ -2833,6 +2858,7 @@ function setupEventListeners() {
     const bio = $("#edit-admin-bio")?.value.trim() || "";
     const email = $("#edit-admin-email")?.value.trim();
     const phone = $("#edit-admin-phone")?.value.trim();
+    const enteredPassword = $("#edit-admin-password")?.value.trim();
     const submitBtn = $("#edit-admin-profile-submit");
 
     if (!name || !email) {
@@ -2843,9 +2869,18 @@ function setupEventListeners() {
       return;
     }
 
+    if (!enteredPassword) {
+      if (editProfileMsg) {
+        editProfileMsg.textContent = "Admin password confirmation is required to save changes.";
+        editProfileMsg.className = "form-message error";
+      }
+      $("#edit-admin-password")?.focus();
+      return;
+    }
+
     if (submitBtn) submitBtn.disabled = true;
     if (editProfileMsg) {
-      editProfileMsg.textContent = "Saving profile & branding details…";
+      editProfileMsg.textContent = "Verifying admin password & saving details…";
       editProfileMsg.className = "form-message";
     }
 
@@ -2856,7 +2891,8 @@ function setupEventListeners() {
         instagram,
         bio,
         email,
-        phone
+        phone,
+        password: enteredPassword
       };
       if (selectedProfileAvatarData) payload.avatarData = selectedProfileAvatarData;
       if (selectedLogoData) payload.logoData = selectedLogoData;
@@ -2887,31 +2923,28 @@ function setupEventListeners() {
 
       localStorage.setItem("exam_admin_profile_data", JSON.stringify(adminProfileState));
       applyAdminProfileUI(adminProfileState);
-      editProfileDialog?.close();
-      showToast("✓ Administrator profile, logo & Instagram QR updated successfully!", "success");
-    } catch (err) {
-      // Local mode fallback
-      adminProfileState = {
-        ...adminProfileState,
-        name,
-        role,
-        instagram,
-        bio,
-        email,
-        phone,
-        ...(selectedProfileAvatarData ? { avatarUrl: selectedProfileAvatarData } : {}),
-        ...(selectedLogoData ? { logoUrl: selectedLogoData } : {}),
-        ...(selectedIgQrData ? { instagramQrUrl: selectedIgQrData } : {})
-      };
-      localStorage.setItem("exam_admin_profile_data", JSON.stringify(adminProfileState));
-      applyAdminProfileUI(adminProfileState);
-      editProfileDialog?.close();
-      showToast("✓ Administrator profile updated locally!", "success");
-    } finally {
-      if (submitBtn) submitBtn.disabled = false;
+      
+      const pwdInput = $("#edit-admin-password");
+      if (pwdInput) pwdInput.value = "";
       selectedProfileAvatarData = null;
       selectedLogoData = null;
       selectedIgQrData = null;
+
+      editProfileDialog?.close();
+      showToast("✓ Administrator profile, logo & Instagram QR updated successfully!", "success");
+    } catch (err) {
+      if (editProfileMsg) {
+        editProfileMsg.textContent = err.message || "Incorrect admin password. Changes rejected.";
+        editProfileMsg.className = "form-message error";
+      }
+      showToast(err.message || "Incorrect admin password", "error");
+      const pwdInput = $("#edit-admin-password");
+      if (pwdInput) {
+        pwdInput.value = "";
+        pwdInput.focus();
+      }
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
     }
   });
 
@@ -2927,13 +2960,12 @@ function setupEventListeners() {
   });
 
   // ==========================================
-  // 1-Click Backup Export & Restore Listeners
+  // 1-Click Backup Export & Restore Listeners (Includes Notes, Profile Pic, Logo, & QR)
   // ==========================================
-  const backupExportBtn = $("#backup-export-btn");
-  backupExportBtn?.addEventListener("click", async () => {
-    backupExportBtn.disabled = true;
-    const origHtml = backupExportBtn.innerHTML;
-    backupExportBtn.innerHTML = `<span>⏳</span> Generating Backup…`;
+  async function performBackupExport(btnElement) {
+    if (btnElement) btnElement.disabled = true;
+    const origHtml = btnElement ? btnElement.innerHTML : "";
+    if (btnElement) btnElement.innerHTML = `<span>⏳</span> Generating Backup…`;
 
     try {
       let backupData = null;
@@ -2947,7 +2979,7 @@ function setupEventListeners() {
       // Fallback if local or api error
       if (!backupData) {
         backupData = {
-          version: "2.0",
+          version: "2.1",
           type: "ExamAlertIndiaFullBackup",
           exportedAt: new Date().toISOString(),
           notes: allNotes,
@@ -2957,6 +2989,11 @@ function setupEventListeners() {
           },
           interactions: liveInteractions,
           profile: adminProfileState,
+          profileAssets: {
+            avatarData: adminProfileState.avatarUrl || null,
+            logoData: adminProfileState.logoUrl || null,
+            instagramQrData: adminProfileState.instagramQrUrl || null
+          },
           images: {}
         };
       }
@@ -2973,14 +3010,22 @@ function setupEventListeners() {
       document.body.removeChild(dlLink);
       URL.revokeObjectURL(dlUrl);
 
-      showToast(`✓ Backup downloaded: ${backupData.notes?.length || 0} notes & system data saved!`, "success");
+      showToast(`✓ Full Backup exported! Saved ${backupData.notes?.length || 0} notes, profile photo, website logo & QR barcode!`, "success");
     } catch (err) {
       showToast("Failed to create backup file: " + err.message, "error");
     } finally {
-      backupExportBtn.disabled = false;
-      backupExportBtn.innerHTML = origHtml;
+      if (btnElement) {
+        btnElement.disabled = false;
+        btnElement.innerHTML = origHtml;
+      }
     }
-  });
+  }
+
+  const backupExportBtn = $("#backup-export-btn");
+  backupExportBtn?.addEventListener("click", () => performBackupExport(backupExportBtn));
+
+  const modalQuickBackupBtn = $("#modal-quick-backup-btn");
+  modalQuickBackupBtn?.addEventListener("click", () => performBackupExport(modalQuickBackupBtn));
 
   const backupRestoreFileInput = $("#backup-restore-file-input");
   const backupRestoreTriggerBtn = $("#backup-restore-trigger-btn");
@@ -2993,7 +3038,7 @@ function setupEventListeners() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!confirm(`Restore website data from "${file.name}"? This will reload all saved notes, images, metrics, and profile details.`)) {
+    if (!confirm(`Restore website data from "${file.name}"? This will reload all saved notes, profile photo, custom logo, Instagram QR barcode, and analytics.`)) {
       backupRestoreFileInput.value = "";
       return;
     }
@@ -3013,11 +3058,14 @@ function setupEventListeners() {
 
       // Send to server
       try {
-        await api("/api/admin/backup/restore", {
+        const restoreRes = await api("/api/admin/backup/restore", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ backup: backupObj })
         });
+        if (restoreRes && restoreRes.profile) {
+          adminProfileState = { ...adminProfileState, ...restoreRes.profile };
+        }
       } catch {}
 
       // Update local storage caches
@@ -3025,8 +3073,14 @@ function setupEventListeners() {
         localStorage.setItem("exam_notes_custom_uploads", JSON.stringify(backupObj.notes));
         allNotes = backupObj.notes;
       }
-      if (backupObj.profile) {
-        adminProfileState = { ...adminProfileState, ...backupObj.profile };
+      if (backupObj.profile || backupObj.profileAssets) {
+        adminProfileState = {
+          ...adminProfileState,
+          ...(backupObj.profile || {}),
+          ...(backupObj.profileAssets?.avatarData ? { avatarUrl: backupObj.profileAssets.avatarData } : {}),
+          ...(backupObj.profileAssets?.logoData ? { logoUrl: backupObj.profileAssets.logoData } : {}),
+          ...(backupObj.profileAssets?.instagramQrData ? { instagramQrUrl: backupObj.profileAssets.instagramQrData } : {})
+        };
         localStorage.setItem("exam_admin_profile_data", JSON.stringify(adminProfileState));
         applyAdminProfileUI(adminProfileState);
       }
@@ -3036,7 +3090,7 @@ function setupEventListeners() {
       }
 
       await loadDashboardData();
-      showToast(`✓ Website data successfully restored! (${(backupObj.notes || []).length} notes loaded)`, "success");
+      showToast(`✓ Website data successfully restored! (${(backupObj.notes || []).length} notes, logo & QR code loaded)`, "success");
     } catch (err) {
       showToast("Restore failed: " + (err.message || "Invalid file format"), "error");
     } finally {
@@ -3866,6 +3920,7 @@ function prevLightbox() {
 }
 
 // Start
+loadAdminProfile();
 setupEventListeners();
 checkAuth();
 

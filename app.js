@@ -1186,7 +1186,50 @@ function setupEventListeners() {
   });
 }
 
+// Instant Branding & Logo Hydration
+function initBranding() {
+  const saved = localStorage.getItem("exam_admin_profile_data");
+  if (saved) {
+    try {
+      const p = JSON.parse(saved);
+      if (p.logoUrl) {
+        document.querySelectorAll(".brand-logo").forEach(img => {
+          img.style.display = "block";
+          img.src = p.logoUrl;
+        });
+      }
+      if (p.avatarUrl) {
+        document.querySelectorAll(".avatar-img").forEach(img => {
+          img.src = p.avatarUrl;
+        });
+      }
+    } catch {}
+  }
+
+  fetch("/api/admin/profile")
+    .then(r => r.json())
+    .then(d => {
+      if (d && d.profile) {
+        const p = d.profile;
+        localStorage.setItem("exam_admin_profile_data", JSON.stringify(p));
+        if (p.logoUrl) {
+          document.querySelectorAll(".brand-logo").forEach(img => {
+            img.style.display = "block";
+            img.src = p.logoUrl;
+          });
+        }
+        if (p.avatarUrl) {
+          document.querySelectorAll(".avatar-img").forEach(img => {
+            img.src = p.avatarUrl;
+          });
+        }
+      }
+    })
+    .catch(() => {});
+}
+
 // Start Application
+initBranding();
 setupEventListeners();
 loadNotes();
 
