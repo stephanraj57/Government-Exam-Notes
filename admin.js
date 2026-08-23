@@ -477,9 +477,12 @@ function applyAdminProfileUI(profile) {
   const logo = profile.logoUrl || "assets/ailogo.png";
   const initials = name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "SR";
 
-  // Update Brand Logos across admin portal
+  // Update Brand Logos & Browser Tab Favicon
   $$(".brand-logo").forEach(el => { el.src = logo; });
   $$(".edit-modal-brand-logo").forEach(el => { el.src = logo; });
+  document.querySelectorAll("link[rel*='icon']").forEach(link => {
+    link.href = logo;
+  });
 
   // Sidebar profile card
   $$(".portal-user-name").forEach(el => el.textContent = name);
@@ -3768,21 +3771,118 @@ function setupEventListeners() {
     backupRestoreFileInput?.click();
   });
 
+  // Windows-Style Backup Restore Progress Popup Window Controller
+  async function showWindowsRestoreProgress(file) {
+    const dialog = $("#backup-restore-progress-dialog");
+    const windowTitleEl = $("#win-window-title");
+    const titleEl = $("#win-transfer-title");
+    const subEl = $("#win-transfer-sub");
+    const stageLabel = $("#win-progress-stage-label");
+    const pctEl = $("#win-progress-pct");
+    const fillEl = $("#win-progress-fill");
+    const itemNameEl = $("#win-transfer-item-name");
+    const speedEl = $("#win-transfer-speed");
+    const etaEl = $("#win-transfer-eta");
+    const itemsCountEl = $("#win-transfer-items-count");
+    const sourceFileEl = $("#win-transfer-source-file");
+    const iconEl = $("#win-transfer-icon");
+    const footerEl = $("#win-transfer-footer");
+
+    if (!dialog) return { animateTo: () => Promise.resolve(), sleep: () => {}, setItemsCount: () => {}, complete: () => {}, close: () => {} };
+
+    // Reset initial visual state
+    if (iconEl) iconEl.textContent = "📦";
+    if (windowTitleEl) windowTitleEl.textContent = `Restoring from ${file.name}`;
+    if (titleEl) titleEl.textContent = "Copying & Restoring Website Data…";
+    if (subEl) subEl.textContent = "Transferring notes library, branding & analytics";
+    if (stageLabel) stageLabel.textContent = "Reading backup package...";
+    if (pctEl) pctEl.textContent = "0%";
+    if (fillEl) fillEl.style.width = "0%";
+    if (itemNameEl) itemNameEl.textContent = `Analyzing ${file.name}...`;
+    if (speedEl) speedEl.textContent = "Speed: 18.2 MB/s";
+    if (etaEl) etaEl.textContent = "Time remaining: ~3 seconds";
+    if (itemsCountEl) itemsCountEl.textContent = "Items: Calculating…";
+    if (sourceFileEl) sourceFileEl.textContent = `Source: ${file.name}`;
+    if (footerEl) footerEl.style.display = "none";
+
+    try {
+      if (typeof dialog.showModal === "function") {
+        dialog.showModal();
+      } else {
+        dialog.setAttribute("open", "");
+      }
+    } catch {
+      dialog.setAttribute("open", "");
+    }
+
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    let currentPct = 0;
+    const animateTo = (targetPct, durationMs, stageText, currentItem, remainingText, speedText) => {
+      if (stageLabel && stageText) stageLabel.textContent = stageText;
+      if (itemNameEl && currentItem) itemNameEl.textContent = currentItem;
+      if (etaEl && remainingText) etaEl.textContent = remainingText;
+      if (speedEl && speedText) speedEl.textContent = speedText;
+
+      return new Promise(resolve => {
+        const start = currentPct;
+        const startTime = performance.now();
+        const frame = (now) => {
+          const elapsed = now - startTime;
+          const p = Math.min(elapsed / durationMs, 1);
+          currentPct = Math.round(start + (targetPct - start) * p);
+          if (pctEl) pctEl.textContent = `${currentPct}%`;
+          if (fillEl) fillEl.style.width = `${currentPct}%`;
+          if (p < 1) {
+            requestAnimationFrame(frame);
+          } else {
+            currentPct = targetPct;
+            if (pctEl) pctEl.textContent = `${targetPct}%`;
+            if (fillEl) fillEl.style.width = `${targetPct}%`;
+            resolve();
+          }
+        };
+        requestAnimationFrame(frame);
+      });
+    };
+
+    return {
+      animateTo,
+      sleep,
+      setItemsCount: (text) => {
+        if (itemsCountEl) itemsCountEl.textContent = text;
+      },
+      complete: async (notesCount) => {
+        if (iconEl) iconEl.textContent = "✅";
+        if (titleEl) titleEl.textContent = "System Restored Successfully!";
+        if (subEl) subEl.textContent = `All ${notesCount} notes, brand logo, profile photo & QR barcode loaded`;
+        if (footerEl) footerEl.style.display = "flex";
+        await sleep(1500);
+        try { dialog.close(); } catch { dialog.removeAttribute("open"); }
+      },
+      close: () => {
+        try { dialog.close(); } catch { dialog.removeAttribute("open"); }
+      }
+    };
+  }
+
   backupRestoreFileInput?.addEventListener("change", async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (!confirm(`Restore website data from "${file.name}"? This will reload all saved notes, profile photo, custom logo, Instagram QR barcode, and analytics.`)) {
-      backupRestoreFileInput.value = "";
-      return;
-    }
 
     if (backupRestoreTriggerBtn) {
       backupRestoreTriggerBtn.disabled = true;
       backupRestoreTriggerBtn.innerHTML = `<span>⏳</span> Restoring data…`;
     }
 
+    let progressModal = null;
+
     try {
+      progressModal = await showWindowsRestoreProgress(file);
+
+      // Stage 1: Read and verify file (0% -> 22%)
+      await progressModal.animateTo(22, 600, "Reading backup package & verifying JSON...", `Unpacking ${file.name} (${(file.size / 1024).toFixed(1)} KB)...`, "Time remaining: ~3 seconds", "Speed: 18.2 MB/s");
+
       const text = await file.text();
       const backupObj = JSON.parse(text);
 
@@ -3790,19 +3890,29 @@ function setupEventListeners() {
         throw new Error("The selected file is not a valid Exam Alert India backup file.");
       }
 
-      // Send to server
-      try {
-        const restoreRes = await api("/api/admin/backup/restore", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ backup: backupObj })
-        });
-        if (restoreRes && restoreRes.profile) {
-          adminProfileState = { ...adminProfileState, ...restoreRes.profile };
-        }
-      } catch {}
+      const notesCount = (backupObj.notes || []).length;
+      progressModal.setItemsCount(`Items: ${notesCount} notes`);
 
-      // Update local storage caches
+      // Stage 2: Decode notes and diagram buffers (22% -> 55%)
+      await progressModal.animateTo(55, 700, "Decoding note records & diagram buffers...", `Validating ${notesCount} revision note cards...`, "Time remaining: ~2 seconds", "Speed: 27.5 MB/s");
+
+      // Stage 3: Server synchronization (55% -> 80%)
+      const restorePromise = api("/api/admin/backup/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ backup: backupObj })
+      }).catch(() => null);
+
+      await progressModal.animateTo(80, 650, "Uploading & committing database records...", "Writing database snapshot to server storage...", "Time remaining: ~1 second", "Speed: 36.0 MB/s");
+
+      const restoreRes = await restorePromise;
+      if (restoreRes && restoreRes.profile) {
+        adminProfileState = { ...adminProfileState, ...restoreRes.profile };
+      }
+
+      // Stage 4: Apply branding and search indices (80% -> 98%)
+      await progressModal.animateTo(98, 500, "Applying branding assets & search indexes...", "Syncing logo, avatar and Instagram QR...", "Time remaining: Almost done", "Speed: 45.0 MB/s");
+
       if (Array.isArray(backupObj.notes)) {
         localStorage.setItem("exam_notes_custom_uploads", JSON.stringify(backupObj.notes));
         allNotes = backupObj.notes;
@@ -3823,9 +3933,13 @@ function setupEventListeners() {
         localStorage.setItem("exam_notes_interactions_data", JSON.stringify(liveInteractions));
       }
 
+      // Stage 5: Complete (98% -> 100%)
+      await progressModal.animateTo(100, 300, "Restore Complete!", `Successfully synchronized ${notesCount} notes & assets`, "Complete", "100% Synced");
+      await progressModal.complete(notesCount);
       await loadDashboardData();
-      showToast(`✓ Website data successfully restored! (${(backupObj.notes || []).length} notes, logo & QR code loaded)`, "success");
+      showToast(`✓ Website data successfully restored! (${notesCount} notes, logo & QR code loaded)`, "success");
     } catch (err) {
+      if (progressModal) progressModal.close();
       showToast("Restore failed: " + (err.message || "Invalid file format"), "error");
     } finally {
       if (backupRestoreTriggerBtn) {

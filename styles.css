@@ -11287,3 +11287,297 @@ body.about-mode .mobile-category-strip {
   box-shadow: 0 8px 20px rgba(220, 39, 67, 0.45);
 }
 
+/* ==========================================================================
+   Windows-Style Backup Restore Copy-Paste Transfer Modal & Animation
+   ========================================================================== */
+.backup-progress-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-width: 520px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(59, 130, 246, 0.3);
+  padding: 0;
+  color: var(--ink);
+  overflow: hidden;
+}
+
+.backup-progress-dialog::backdrop {
+  background: rgba(11, 15, 25, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.win-transfer-card {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.win-window-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--surface-subtle);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+
+.win-titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.win-titlebar-icon {
+  font-size: 1.1rem;
+}
+
+.win-titlebar-text {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0.2px;
+}
+
+.win-titlebar-controls {
+  display: flex;
+  align-items: center;
+}
+
+.win-titlebar-btn {
+  background: transparent;
+  border: none;
+  color: var(--ink-muted);
+  width: 28px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  transition: all 0.15s ease;
+}
+
+.win-titlebar-btn:hover {
+  background: rgba(239, 68, 68, 0.18);
+  color: #ef4444;
+}
+
+.win-transfer-body {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.win-transfer-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.win-transfer-header-icon {
+  font-size: 1.9rem;
+  background: rgba(37, 99, 235, 0.12);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.win-transfer-header-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.win-transfer-header-sub {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+
+/* Windows Copy Animation: Flying documents between Source and Destination */
+.win-copy-stage {
+  position: relative;
+  height: 96px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 36px;
+  overflow: hidden;
+}
+
+.win-folder-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  z-index: 10;
+}
+
+.win-folder-icon {
+  font-size: 2.3rem;
+  line-height: 1;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.2));
+}
+
+.win-folder-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.win-transfer-track {
+  position: absolute;
+  left: 95px;
+  right: 95px;
+  top: 50%;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, #3b82f6 0px, #3b82f6 6px, transparent 6px, transparent 12px);
+  z-index: 1;
+  opacity: 0.65;
+}
+
+/* Flying flying sheets / documents */
+.win-flying-doc {
+  position: absolute;
+  left: 70px;
+  top: 30px;
+  font-size: 1.55rem;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+  animation: winFlyDoc 1.7s cubic-bezier(0.35, 0, 0.25, 1) infinite;
+}
+
+.win-flying-doc.doc-1 { animation-delay: 0s; }
+.win-flying-doc.doc-2 { animation-delay: 0.42s; }
+.win-flying-doc.doc-3 { animation-delay: 0.85s; }
+.win-flying-doc.doc-4 { animation-delay: 1.28s; }
+
+@keyframes winFlyDoc {
+  0% {
+    left: 70px;
+    top: 34px;
+    opacity: 0;
+    transform: scale(0.6) rotate(-18deg);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.1) rotate(-6deg);
+  }
+  50% {
+    top: 10px;
+    transform: scale(1.25) rotate(4deg);
+  }
+  85% {
+    opacity: 1;
+    transform: scale(1.05) rotate(14deg);
+  }
+  100% {
+    left: calc(100% - 105px);
+    top: 34px;
+    opacity: 0;
+    transform: scale(0.6) rotate(22deg);
+  }
+}
+
+/* Progress Bar & Percentage */
+.win-progress-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.win-progress-pct {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.win-progress-track {
+  height: 14px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.win-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 50%, #10b981 100%);
+  border-radius: var(--radius-full);
+  transition: width 0.1s linear;
+  position: relative;
+  overflow: hidden;
+}
+
+.win-progress-fill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.25) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.25) 50%,
+    rgba(255, 255, 255, 0.25) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 24px 24px;
+  animation: winStripeMove 1s linear infinite;
+}
+
+@keyframes winStripeMove {
+  0% { background-position: 0 0; }
+  100% { background-position: 24px 0; }
+}
+
+.win-transfer-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  font-size: 0.73rem;
+  color: var(--ink-muted);
+  background: var(--surface-subtle);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.win-transfer-status-text {
+  font-size: 0.75rem;
+  color: var(--ink-sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+

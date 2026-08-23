@@ -8,8 +8,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="icon" type="image/png" href="assets/ailogo.png">
-  <link rel="stylesheet" href="styles.css?v=7.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/ailogo.png?v=8.0">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/ailogo.png?v=8.0">
+  <link rel="apple-touch-icon" href="assets/ailogo.png?v=8.0">
+  <link rel="shortcut icon" type="image/png" href="assets/ailogo.png?v=8.0">
+  <link rel="stylesheet" href="styles.css?v=10.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -1800,9 +1803,85 @@
     </div>
   </dialog>
 
+  <!-- Windows-Style Backup Restore Progress Popup Window Dialog -->
+  <dialog id="backup-restore-progress-dialog" class="dialog backup-progress-dialog">
+    <div class="win-transfer-card">
+      <!-- Windows Window Title Bar -->
+      <div class="win-window-titlebar">
+        <div class="win-titlebar-left">
+          <span class="win-titlebar-icon">📁</span>
+          <span class="win-titlebar-text" id="win-window-title">Restoring System Backup</span>
+        </div>
+        <div class="win-titlebar-controls">
+          <button type="button" id="win-dialog-close-btn" class="win-titlebar-btn" title="Close window" onclick="document.getElementById('backup-restore-progress-dialog').close()">✕</button>
+        </div>
+      </div>
+
+      <div class="win-transfer-body">
+        <!-- Sub Header -->
+        <div class="win-transfer-header">
+          <div class="win-transfer-header-icon" id="win-transfer-icon">📦</div>
+          <div>
+            <h3 class="win-transfer-header-title" id="win-transfer-title">Copying & Restoring Website Data…</h3>
+            <p class="win-transfer-header-sub" id="win-transfer-sub">Transferring notes library, branding & analytics</p>
+          </div>
+        </div>
+
+        <!-- Windows Copy Animation Stage -->
+        <div class="win-copy-stage">
+          <div class="win-folder-node">
+            <span class="win-folder-icon">📦</span>
+            <span class="win-folder-label">Backup File</span>
+          </div>
+
+          <div class="win-transfer-track"></div>
+
+          <!-- Flying Documents Stream -->
+          <div class="win-flying-doc doc-1">📄</div>
+          <div class="win-flying-doc doc-2">📑</div>
+          <div class="win-flying-doc doc-3">🖼️</div>
+          <div class="win-flying-doc doc-4">📝</div>
+
+          <div class="win-folder-node">
+            <span class="win-folder-icon">🗄️</span>
+            <span class="win-folder-label">Live System</span>
+          </div>
+        </div>
+
+        <!-- Progress Info Row -->
+        <div class="win-progress-info-row">
+          <span id="win-progress-stage-label">Reading backup package...</span>
+          <span id="win-progress-pct" class="win-progress-pct">0%</span>
+        </div>
+
+        <!-- Animated Progress Bar -->
+        <div class="win-progress-track">
+          <div id="win-progress-fill" class="win-progress-fill" style="width: 0%;"></div>
+        </div>
+
+        <!-- Current Item & Stats -->
+        <div class="win-transfer-status-text" id="win-transfer-item-name">Preparing data stream...</div>
+
+        <div class="win-transfer-stats">
+          <div id="win-transfer-speed">Speed: 18.2 MB/s</div>
+          <div id="win-transfer-eta" style="text-align: right;">Time remaining: ~2 seconds</div>
+          <div id="win-transfer-items-count">Items: 0 items</div>
+          <div id="win-transfer-source-file" style="text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Source: backup.json</div>
+        </div>
+
+        <!-- Action row upon finish -->
+        <div id="win-transfer-footer" class="win-transfer-footer" style="display: none; justify-content: flex-end; margin-top: 4px;">
+          <button type="button" class="profile-act-btn primary" onclick="document.getElementById('backup-restore-progress-dialog').close()" style="padding: 8px 20px; font-weight: 700; font-size: 0.85rem;">
+            <span>✓</span> Done
+          </button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=7.0"></script>
+  <script src="admin.js?v=10.0"></script>
 </body>
 </html>
