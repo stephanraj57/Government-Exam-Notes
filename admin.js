@@ -142,16 +142,97 @@ function setTheme(theme, save = true) {
 }
 
 // ==========================================
-// 3. Real-Time Cross-Tab Authentication & View Switch
+// 3. Real-Time Cross-Tab Authentication & 30-Minute Session Management
 // ==========================================
+const ADMIN_SESSION_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 let authBroadcastChannel = null;
+let sessionTimerInterval = null;
+let sessionExpiresAt = 0;
+
+function startSessionCountdown(expiresAt) {
+  if (expiresAt && expiresAt > Date.now()) {
+    sessionExpiresAt = expiresAt;
+  } else {
+    const saved = Number(sessionStorage.getItem("exam_admin_session_expires_at"));
+    if (saved && saved > Date.now()) {
+      sessionExpiresAt = saved;
+    } else {
+      sessionExpiresAt = Date.now() + ADMIN_SESSION_DURATION_MS;
+    }
+  }
+  sessionStorage.setItem("exam_admin_session_expires_at", String(sessionExpiresAt));
+
+  const timerBadge = $("#admin-session-timer-badge");
+  if (timerBadge) {
+    timerBadge.hidden = false;
+    timerBadge.removeAttribute("hidden");
+    timerBadge.style.removeProperty("display");
+  }
+
+  updateSessionCountdownUI();
+
+  if (sessionTimerInterval) clearInterval(sessionTimerInterval);
+  sessionTimerInterval = setInterval(() => {
+    updateSessionCountdownUI();
+  }, 1000);
+}
+
+function updateSessionCountdownUI() {
+  const dashSec = $("#admin-dashboard-section");
+  if (!dashSec || dashSec.hidden) {
+    stopSessionCountdown();
+    return;
+  }
+
+  const now = Date.now();
+  const remainingMs = sessionExpiresAt - now;
+  const timerBadge = $("#admin-session-timer-badge");
+  const timerText = $("#admin-session-countdown");
+
+  if (remainingMs <= 0) {
+    stopSessionCountdown();
+    executeLogout(true);
+    showToast("🔒 Admin session expired after 30 minutes. Please login again.", "error");
+    return;
+  }
+
+  const totalSeconds = Math.floor(remainingMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  const formatted = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+
+  if (timerText) {
+    timerText.textContent = formatted;
+  }
+  if (timerBadge) {
+    timerBadge.title = `Admin session active: ${formatted} remaining (${minutes}m ${seconds}s until auto-logout)`;
+    timerBadge.classList.toggle("warning", totalSeconds <= 300 && totalSeconds > 60);
+    timerBadge.classList.toggle("danger", totalSeconds <= 60);
+  }
+}
+
+function stopSessionCountdown() {
+  if (sessionTimerInterval) {
+    clearInterval(sessionTimerInterval);
+    sessionTimerInterval = null;
+  }
+  const timerBadge = $("#admin-session-timer-badge");
+  if (timerBadge) {
+    timerBadge.hidden = true;
+    timerBadge.setAttribute("hidden", "");
+    timerBadge.style.setProperty("display", "none", "important");
+    timerBadge.classList.remove("warning", "danger");
+  }
+  sessionStorage.removeItem("exam_admin_session_expires_at");
+}
+
 try {
   if (typeof BroadcastChannel !== "undefined") {
     authBroadcastChannel = new BroadcastChannel("exam_admin_auth_sync_channel");
     authBroadcastChannel.onmessage = (event) => {
       if (event.data?.type === "LOGOUT") {
         executeLogout(false);
-        showToast("🔒 Signed out from another tab.", "info");
+        showToast("🔒 Logged out from another tab.", "info");
       } else if (event.data?.type === "LOGIN") {
         checkAuth();
         showToast("✓ Authenticated in another tab. Session synced.", "success");
@@ -167,7 +248,7 @@ window.addEventListener("storage", (e) => {
       const data = JSON.parse(e.newValue || "{}");
       if (data.action === "logout") {
         executeLogout(false);
-        showToast("🔒 Signed out from another tab.", "info");
+        showToast("🔒 Logged out from another tab.", "info");
       } else if (data.action === "login") {
         checkAuth();
         showToast("✓ Authenticated in another tab. Session synced.", "success");
@@ -195,7 +276,10 @@ async function verifySessionWithServer() {
     const res = await api("/api/admin/me");
     if (!res || !res.admin) {
       executeLogout(false);
-      showToast("🔒 Signed out from another tab.", "info");
+      showToast("🔒 Admin session expired. Please login again.", "info");
+    } else if (res.sessionExpiresAt) {
+      sessionExpiresAt = res.sessionExpiresAt;
+      sessionStorage.setItem("exam_admin_session_expires_at", String(sessionExpiresAt));
     }
   } catch (err) {
     if (!err.message?.includes("Failed to fetch") && window.location.protocol !== "file:") {
@@ -209,6 +293,8 @@ async function checkAuth() {
     const res = await api("/api/admin/me");
     if (res && res.admin) {
       sessionStorage.setItem("exam_admin_local_session", "true");
+      const exp = res.sessionExpiresAt || (Date.now() + ADMIN_SESSION_DURATION_MS);
+      startSessionCountdown(exp);
       showDashboard();
     } else {
       executeLogout(false);
@@ -216,6 +302,7 @@ async function checkAuth() {
   } catch (err) {
     if (window.location.protocol === "file:" || err.message?.includes("Failed to fetch")) {
       if (sessionStorage.getItem("exam_admin_local_session") === "true") {
+        startSessionCountdown(Date.now() + ADMIN_SESSION_DURATION_MS);
         showDashboard();
       } else {
         showLogin();
@@ -227,6 +314,7 @@ async function checkAuth() {
 }
 
 function executeLogout(notifyServer = true) {
+  stopSessionCountdown();
   if (notifyServer) {
     api("/api/admin/logout", { method: "POST" }).catch(() => {});
     try {
@@ -241,6 +329,7 @@ function executeLogout(notifyServer = true) {
 }
 
 function showLogin() {
+  stopSessionCountdown();
   const authContainer = $("#admin-auth-container");
   const authSec = $("#admin-auth-section");
   const dashSec = $("#admin-dashboard-section");
@@ -2247,12 +2336,17 @@ function openEditModal(noteId) {
   if (!note) return;
 
   $("#edit-note-id").value = note.id;
-  $("#edit-note-title").value = note.title;
+  const titleInput = $("#edit-note-title");
+  if (titleInput) {
+    titleInput.value = note.title || "";
+    titleInput.dispatchEvent(new Event("input", { bubbles: true }));
+  }
   $("#edit-note-subject").value = note.subject;
   
   const tagsInput = $("#edit-note-tags");
   if (tagsInput) {
     tagsInput.value = (note.tags || []).join(", ");
+    tagsInput.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
   const msg = $("#edit-form-msg");
@@ -2263,6 +2357,453 @@ function openEditModal(noteId) {
 
   const dialog = $("#admin-edit-dialog");
   if (dialog) dialog.showModal();
+}
+
+// ==========================================
+// 6.5 Live Spelling Correction & Red Wavy Underline Alert System
+// ==========================================
+const EXAM_VOCABULARY = [
+  "title", "titles", "topic", "topics", "note", "notes", "multiple", "tag", "tags", "revision", "concept", "clear", "smart", "better",
+  "publish", "modify", "library", "content", "subject", "category", "prelims", "mains", "interview",
+  "history", "polity", "economy", "geography", "science", "maths", "english", "others",
+  "article", "articles", "constitution", "amendment", "amendments", "preamble", "parliament",
+  "judiciary", "governor", "president", "writs", "writ", "monetary", "inflation", "dynasty",
+  "harappa", "harappan", "mesolithic", "neolithic", "paleolithic", "palaeolithic", "rigvedic",
+  "buddhism", "buddhist", "jainism", "sultanate", "viceroy", "viceroys", "photosynthesis",
+  "respiration", "circulatory", "thermodynamics", "gravitation", "trigonometry", "quadrilateral",
+  "percentage", "syllogism", "archaeology", "archaeological", "municipality", "municipalities",
+  "finance", "budget", "plateau", "monsoon", "pollution", "government", "environment",
+  "committee", "independence", "separate", "occurrence", "definitely", "privilege",
+  "legislature", "representation", "democracy", "sovereignty", "secularism", "socialism",
+  "administration", "bureaucracy", "sovereign", "fraternity", "fundamental", "citizenship",
+  "directive", "principles", "emergency", "provisions", "ordinance", "revolution",
+  "movement", "civilization", "atmosphere", "biodiversity", "ecosystem", "sanctuary",
+  "biosphere", "glacier", "glaciers", "volcano", "volcanoes", "earthquake", "tsunami",
+  "temperature", "precipitation", "humidity", "agriculture", "irrigation", "microbiology",
+  "heredity", "evolution", "electromagnetism", "acceleration", "mensuration", "probability",
+  "permutation", "combination", "comprehension", "reasoning", "aptitude", "quantitative",
+  "formula", "formulas", "structure", "system", "policy", "national", "international",
+  "supreme", "court", "high", "tribunal", "tribunals", "council", "assembly", "election",
+  "commission", "powers", "duties", "schedule", "schedules", "part", "parts", "rights",
+  "written", "writing", "received", "because", "until", "tomorrow", "development",
+  "important", "introduction", "summary", "analysis", "questions", "answers", "previous",
+  "year", "years", "general", "studies", "awareness", "current", "affairs", "static",
+  "upsc", "ssc", "cgl", "chsl", "rrb", "ntpc", "ibps", "sbi", "rbi", "drdo", "isro", "nda", "cds"
+];
+
+const KNOWN_TYPOS = {
+  "tittle": "title",
+  "tittles": "titles",
+  "topc": "topic",
+  "notess": "notes",
+  "notse": "notes",
+  "multple": "multiple",
+  "taggs": "tags",
+  "artical": "article",
+  "articals": "articles",
+  "constituion": "constitution",
+  "constiution": "constitution",
+  "consitution": "constitution",
+  "constutution": "constitution",
+  "constituon": "constitution",
+  "amendmant": "amendment",
+  "amendmants": "amendments",
+  "amendemnt": "amendment",
+  "preambel": "preamble",
+  "preambale": "preamble",
+  "parliment": "parliament",
+  "parlament": "parliament",
+  "parlimant": "parliament",
+  "parleament": "parliament",
+  "judicary": "judiciary",
+  "judicairy": "judiciary",
+  "judicuary": "judiciary",
+  "governer": "governor",
+  "govener": "governor",
+  "presidant": "president",
+  "presedent": "president",
+  "writts": "writs",
+  "writt": "writ",
+  "monetry": "monetary",
+  "monetory": "monetary",
+  "inflasion": "inflation",
+  "inflaton": "inflation",
+  "dynesty": "dynasty",
+  "geogrophy": "geography",
+  "geograhy": "geography",
+  "geographi": "geography",
+  "histroy": "history",
+  "historie": "history",
+  "scienc": "science",
+  "sciense": "science",
+  "mathes": "maths",
+  "economi": "economy",
+  "harapa": "harappa",
+  "harapan": "harappan",
+  "harappan": "harappan",
+  "mesolithic": "mesolithic",
+  "neolithic": "neolithic",
+  "paleolithic": "palaeolithic",
+  "rigvedic": "rigvedic",
+  "budhism": "buddhism",
+  "budhist": "buddhist",
+  "jainism": "jainism",
+  "sultanate": "sultanate",
+  "sultnate": "sultanate",
+  "sultanet": "sultanate",
+  "viceroy": "viceroy",
+  "viceroys": "viceroys",
+  "vicroy": "viceroy",
+  "photosynthisis": "photosynthesis",
+  "photosythesis": "photosynthesis",
+  "photosynthesise": "photosynthesis",
+  "respiration": "respiration",
+  "respirasion": "respiration",
+  "respiraton": "respiration",
+  "circulatory": "circulatory",
+  "circulatery": "circulatory",
+  "circulary": "circulatory",
+  "thermodynamics": "thermodynamics",
+  "thermodynamcis": "thermodynamics",
+  "gravitation": "gravitation",
+  "gravitasion": "gravitation",
+  "trigonometry": "trigonometry",
+  "trigonometery": "trigonometry",
+  "trignometry": "trigonometry",
+  "quadrilateral": "quadrilateral",
+  "quadrilatral": "quadrilateral",
+  "quadrilaterl": "quadrilateral",
+  "percentage": "percentage",
+  "percntage": "percentage",
+  "percentge": "percentage",
+  "persentage": "percentage",
+  "syllogism": "syllogism",
+  "syllogisum": "syllogism",
+  "silogism": "syllogism",
+  "archaeology": "archaeology",
+  "archeology": "archaeology",
+  "archeological": "archaeological",
+  "municipality": "municipality",
+  "muncipality": "municipality",
+  "muncipalities": "municipalities",
+  "municipility": "municipality",
+  "finance": "finance",
+  "finanace": "finance",
+  "finaance": "finance",
+  "budget": "budget",
+  "buget": "budget",
+  "budjet": "budget",
+  "plateau": "plateau",
+  "platau": "plateau",
+  "plateu": "plateau",
+  "monsoon": "monsoon",
+  "mansoon": "monsoon",
+  "monsoom": "monsoon",
+  "pollution": "pollution",
+  "pollusion": "pollution",
+  "polusion": "pollution",
+  "government": "government",
+  "goverment": "government",
+  "governmnt": "government",
+  "environment": "environment",
+  "enviroment": "environment",
+  "enviromental": "environment",
+  "committee": "committee",
+  "commitee": "committee",
+  "comittee": "committee",
+  "committe": "committee",
+  "independence": "independence",
+  "independance": "independence",
+  "indepedence": "independence",
+  "separate": "separate",
+  "seperate": "separate",
+  "seperation": "separation",
+  "occurrence": "occurrence",
+  "occurance": "occurrence",
+  "occurence": "occurrence",
+  "definitely": "definitely",
+  "definately": "definitely",
+  "definitly": "definitely",
+  "privilege": "privilege",
+  "privilage": "privilege",
+  "priviledge": "privilege",
+  "legislature": "legislature",
+  "legislater": "legislature",
+  "legislatur": "legislature",
+  "representation": "representation",
+  "represenation": "representation",
+  "representaion": "representation",
+  "democracy": "democracy",
+  "democrasy": "democracy",
+  "democarcy": "democracy",
+  "sovereignty": "sovereignty",
+  "sovereignity": "sovereignty",
+  "soverignty": "sovereignty",
+  "secularism": "secularism",
+  "seculer": "secular",
+  "socialism": "socialism",
+  "socialisem": "socialism",
+  "administration": "administration",
+  "administrasion": "administration",
+  "administrtion": "administration",
+  "bureaucracy": "bureaucracy",
+  "bureacracy": "bureaucracy",
+  "bureaucrasy": "bureaucracy",
+  "sovereign": "sovereign",
+  "soverign": "sovereign",
+  "fraternity": "fraternity",
+  "fraternety": "fraternity",
+  "fundamental": "fundamental",
+  "fundamantal": "fundamental",
+  "fundemental": "fundamental",
+  "citizenship": "citizenship",
+  "citiznship": "citizenship",
+  "directive": "directive",
+  "directiv": "directive",
+  "emergency": "emergency",
+  "emergensy": "emergency",
+  "provisions": "provisions",
+  "provisons": "provisions",
+  "ordinance": "ordinance",
+  "ordinence": "ordinance",
+  "revolution": "revolution",
+  "revolusion": "revolution",
+  "movement": "movement",
+  "movment": "movement",
+  "civilization": "civilization",
+  "civilisation": "civilization",
+  "civilizaton": "civilization",
+  "atmosphere": "atmosphere",
+  "atmospher": "atmosphere",
+  "biodiversity": "biodiversity",
+  "biodiveristy": "biodiversity",
+  "ecosystem": "ecosystem",
+  "ecosystm": "ecosystem",
+  "sanctuary": "sanctuary",
+  "sanctury": "sanctuary",
+  "sancturies": "sanctuaries",
+  "biosphere": "biosphere",
+  "biopshere": "biosphere",
+  "glacier": "glacier",
+  "glaciers": "glaciers",
+  "glaciar": "glacier",
+  "volcano": "volcano",
+  "volcanoes": "volcanoes",
+  "volcanos": "volcanoes",
+  "valcano": "volcano",
+  "earthquake": "earthquake",
+  "earthquak": "earthquake",
+  "tsunami": "tsunami",
+  "temperature": "temperature",
+  "temparature": "temperature",
+  "tempreture": "temperature",
+  "precipitation": "precipitation",
+  "precipitasion": "precipitation",
+  "humidity": "humidity",
+  "humedity": "humidity",
+  "agriculture": "agriculture",
+  "agriculter": "agriculture",
+  "irrigation": "irrigation",
+  "irrigasion": "irrigation",
+  "microbiology": "microbiology",
+  "microbilogy": "microbiology",
+  "heredity": "heredity",
+  "heridity": "heredity",
+  "evolution": "evolution",
+  "evolusion": "evolution",
+  "electromagnetism": "electromagnetism",
+  "electromagntism": "electromagnetism",
+  "acceleration": "acceleration",
+  "accelaration": "acceleration",
+  "mensuration": "mensuration",
+  "mensurasion": "mensuration",
+  "probability": "probability",
+  "probablity": "probability",
+  "permutation": "permutation",
+  "permutasion": "permutation",
+  "combination": "combination",
+  "combinasion": "combination",
+  "comprehension": "comprehension",
+  "comprehention": "comprehension",
+  "reasoning": "reasoning",
+  "resonning": "reasoning",
+  "aptitude": "aptitude",
+  "aptitute": "aptitude",
+  "quantitative": "quantitative",
+  "quantative": "quantitative",
+  "interview": "interview",
+  "interveiw": "interview",
+  "writting": "writing",
+  "recieved": "received",
+  "becuase": "because",
+  "untill": "until",
+  "alot": "a lot",
+  "tommorow": "tomorrow"
+};
+
+function levenshteinDistance(a, b) {
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  const matrix = [];
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
+function matchCase(original, replacement) {
+  if (original === original.toUpperCase() && original.length > 1) {
+    return replacement.toUpperCase();
+  }
+  if (original[0] === original[0].toUpperCase()) {
+    return replacement.charAt(0).toUpperCase() + replacement.slice(1);
+  }
+  return replacement.toLowerCase();
+}
+
+function findSpellingSuggestion(rawWord) {
+  const lower = rawWord.toLowerCase().replace(/^[^\w]+|[^\w]+$/g, "");
+  if (!lower || lower.length < 3) return null;
+
+  // 1. Direct typo dictionary check
+  if (KNOWN_TYPOS[lower]) {
+    return matchCase(rawWord, KNOWN_TYPOS[lower]);
+  }
+
+  // 2. If it's already a valid vocab word, numbers, or uppercase acronym
+  if (EXAM_VOCABULARY.includes(lower) || /^\d+$/.test(lower) || (rawWord.length <= 5 && rawWord === rawWord.toUpperCase())) {
+    return null;
+  }
+
+  // 3. Levenshtein fuzzy distance check
+  let bestMatch = null;
+  let minDistance = 999;
+  const maxAllowedDist = lower.length <= 4 ? 1 : (lower.length <= 7 ? 2 : 3);
+
+  for (const vocab of EXAM_VOCABULARY) {
+    if (Math.abs(vocab.length - lower.length) > maxAllowedDist) continue;
+    const dist = levenshteinDistance(lower, vocab);
+    if (dist < minDistance && dist <= maxAllowedDist) {
+      minDistance = dist;
+      bestMatch = vocab;
+    }
+  }
+
+  if (bestMatch && minDistance <= maxAllowedDist) {
+    return matchCase(rawWord, bestMatch);
+  }
+
+  return null;
+}
+
+function findSpellingErrors(text) {
+  if (!text || typeof text !== "string") return [];
+  const words = text.match(/[A-Za-zÀ-ÿ0-9'-]+/g) || [];
+  const errors = [];
+  const seen = new Set();
+
+  for (const rawWord of words) {
+    const suggested = findSpellingSuggestion(rawWord);
+    if (suggested && suggested.toLowerCase() !== rawWord.toLowerCase()) {
+      const key = `${rawWord}->${suggested}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        errors.push({
+          wrong: rawWord,
+          correct: suggested
+        });
+      }
+    }
+  }
+  return errors;
+}
+
+function attachSpellChecker(inputEl, alertContainerEl, onFixedCallback = null) {
+  if (!inputEl || !alertContainerEl) return;
+
+  const updateSpellCheck = () => {
+    const val = inputEl.value || "";
+    if (!val.trim()) {
+      alertContainerEl.hidden = true;
+      alertContainerEl.setAttribute("hidden", "");
+      alertContainerEl.style.setProperty("display", "none", "important");
+      inputEl.classList.remove("input-has-spelling-error");
+      return;
+    }
+
+    const errors = findSpellingErrors(val);
+    if (errors.length > 0) {
+      inputEl.classList.add("input-has-spelling-error");
+      alertContainerEl.hidden = false;
+      alertContainerEl.removeAttribute("hidden");
+      alertContainerEl.style.setProperty("display", "flex", "important");
+      
+      alertContainerEl.innerHTML = `
+        <span class="spelling-alert-label">
+          <span>🔴</span> Spelling error detected:
+        </span>
+        ${errors.map(err => `
+          <span class="spelling-error-pill">
+            <span class="misspelled-word-text" title="Misspelled word (Click to fix)">${escapeHtml(err.wrong)}</span>
+            <span class="spell-arrow">➔</span>
+            <button type="button" class="spell-fix-btn" data-wrong="${escapeHtml(err.wrong)}" data-correct="${escapeHtml(err.correct)}" title="Click to fix '${escapeHtml(err.wrong)}'">
+              <span>✓</span> ${escapeHtml(err.correct)}
+            </button>
+          </span>
+        `).join("")}
+      `;
+
+      // Attach click listeners to fix specific misspelled words
+      alertContainerEl.querySelectorAll(".spell-fix-btn, .misspelled-word-text").forEach(el => {
+        el.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const pill = el.closest(".spelling-error-pill");
+          const btn = pill ? pill.querySelector(".spell-fix-btn") : el;
+          const wrongWord = btn ? btn.dataset.wrong : null;
+          const correctWord = btn ? btn.dataset.correct : null;
+          if (!wrongWord || !correctWord) return;
+
+          // Replace only the specific misspelled word
+          const escapedWrong = wrongWord.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const regex = new RegExp(`\\b${escapedWrong}\\b`, "g");
+          inputEl.value = inputEl.value.replace(regex, correctWord);
+
+          // Trigger input and recheck
+          inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+          inputEl.focus();
+
+          if (typeof onFixedCallback === "function") {
+            onFixedCallback();
+          }
+          showToast(`✓ Fixed spelling: "${wrongWord}" ➔ "${correctWord}"`, "success");
+        });
+      });
+    } else {
+      inputEl.classList.remove("input-has-spelling-error");
+      alertContainerEl.hidden = true;
+      alertContainerEl.setAttribute("hidden", "");
+      alertContainerEl.style.setProperty("display", "none", "important");
+    }
+  };
+
+  inputEl.addEventListener("input", updateSpellCheck);
+  inputEl.addEventListener("focus", updateSpellCheck);
+  inputEl.addEventListener("keyup", updateSpellCheck);
+  inputEl.addEventListener("paste", () => setTimeout(updateSpellCheck, 50));
 }
 
 // ==========================================
@@ -2573,6 +3114,48 @@ function setupEventListeners() {
   setupFileDrop();
   setupPublishStudio();
 
+  // Live Spelling Correction & Red Underline Notifications
+  attachSpellChecker(
+    $("#studio-note-title"),
+    $("#studio-title-spell-alert"),
+    () => {
+      const titleInput = $("#studio-note-title");
+      const charCount = $("#studio-title-char-count");
+      if (charCount && titleInput) charCount.textContent = `${titleInput.value.length}/80`;
+      const simTitle = $("#sim-title-text");
+      if (simTitle && titleInput) simTitle.textContent = titleInput.value.trim() || "Indian Constitution – Fundamental Rights & Preamble";
+    }
+  );
+
+  attachSpellChecker(
+    $("#studio-note-tags"),
+    $("#studio-tags-spell-alert"),
+    () => {
+      const tagsInput = $("#studio-note-tags");
+      const raw = tagsInput ? tagsInput.value : "";
+      const tags = raw.split(",").map(t => t.trim().replace(/^#/, "")).filter(Boolean);
+      const simTagsRow = $("#sim-tags-row");
+      if (simTagsRow) {
+        if (tags.length === 0) {
+          simTagsRow.innerHTML = `<span class="sim-tag">#UPSC</span><span class="sim-tag">#Constitution</span>`;
+        } else {
+          simTagsRow.innerHTML = tags.map(t => `<span class="sim-tag">#${escapeHtml(t)}</span>`).join("");
+        }
+      }
+      renderPublishTagSuggestions("");
+    }
+  );
+
+  attachSpellChecker(
+    $("#edit-note-title"),
+    $("#edit-title-spell-alert")
+  );
+
+  attachSpellChecker(
+    $("#edit-note-tags"),
+    $("#edit-tags-spell-alert")
+  );
+
   // Sidebar Hide / View Toggle (Desktop Collapsible & Mobile Off-Canvas Drawer)
   const appShell = $("#admin-dashboard-section");
   const backdrop = $("#admin-sidebar-backdrop");
@@ -2687,6 +3270,10 @@ function setupEventListeners() {
     if (emailInput) emailInput.value = adminProfileState.email || "admin@examalertindia.com";
     if (phoneInput) phoneInput.value = adminProfileState.phone || "+91 98765 43210";
 
+    // Initial run of validation feedback
+    checkAdminProfileEmail();
+    checkAdminProfilePhone();
+
     // Update Live IG Preview in dialog
     const igHandlePreview = $("#edit-preview-ig-handle");
     const igTestLink = $("#edit-ig-test-link");
@@ -2726,6 +3313,130 @@ function setupEventListeners() {
     editProfileDialog?.showModal();
     nameInput?.focus();
   };
+
+  // Live Email & 10-Digit Phone Validation Helpers for Edit Profile
+  function checkAdminProfileEmail() {
+    const emailInput = $("#edit-admin-email");
+    const feedbackEl = $("#edit-admin-email-feedback");
+    if (!emailInput) return true;
+
+    const val = emailInput.value.trim();
+    if (!val) {
+      emailInput.classList.remove("input-field-valid");
+      emailInput.classList.add("input-field-invalid");
+      if (feedbackEl) {
+        feedbackEl.hidden = false;
+        feedbackEl.removeAttribute("hidden");
+        feedbackEl.className = "field-validation-feedback error";
+        feedbackEl.innerHTML = "<span>⚠️</span> Email address is required.";
+      }
+      return false;
+    }
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(val)) {
+      emailInput.classList.remove("input-field-valid");
+      emailInput.classList.add("input-field-invalid");
+      if (feedbackEl) {
+        feedbackEl.hidden = false;
+        feedbackEl.removeAttribute("hidden");
+        feedbackEl.className = "field-validation-feedback error";
+        feedbackEl.innerHTML = "<span>⚠️</span> Please enter a valid email address (e.g. name@example.com).";
+      }
+      return false;
+    }
+
+    emailInput.classList.remove("input-field-invalid");
+    emailInput.classList.add("input-field-valid");
+    if (feedbackEl) {
+      feedbackEl.hidden = false;
+      feedbackEl.removeAttribute("hidden");
+      feedbackEl.className = "field-validation-feedback success";
+      feedbackEl.innerHTML = "<span>✓</span> Valid email address.";
+    }
+    return true;
+  }
+
+  function checkAdminProfilePhone() {
+    const phoneInput = $("#edit-admin-phone");
+    const feedbackEl = $("#edit-admin-phone-feedback");
+    const counterEl = $("#edit-admin-phone-counter");
+    if (!phoneInput) return true;
+
+    const val = phoneInput.value.trim();
+    const digits = val.replace(/\D/g, "");
+    let core10 = digits;
+    if (digits.length === 12 && digits.startsWith("91")) {
+      core10 = digits.slice(2);
+    } else if (digits.length === 11 && digits.startsWith("0")) {
+      core10 = digits.slice(1);
+    }
+
+    const count = Math.min(core10.length, 10);
+    const isExact10 = core10.length === 10;
+    const isIndianFormat = isExact10 && /^[6-9]\d{9}$/.test(core10);
+
+    if (counterEl) {
+      counterEl.textContent = `${count}/10 digits`;
+      if (isExact10) {
+        counterEl.className = "phone-digit-counter valid";
+      } else {
+        counterEl.className = "phone-digit-counter invalid";
+      }
+    }
+
+    if (!val) {
+      phoneInput.classList.remove("input-field-valid");
+      phoneInput.classList.add("input-field-invalid");
+      if (feedbackEl) {
+        feedbackEl.hidden = false;
+        feedbackEl.removeAttribute("hidden");
+        feedbackEl.className = "field-validation-feedback error";
+        feedbackEl.innerHTML = "<span>⚠️</span> Mobile number is required.";
+      }
+      return false;
+    }
+
+    if (!isExact10) {
+      phoneInput.classList.remove("input-field-valid");
+      phoneInput.classList.add("input-field-invalid");
+      if (feedbackEl) {
+        feedbackEl.hidden = false;
+        feedbackEl.removeAttribute("hidden");
+        feedbackEl.className = "field-validation-feedback error";
+        feedbackEl.innerHTML = `<span>⚠️</span> Mobile number must be exactly 10 digits (${core10.length}/10 entered).`;
+      }
+      return false;
+    }
+
+    if (!isIndianFormat) {
+      phoneInput.classList.remove("input-field-valid");
+      phoneInput.classList.add("input-field-invalid");
+      if (feedbackEl) {
+        feedbackEl.hidden = false;
+        feedbackEl.removeAttribute("hidden");
+        feedbackEl.className = "field-validation-feedback error";
+        feedbackEl.innerHTML = "<span>⚠️</span> Mobile number must start with 6, 7, 8, or 9.";
+      }
+      return false;
+    }
+
+    phoneInput.classList.remove("input-field-invalid");
+    phoneInput.classList.add("input-field-valid");
+    if (feedbackEl) {
+      feedbackEl.hidden = false;
+      feedbackEl.removeAttribute("hidden");
+      feedbackEl.className = "field-validation-feedback success";
+      feedbackEl.innerHTML = "<span>✓</span> Valid 10-digit mobile number.";
+    }
+    return true;
+  }
+
+  // Attach live validation events for Profile Email and Phone
+  $("#edit-admin-email")?.addEventListener("input", checkAdminProfileEmail);
+  $("#edit-admin-email")?.addEventListener("blur", checkAdminProfileEmail);
+  $("#edit-admin-phone")?.addEventListener("input", checkAdminProfilePhone);
+  $("#edit-admin-phone")?.addEventListener("blur", checkAdminProfilePhone);
 
   $("#profile-open-edit-btn")?.addEventListener("click", openProfileEditDialog);
 
@@ -2861,11 +3572,34 @@ function setupEventListeners() {
     const enteredPassword = $("#edit-admin-password")?.value.trim();
     const submitBtn = $("#edit-admin-profile-submit");
 
-    if (!name || !email) {
+    if (!name) {
       if (editProfileMsg) {
-        editProfileMsg.textContent = "Name and Email are required.";
+        editProfileMsg.textContent = "Full Name is required.";
         editProfileMsg.className = "form-message error";
       }
+      $("#edit-admin-name")?.focus();
+      return;
+    }
+
+    // Strict Email Validation Check
+    if (!checkAdminProfileEmail()) {
+      if (editProfileMsg) {
+        editProfileMsg.textContent = "Please enter a valid email address.";
+        editProfileMsg.className = "form-message error";
+      }
+      showToast("Please enter a valid email address.", "error");
+      $("#edit-admin-email")?.focus();
+      return;
+    }
+
+    // Strict 10-Digit Mobile Number Validation Check
+    if (!checkAdminProfilePhone()) {
+      if (editProfileMsg) {
+        editProfileMsg.textContent = "Please enter a valid 10-digit mobile number.";
+        editProfileMsg.className = "form-message error";
+      }
+      showToast("Please enter a valid 10-digit mobile number.", "error");
+      $("#edit-admin-phone")?.focus();
       return;
     }
 
@@ -3416,26 +4150,29 @@ function setupEventListeners() {
     btn.disabled = true;
 
     try {
-      await api("/api/admin/login", {
+      const loginRes = await api("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: enteredPassword })
       });
       sessionStorage.setItem("exam_admin_local_session", "true");
+      const exp = (loginRes && loginRes.sessionExpiresAt) || (Date.now() + ADMIN_SESSION_DURATION_MS);
+      startSessionCountdown(exp);
       try {
         localStorage.setItem("exam_admin_auth_sync_event", JSON.stringify({ action: "login", time: Date.now() }));
         if (authBroadcastChannel) {
           authBroadcastChannel.postMessage({ type: "LOGIN", time: Date.now() });
         }
       } catch {}
-      showToast("Authentication successful! Welcome to Admin Studio.", "success");
+      showToast("Authentication successful! 30-minute Admin session active.", "success");
       showDashboard();
     } catch (err) {
       if (err.message.includes("Failed to fetch") || window.location.protocol === "file:") {
         const savedPass = localStorage.getItem("exam_admin_custom_password") || "admin123";
         if (enteredPassword === savedPass || enteredPassword === "admin123") {
           sessionStorage.setItem("exam_admin_local_session", "true");
-          showToast("Signed in (Direct Browser Mode).", "success");
+          startSessionCountdown(Date.now() + ADMIN_SESSION_DURATION_MS);
+          showToast("Logged in (Direct Browser Mode - 30m Session).", "success");
           showDashboard();
         } else {
           msg.textContent = "Incorrect password.";
@@ -3455,9 +4192,9 @@ function setupEventListeners() {
 
   // Logout Buttons (Header & Sidebar)
   const handleLogout = async () => {
-    if (confirm("Sign out from the Admin session?")) {
+    if (confirm("Logout from the Admin session?")) {
       executeLogout(true);
-      showToast("Signed out successfully.", "info");
+      showToast("Logged out successfully.", "info");
     }
   };
 
@@ -3925,28 +4662,42 @@ setupEventListeners();
 checkAuth();
 
 // ==========================================
-// Real-Time Active Users Presence & Auth Security Poller
+// Real-Time Active Users Presence & Auth Security Poller (Relaxed 45s)
 // ==========================================
-setInterval(async () => {
+let isPresencePolling = false;
+async function performPresenceCheck() {
+  if (isPresencePolling || document.hidden) return;
   const dashSec = $("#admin-dashboard-section");
   const isDashboardActive = dashSec && !dashSec.hidden;
+  if (!isDashboardActive) return;
 
-  if (isDashboardActive || document.visibilityState === "visible") {
+  isPresencePolling = true;
+  try {
+    const res = await api("/api/heartbeat");
+    if (res && res.activeUsers !== undefined) {
+      updateActiveUsersDisplay(res.activeUsers);
+    }
+  } catch {}
+
+  if (window.location.protocol !== "file:") {
     try {
-      const res = await api("/api/heartbeat");
-      if (res && res.activeUsers !== undefined) {
-        updateActiveUsersDisplay(res.activeUsers);
+      const authCheck = await api("/api/admin/me");
+      if (!authCheck || !authCheck.admin) {
+        executeLogout(false);
+        showToast("🔒 Admin session expired. Please login again.", "info");
+      } else if (authCheck.sessionExpiresAt) {
+        sessionExpiresAt = authCheck.sessionExpiresAt;
       }
     } catch {}
-
-    if (isDashboardActive && window.location.protocol !== "file:") {
-      try {
-        const authCheck = await api("/api/admin/me");
-        if (!authCheck || !authCheck.admin) {
-          executeLogout(false);
-          showToast("🔒 Signed out from another tab.", "info");
-        }
-      } catch {}
-    }
   }
-}, 4000);
+  isPresencePolling = false;
+}
+
+// Periodic check every 45s only when tab is active and visible
+setInterval(performPresenceCheck, 45000);
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    performPresenceCheck();
+  }
+});

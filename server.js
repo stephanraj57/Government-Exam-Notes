@@ -139,16 +139,27 @@ function parseCookies(request) {
   }, {});
 }
 
-function isAdmin(request) {
+const ADMIN_SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const ADMIN_COOKIE_MAX_AGE = 1800; // 30 minutes in seconds
+
+function getAdminSession(request) {
   const token = parseCookies(request).examAdminSession;
   if (!token || typeof token !== "string" || token.length < 16) {
-    return false;
+    return null;
   }
   const expiry = sessions.get(token);
   if (typeof expiry === "number" && expiry > Date.now()) {
-    return true;
+    return { token, expiry, remainingMs: expiry - Date.now() };
   }
-  return false;
+  if (expiry && expiry <= Date.now()) {
+    sessions.delete(token);
+    persistSessions();
+  }
+  return null;
+}
+
+function isAdmin(request) {
+  return getAdminSession(request) !== null;
 }
 
 function safePasswordMatch(value) {
@@ -185,7 +196,7 @@ function readBody(request, limit = 15 * 1024 * 1024) {
 }
 
 function sendUnauthorized(response) {
-  sendJson(response, 401, { error: "Admin sign-in is required for this action." });
+  sendJson(response, 401, { error: "Admin login session expired or required for this action." });
 }
 
 const activeSessions = new Map();
@@ -387,7 +398,13 @@ async function handleApi(request, response, url) {
   }
 
   if (request.method === "GET" && url.pathname === "/api/admin/me") {
-    sendJson(response, 200, { admin: isAdmin(request) });
+    const session = getAdminSession(request);
+    sendJson(response, 200, {
+      admin: session !== null,
+      sessionExpiresAt: session ? session.expiry : null,
+      remainingMs: session ? session.remainingMs : 0,
+      sessionTtlMs: ADMIN_SESSION_TTL_MS
+    });
     return true;
   }
 
@@ -415,8 +432,31 @@ async function handleApi(request, response, url) {
     if (!profile) profile = { ...DEFAULT_PROFILE };
 
     if (body.name) profile.name = String(body.name).trim().slice(0, 60);
-    if (body.email) profile.email = String(body.email).trim().slice(0, 100);
-    if (body.phone !== undefined) profile.phone = String(body.phone).trim().slice(0, 30);
+    
+    // Validate Email ID format
+    if (body.email !== undefined) {
+      const emailVal = String(body.email).trim();
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailVal || !emailRegex.test(emailVal)) {
+        sendJson(response, 400, { error: "Please enter a valid email address (e.g. name@example.com)." });
+        return true;
+      }
+      profile.email = emailVal.slice(0, 100);
+    }
+
+    // Validate 10-digit Mobile Number format
+    if (body.phone !== undefined) {
+      const phoneVal = String(body.phone).trim();
+      const digitsOnly = phoneVal.replace(/\D/g, "");
+      const isTenDigits = digitsOnly.length === 10 || (digitsOnly.length === 12 && digitsOnly.startsWith("91")) || (digitsOnly.length === 11 && digitsOnly.startsWith("0"));
+      if (!phoneVal || !isTenDigits) {
+        sendJson(response, 400, { error: "Mobile number must be a valid 10-digit number." });
+        return true;
+      }
+      const core10 = digitsOnly.slice(-10);
+      profile.phone = `+91 ${core10.slice(0, 5)} ${core10.slice(5)}`;
+    }
+
     if (body.role) profile.role = String(body.role).trim().slice(0, 80);
     if (body.instagram !== undefined) profile.instagram = String(body.instagram).trim().replace(/^@/, "").slice(0, 50);
     if (body.bio !== undefined) profile.bio = String(body.bio).trim().slice(0, 800);
@@ -504,10 +544,15 @@ async function handleApi(request, response, url) {
       return true;
     }
     const token = crypto.randomBytes(32).toString("hex");
-    const expires = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    const expires = Date.now() + ADMIN_SESSION_TTL_MS;
     sessions.set(token, expires);
     await persistSessions();
-    sendJson(response, 200, { admin: true }, { "Set-Cookie": `examAdminSession=${token}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax` });
+    sendJson(
+      response,
+      200,
+      { admin: true, sessionExpiresAt: expires, remainingMs: ADMIN_SESSION_TTL_MS, sessionTtlMs: ADMIN_SESSION_TTL_MS },
+      { "Set-Cookie": `examAdminSession=${token}; HttpOnly; Path=/; Max-Age=${ADMIN_COOKIE_MAX_AGE}; SameSite=Lax` }
+    );
     return true;
   }
 
@@ -890,6 +935,10 @@ async function handleApi(request, response, url) {
 }
 
 async function serveStatic(request, response, pathname) {
+  if (pathname === "/favicon.ico") {
+    pathname = "/assets/ailogo.png";
+  }
+
   const allowedPublicFiles = new Set([
     "/",
     "/index.html",
