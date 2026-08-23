@@ -947,6 +947,8 @@ async function serveStatic(request, response, pathname) {
     "/styles.css",
     "/app.js",
     "/admin.js",
+    "/favicon.ico",
+    "/favicon.png",
     "/assets/ailogo.png",
     "/assets/admin.jpg"
   ]);

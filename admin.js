@@ -88,11 +88,19 @@ function showToast(message, type = "info") {
   }, 3200);
 }
 
-async function api(url, options) {
-  const r = await fetch(url, options);
-  const v = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(v.error || "Something went wrong.");
-  return v;
+async function api(url, options = {}) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  try {
+    const r = await fetch(url, { ...options, signal: options.signal || controller.signal });
+    clearTimeout(timeoutId);
+    const v = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(v.error || "Something went wrong.");
+    return v;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
+  }
 }
 
 // ==========================================
