@@ -153,10 +153,26 @@ async function loadNotes() {
         }
       })
       .catch(() => {});
+
+    // Hydrate Admin Profile Avatar & Name
+    fetch("/api/admin/profile")
+      .then(r => r.json())
+      .then(d => {
+        if (d && d.profile) {
+          const avatar = d.profile.avatarUrl;
+          if (avatar) {
+            document.querySelectorAll(".avatar-img").forEach(img => {
+              img.src = avatar;
+            });
+          }
+        }
+      })
+      .catch(() => {});
   }
 
   updateAdminState();
   updatePopularTags();
+  handleUrlHash();
   render();
 }
 
@@ -507,10 +523,21 @@ function updateCategoryCounts() {
 // ==========================================
 // 8. Navigation & View Handling
 // ==========================================
-function switchView(viewName) {
+function switchView(viewName, updateHash = true) {
+  if (!["notes", "bookmarks", "recent"].includes(viewName)) {
+    viewName = "notes";
+  }
   currentView = viewName;
   activeTag = null;
   currentPage = 1;
+
+  if (updateHash) {
+    if (viewName === "notes") {
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+    } else {
+      window.location.hash = viewName;
+    }
+  }
 
   $$(".nav-link").forEach(btn => {
     btn.classList.toggle("active", btn.dataset.view === viewName);
@@ -521,6 +548,17 @@ function switchView(viewName) {
   });
 
   render();
+}
+
+function handleUrlHash() {
+  const rawHash = (window.location.hash || "").replace(/^#/, "").trim().toLowerCase();
+  if (rawHash === "bookmarks" || rawHash === "saved") {
+    switchView("bookmarks", false);
+  } else if (rawHash === "recent" || rawHash === "recently-viewed") {
+    switchView("recent", false);
+  } else if (rawHash === "notes" || rawHash === "all") {
+    switchView("notes", false);
+  }
 }
 
 function selectCategory(catName) {
@@ -800,6 +838,9 @@ function prevLightbox() {
 // ==========================================
 function setupEventListeners() {
   initTheme();
+
+  // Handle URL hash changes (e.g. #bookmarks, #recent)
+  window.addEventListener("hashchange", handleUrlHash);
 
   // Desktop Navigation
   $$(".nav-link").forEach(btn => {

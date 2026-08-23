@@ -400,6 +400,10 @@ function applyAdminProfileUI(profile) {
   // Profile View
   const pName = $(".profile-full-name");
   if (pName) pName.textContent = name;
+  const pBadge = $(".profile-master-badge");
+  if (pBadge) pBadge.innerHTML = `<span class="sparkle-icon">✦</span> ${escapeHtml(role)} <span class="sparkle-icon">✦</span>`;
+  const pBio = $(".profile-bio-text");
+  if (pBio && profile.bio) pBio.textContent = profile.bio;
   const dName = $("#profile-display-name");
   if (dName) dName.textContent = name;
   const dEmail = $("#profile-display-email");
@@ -2653,10 +2657,14 @@ function setupEventListeners() {
       editProfileMsg.className = "form-message";
     }
     const nameInput = $("#edit-admin-name");
+    const roleInput = $("#edit-admin-role");
+    const bioInput = $("#edit-admin-bio");
     const emailInput = $("#edit-admin-email");
     const phoneInput = $("#edit-admin-phone");
 
     if (nameInput) nameInput.value = adminProfileState.name || "Stephanraj";
+    if (roleInput) roleInput.value = adminProfileState.role || "Master Admin & Platform Creator";
+    if (bioInput) bioInput.value = adminProfileState.bio || "";
     if (emailInput) emailInput.value = adminProfileState.email || "admin@examalertindia.com";
     if (phoneInput) phoneInput.value = adminProfileState.phone || "+91 98765 43210";
     if (editAvatarPreviewImg) {
@@ -2723,6 +2731,8 @@ function setupEventListeners() {
   editProfileForm?.addEventListener("submit", async e => {
     e.preventDefault();
     const name = $("#edit-admin-name")?.value.trim();
+    const role = $("#edit-admin-role")?.value.trim() || "Master Admin & Platform Creator";
+    const bio = $("#edit-admin-bio")?.value.trim() || "";
     const email = $("#edit-admin-email")?.value.trim();
     const phone = $("#edit-admin-phone")?.value.trim();
     const submitBtn = $("#edit-admin-profile-submit");
@@ -2747,6 +2757,8 @@ function setupEventListeners() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
+          role,
+          bio,
           email,
           phone,
           avatarData: selectedProfileAvatarData
@@ -2759,6 +2771,8 @@ function setupEventListeners() {
         adminProfileState = {
           ...adminProfileState,
           name,
+          role,
+          bio,
           email,
           phone,
           ...(selectedProfileAvatarData ? { avatarUrl: selectedProfileAvatarData } : {})
@@ -2774,6 +2788,8 @@ function setupEventListeners() {
       adminProfileState = {
         ...adminProfileState,
         name,
+        role,
+        bio,
         email,
         phone,
         ...(selectedProfileAvatarData ? { avatarUrl: selectedProfileAvatarData } : {})

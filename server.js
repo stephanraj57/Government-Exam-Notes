@@ -47,7 +47,8 @@ const DEFAULT_PROFILE = {
   name: "Stephanraj",
   email: "admin@examalertindia.com",
   phone: "+91 98765 43210",
-  role: "Super Administrator",
+  role: "Master Admin & Platform Creator",
+  bio: "Every student preparing for competitive examinations deserves access to clean, high-retention study resources without financial barriers. Free AI Govt Exam Notes was founded on the philosophy that visual synthesis, structured mind maps, and concept clarity can transform preparation outcomes. Our commitment is to keep this knowledge base 100% free, updated, and accessible to every aspirant in India.",
   avatarUrl: "assets/admin.jpg",
   updatedAt: new Date().toISOString()
 };
@@ -405,7 +406,8 @@ async function handleApi(request, response, url) {
     if (body.name) profile.name = String(body.name).trim().slice(0, 60);
     if (body.email) profile.email = String(body.email).trim().slice(0, 100);
     if (body.phone !== undefined) profile.phone = String(body.phone).trim().slice(0, 30);
-    if (body.role) profile.role = String(body.role).trim().slice(0, 50);
+    if (body.role) profile.role = String(body.role).trim().slice(0, 80);
+    if (body.bio !== undefined) profile.bio = String(body.bio).trim().slice(0, 800);
 
     if (body.avatarData) {
       const rawImage = String(body.avatarData).trim();

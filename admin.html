@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2.6">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -35,8 +35,8 @@
   <!-- Unauthenticated Login View Container (Obsidian Glow & Glass Studio Design) -->
   <main class="admin-container" id="admin-auth-container">
     
-    <!-- Ambient Radial Glow Mesh Backdrop -->
-    <div class="obsidian-ambient-glow">
+    <!-- Ambient Radial Glow Mesh Backdrop (Login Page Only) -->
+    <div class="obsidian-ambient-glow" aria-hidden="true">
       <div class="obsidian-grid-pattern"></div>
       <div class="glow-orb glow-orb-1"></div>
       <div class="glow-orb glow-orb-2"></div>
@@ -1450,6 +1450,16 @@
         <div class="form-group">
           <label class="form-label-title" for="edit-admin-name">Full Name <span class="req-star" style="color: var(--primary);">*</span></label>
           <input id="edit-admin-name" class="form-control" type="text" maxlength="50" placeholder="e.g. Stephanraj" required autocomplete="name">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label-title" for="edit-admin-role">Role & Designation</label>
+          <input id="edit-admin-role" class="form-control" type="text" maxlength="60" placeholder="e.g. Master Admin & Platform Creator">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label-title" for="edit-admin-bio">Founder's Vision / Creator Bio (Shown on About Us)</label>
+          <textarea id="edit-admin-bio" class="form-control" rows="3" style="height: auto; padding: 8px 11px; resize: vertical; line-height: 1.45;" placeholder="Enter your vision or founder's message for students"></textarea>
         </div>
 
         <div class="form-group">
