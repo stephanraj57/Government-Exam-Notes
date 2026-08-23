@@ -561,7 +561,7 @@ function switchView(viewName, updateHash = true) {
     document.body.classList.add("about-mode");
     if (appShell) appShell.style.display = "none";
     if (aboutViewPanel) {
-      aboutViewPanel.style.display = "block";
+      aboutViewPanel.style.display = "flex";
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
     if (mobileCatStrip) mobileCatStrip.style.display = "none";
