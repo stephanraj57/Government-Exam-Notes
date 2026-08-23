@@ -178,20 +178,35 @@ function setTheme(theme, save = true) {
 async function loadNotes() {
   let serverNotes = [];
   try {
-    const [notesRes, visitsRes, meRes] = await Promise.all([
-      fetch("/api/notes").then(r => r.ok ? r.json() : { notes: [] }).catch(() => ({ notes: [] })),
-      fetch("/api/visits").then(r => r.ok ? r.json() : { count: 0 }).catch(() => ({ count: 0 })),
-      fetch("/api/admin/me").then(r => r.ok ? r.json() : { admin: false }).catch(() => ({ admin: false }))
-    ]);
+    let notesData = null;
+    try {
+      const res = await fetch("/api/notes");
+      if (res.ok) notesData = await res.json();
+    } catch {}
 
-    serverNotes = notesRes.notes || [];
-    isAdmin = Boolean(meRes.admin);
+    // Fall back to static data/notes.json for mobile devices & static cloud hosting
+    if (!notesData || !Array.isArray(notesData.notes) || notesData.notes.length === 0) {
+      try {
+        const staticRes = await fetch("data/notes.json");
+        if (staticRes.ok) {
+          const raw = await staticRes.json();
+          notesData = { notes: Array.isArray(raw) ? raw : (raw.notes || []) };
+        }
+      } catch {}
+    }
+
+    serverNotes = (notesData && notesData.notes) || [];
+    isAdmin = false;
+    try {
+      const meRes = await fetch("/api/admin/me").then(r => r.ok ? r.json() : { admin: false });
+      isAdmin = Boolean(meRes.admin);
+    } catch {}
   } catch {
     serverNotes = [];
     isAdmin = false;
   }
 
-  // Merge server notes and local storage custom uploads (ensuring restored backup notes always appear on home page)
+  // Merge static/server notes and local storage custom uploads (ensuring restored backup notes always appear on mobile & desktop)
   const localUploads = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
   const mergedNotes = [...localUploads.filter(l => !serverNotes.some(s => s.id === l.id)), ...serverNotes];
 
@@ -204,7 +219,7 @@ async function loadNotes() {
     localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
   } catch {}
 
-  // Hydrate Brand Logo & Admin Profile Avatar immediately from LocalStorage
+  // Hydrate Brand Logo & Admin Profile Avatar immediately from LocalStorage, static file, or API
   const localProfile = JSON.parse(localStorage.getItem("exam_admin_profile_data") || "null");
   if (localProfile) {
     if (localProfile.avatarUrl) {
@@ -215,6 +230,28 @@ async function loadNotes() {
     }
   }
 
+  // Fetch from API or fallback to static data/profile.json
+  fetch("/api/admin/profile")
+    .then(r => r.ok ? r.json() : fetch("data/profile.json").then(r2 => r2.ok ? r2.json() : null).then(d => ({ profile: d })))
+    .then(d => {
+      if (d && d.profile) {
+        const avatar = d.profile.avatarUrl;
+        if (avatar) {
+          localStorage.setItem("exam_admin_profile_data", JSON.stringify(d.profile));
+          document.querySelectorAll(".avatar-img").forEach(img => {
+            img.src = avatar;
+          });
+        }
+        const logo = d.profile.logoUrl;
+        if (logo) {
+          document.querySelectorAll(".brand-logo").forEach(img => {
+            img.src = logo;
+          });
+        }
+      }
+    })
+    .catch(() => {});
+
   // Track genuine student homepage visit (recording daily & total website traffic)
   if (!sessionStorage.getItem("exam_student_session_visit")) {
     sessionStorage.setItem("exam_student_session_visit", "true");
@@ -224,28 +261,6 @@ async function loadNotes() {
         if (data) {
           localStorage.setItem("exam_notes_local_visits", String(data.count || 0));
           localStorage.setItem("exam_notes_local_visits_today", String(data.today || 0));
-        }
-      })
-      .catch(() => {});
-
-    // Hydrate Brand Logo & Admin Profile Avatar from server
-    fetch("/api/admin/profile")
-      .then(r => r.json())
-      .then(d => {
-        if (d && d.profile) {
-          const avatar = d.profile.avatarUrl;
-          if (avatar) {
-            localStorage.setItem("exam_admin_profile_data", JSON.stringify(d.profile));
-            document.querySelectorAll(".avatar-img").forEach(img => {
-              img.src = avatar;
-            });
-          }
-          const logo = d.profile.logoUrl;
-          if (logo) {
-            document.querySelectorAll(".brand-logo").forEach(img => {
-              img.src = logo;
-            });
-          }
         }
       })
       .catch(() => {});

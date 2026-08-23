@@ -1,0 +1,121 @@
+[
+  {
+    "id": "f09d7bcc-2676-4d7e-a2c6-4d582488ef5b",
+    "title": "Fundamental Rights",
+    "subject": "Polity",
+    "tags": [
+      "constitution",
+      "fundamental",
+      "ambethkar"
+    ],
+    "imageUrl": "/uploads/f09d7bcc-2676-4d7e-a2c6-4d582488ef5b.jpg",
+    "createdAt": "2026-08-23T08:42:58.620Z"
+  },
+  {
+    "id": "f758724c-be18-4f73-9802-f3ad5e4b82ba",
+    "title": "parliment",
+    "subject": "Polity",
+    "tags": [
+      "parliment.lok sabha",
+      "rajya sabha"
+    ],
+    "imageUrl": "/uploads/f758724c-be18-4f73-9802-f3ad5e4b82ba.jpg",
+    "createdAt": "2026-08-23T08:41:59.369Z"
+  },
+  {
+    "id": "4cb884bc-c1ef-48ba-b596-20788c8fc4ea",
+    "title": "Important Days",
+    "subject": "Others",
+    "tags": [
+      "water day",
+      "yoga day",
+      "womens day"
+    ],
+    "imageUrl": "/uploads/4cb884bc-c1ef-48ba-b596-20788c8fc4ea.jpg",
+    "createdAt": "2026-08-23T08:41:09.413Z"
+  },
+  {
+    "id": "db898fde-3925-458e-bf6f-a5d06b9c58a2",
+    "title": "Mountain Ranges India",
+    "subject": "Geography",
+    "tags": [
+      "mountain"
+    ],
+    "imageUrl": "/uploads/db898fde-3925-458e-bf6f-a5d06b9c58a2.jpg",
+    "createdAt": "2026-08-23T08:40:01.175Z"
+  },
+  {
+    "id": "a4c5f2f1-a62c-49f6-ba6c-58616dc9c642",
+    "title": "Acids&Bases",
+    "subject": "Science",
+    "tags": [
+      "acid",
+      "bases",
+      "alkaline",
+      "ph"
+    ],
+    "imageUrl": "/uploads/a4c5f2f1-a62c-49f6-ba6c-58616dc9c642.jpg",
+    "createdAt": "2026-08-23T08:35:36.393Z"
+  },
+  {
+    "id": "63b4e2f0-86ac-433c-b311-0e4101706289",
+    "title": "First five year plan",
+    "subject": "Economy",
+    "tags": [
+      "five year plan"
+    ],
+    "imageUrl": "/uploads/63b4e2f0-86ac-433c-b311-0e4101706289.jpg",
+    "createdAt": "2026-08-23T08:34:43.253Z"
+  },
+  {
+    "id": "eaa8ff75-879a-4a4c-a58b-9e4f81f76343",
+    "title": "Temple styles",
+    "subject": "Art and Culture",
+    "tags": [
+      "art",
+      "culture",
+      "temple",
+      "architecture"
+    ],
+    "imageUrl": "/uploads/eaa8ff75-879a-4a4c-a58b-9e4f81f76343.jpg",
+    "createdAt": "2026-08-23T08:33:39.524Z"
+  },
+  {
+    "id": "167940f4-0cbf-4a7c-a413-054623dd1892",
+    "title": "Battle of Buxar",
+    "subject": "History",
+    "tags": [
+      "war",
+      "buxar",
+      "freedom",
+      "india"
+    ],
+    "imageUrl": "/uploads/167940f4-0cbf-4a7c-a413-054623dd1892.jpg",
+    "createdAt": "2026-08-23T08:32:30.311Z"
+  },
+  {
+    "id": "09691cd7-1a95-47bd-93d8-89b2fd161318",
+    "title": "Battle of Plassey",
+    "subject": "History",
+    "tags": [
+      "plassey",
+      "war",
+      "modern",
+      "freedom"
+    ],
+    "imageUrl": "/uploads/09691cd7-1a95-47bd-93d8-89b2fd161318.jpg",
+    "createdAt": "2026-08-23T08:31:12.447Z"
+  },
+  {
+    "id": "4df1637d-f0f6-4ccb-9d55-a63202942317",
+    "title": "American civil war",
+    "subject": "History",
+    "tags": [
+      "america",
+      "war",
+      "civil"
+    ],
+    "imageUrl": "/uploads/4df1637d-f0f6-4ccb-9d55-a63202942317.jpg",
+    "createdAt": "2026-08-23T08:30:10.901Z"
+  }
+]

@@ -671,7 +671,7 @@ async function loadDashboardData() {
 
   try {
     const [notesData, visitsData, interData] = await Promise.all([
-      api("/api/notes"),
+      api("/api/notes").catch(() => fetch("data/notes.json").then(r => r.ok ? r.json() : []).then(d => ({ notes: Array.isArray(d) ? d : (d.notes || []) })).catch(() => ({ notes: [] }))),
       api("/api/visits").catch(() => ({ count: 0, today: 0 })),
       api("/api/interactions").catch(() => null)
     ]);
