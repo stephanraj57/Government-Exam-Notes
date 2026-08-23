@@ -88,26 +88,21 @@ async function ensureStorage() {
 
   try {
     const savedSessions = await readJson(SESSIONS_FILE);
-    if (savedSessions && typeof savedSessions === "object") {
-      const now = Date.now();
-      for (const [t, exp] of Object.entries(savedSessions)) {
-        if (typeof exp === "number" && exp > now && t.length >= 16) {
-          sessions.set(t, exp);
-        }
+    if (Array.isArray(savedSessions)) {
+      for (const t of savedSessions) {
+        if (typeof t === "string" && t.length >= 16) sessions.set(t, true);
+      }
+    } else if (savedSessions && typeof savedSessions === "object") {
+      for (const t of Object.keys(savedSessions)) {
+        if (typeof t === "string" && t.length >= 16) sessions.set(t, true);
       }
     }
   } catch {}
 }
 
 async function persistSessions() {
-  const now = Date.now();
-  const obj = {};
-  for (const [t, exp] of sessions.entries()) {
-    if (typeof exp === "number" && exp > now) {
-      obj[t] = exp;
-    }
-  }
-  await writeJson(SESSIONS_FILE, obj).catch(() => {});
+  const arr = [...sessions.keys()];
+  await writeJson(SESSIONS_FILE, arr).catch(() => {});
 }
 
 async function createJsonIfMissing(filePath, value) {
@@ -139,21 +134,15 @@ function parseCookies(request) {
   }, {});
 }
 
-const ADMIN_SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
-const ADMIN_COOKIE_MAX_AGE = 1800; // 30 minutes in seconds
+const ADMIN_COOKIE_MAX_AGE = 315360000; // 10 years (Permanent Admin Session)
 
 function getAdminSession(request) {
   const token = parseCookies(request).examAdminSession;
   if (!token || typeof token !== "string" || token.length < 16) {
     return null;
   }
-  const expiry = sessions.get(token);
-  if (typeof expiry === "number" && expiry > Date.now()) {
-    return { token, expiry, remainingMs: expiry - Date.now() };
-  }
-  if (expiry && expiry <= Date.now()) {
-    sessions.delete(token);
-    persistSessions();
+  if (sessions.has(token)) {
+    return { token, permanent: true };
   }
   return null;
 }
@@ -401,9 +390,7 @@ async function handleApi(request, response, url) {
     const session = getAdminSession(request);
     sendJson(response, 200, {
       admin: session !== null,
-      sessionExpiresAt: session ? session.expiry : null,
-      remainingMs: session ? session.remainingMs : 0,
-      sessionTtlMs: ADMIN_SESSION_TTL_MS
+      permanent: true
     });
     return true;
   }
@@ -544,13 +531,12 @@ async function handleApi(request, response, url) {
       return true;
     }
     const token = crypto.randomBytes(32).toString("hex");
-    const expires = Date.now() + ADMIN_SESSION_TTL_MS;
-    sessions.set(token, expires);
+    sessions.set(token, true);
     await persistSessions();
     sendJson(
       response,
       200,
-      { admin: true, sessionExpiresAt: expires, remainingMs: ADMIN_SESSION_TTL_MS, sessionTtlMs: ADMIN_SESSION_TTL_MS },
+      { admin: true, permanent: true },
       { "Set-Cookie": `examAdminSession=${token}; HttpOnly; Path=/; Max-Age=${ADMIN_COOKIE_MAX_AGE}; SameSite=Lax` }
     );
     return true;

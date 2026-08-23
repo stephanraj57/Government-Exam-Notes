@@ -277,89 +277,9 @@ function setTheme(theme, save = true) {
 }
 
 // ==========================================
-// 3. Real-Time Cross-Tab Authentication & 30-Minute Session Management
+// 3. Real-Time Cross-Tab Authentication (Permanent Session Mode)
 // ==========================================
-const ADMIN_SESSION_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 let authBroadcastChannel = null;
-let sessionTimerInterval = null;
-let sessionExpiresAt = 0;
-
-function startSessionCountdown(expiresAt) {
-  if (expiresAt && expiresAt > Date.now()) {
-    sessionExpiresAt = expiresAt;
-  } else {
-    const saved = Number(sessionStorage.getItem("exam_admin_session_expires_at"));
-    if (saved && saved > Date.now()) {
-      sessionExpiresAt = saved;
-    } else {
-      sessionExpiresAt = Date.now() + ADMIN_SESSION_DURATION_MS;
-    }
-  }
-  sessionStorage.setItem("exam_admin_session_expires_at", String(sessionExpiresAt));
-
-  const timerBadge = $("#admin-session-timer-badge");
-  if (timerBadge) {
-    timerBadge.hidden = false;
-    timerBadge.removeAttribute("hidden");
-    timerBadge.style.removeProperty("display");
-  }
-
-  updateSessionCountdownUI();
-
-  if (sessionTimerInterval) clearInterval(sessionTimerInterval);
-  sessionTimerInterval = setInterval(() => {
-    updateSessionCountdownUI();
-  }, 1000);
-}
-
-function updateSessionCountdownUI() {
-  const dashSec = $("#admin-dashboard-section");
-  if (!dashSec || dashSec.hidden) {
-    stopSessionCountdown();
-    return;
-  }
-
-  const now = Date.now();
-  const remainingMs = sessionExpiresAt - now;
-  const timerBadge = $("#admin-session-timer-badge");
-  const timerText = $("#admin-session-countdown");
-
-  if (remainingMs <= 0) {
-    stopSessionCountdown();
-    executeLogout(true);
-    showToast("🔒 Admin session expired after 30 minutes. Please login again.", "error");
-    return;
-  }
-
-  const totalSeconds = Math.floor(remainingMs / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  const formatted = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-
-  if (timerText) {
-    timerText.textContent = formatted;
-  }
-  if (timerBadge) {
-    timerBadge.title = `Admin session active: ${formatted} remaining (${minutes}m ${seconds}s until auto-logout)`;
-    timerBadge.classList.toggle("warning", totalSeconds <= 300 && totalSeconds > 60);
-    timerBadge.classList.toggle("danger", totalSeconds <= 60);
-  }
-}
-
-function stopSessionCountdown() {
-  if (sessionTimerInterval) {
-    clearInterval(sessionTimerInterval);
-    sessionTimerInterval = null;
-  }
-  const timerBadge = $("#admin-session-timer-badge");
-  if (timerBadge) {
-    timerBadge.hidden = true;
-    timerBadge.setAttribute("hidden", "");
-    timerBadge.style.setProperty("display", "none", "important");
-    timerBadge.classList.remove("warning", "danger");
-  }
-  sessionStorage.removeItem("exam_admin_session_expires_at");
-}
 
 try {
   if (typeof BroadcastChannel !== "undefined") {
@@ -411,10 +331,7 @@ async function verifySessionWithServer() {
     const res = await api("/api/admin/me");
     if (!res || !res.admin) {
       executeLogout(false);
-      showToast("🔒 Admin session expired. Please login again.", "info");
-    } else if (res.sessionExpiresAt) {
-      sessionExpiresAt = res.sessionExpiresAt;
-      sessionStorage.setItem("exam_admin_session_expires_at", String(sessionExpiresAt));
+      showToast("🔒 Admin session required. Please login.", "info");
     }
   } catch (err) {
     if (!err.message?.includes("Failed to fetch") && window.location.protocol !== "file:") {
@@ -428,8 +345,6 @@ async function checkAuth() {
     const res = await api("/api/admin/me");
     if (res && res.admin) {
       sessionStorage.setItem("exam_admin_local_session", "true");
-      const exp = res.sessionExpiresAt || (Date.now() + ADMIN_SESSION_DURATION_MS);
-      startSessionCountdown(exp);
       showDashboard();
     } else {
       executeLogout(false);
@@ -437,7 +352,6 @@ async function checkAuth() {
   } catch (err) {
     if (window.location.protocol === "file:" || err.message?.includes("Failed to fetch")) {
       if (sessionStorage.getItem("exam_admin_local_session") === "true") {
-        startSessionCountdown(Date.now() + ADMIN_SESSION_DURATION_MS);
         showDashboard();
       } else {
         showLogin();
@@ -449,7 +363,6 @@ async function checkAuth() {
 }
 
 function executeLogout(notifyServer = true) {
-  stopSessionCountdown();
   if (notifyServer) {
     api("/api/admin/logout", { method: "POST" }).catch(() => {});
     try {
@@ -464,7 +377,6 @@ function executeLogout(notifyServer = true) {
 }
 
 function showLogin() {
-  stopSessionCountdown();
   const authContainer = $("#admin-auth-container");
   const authSec = $("#admin-auth-section");
   const dashSec = $("#admin-dashboard-section");
@@ -4499,23 +4411,20 @@ function setupEventListeners() {
         body: JSON.stringify({ password: enteredPassword })
       });
       sessionStorage.setItem("exam_admin_local_session", "true");
-      const exp = (loginRes && loginRes.sessionExpiresAt) || (Date.now() + ADMIN_SESSION_DURATION_MS);
-      startSessionCountdown(exp);
       try {
         localStorage.setItem("exam_admin_auth_sync_event", JSON.stringify({ action: "login", time: Date.now() }));
         if (authBroadcastChannel) {
           authBroadcastChannel.postMessage({ type: "LOGIN", time: Date.now() });
         }
       } catch {}
-      showToast("Authentication successful! 30-minute Admin session active.", "success");
+      showToast("✓ Authentication successful! Welcome to Admin Studio.", "success");
       showDashboard();
     } catch (err) {
       if (err.message.includes("Failed to fetch") || window.location.protocol === "file:") {
         const savedPass = localStorage.getItem("exam_admin_custom_password") || "admin123";
         if (enteredPassword === savedPass || enteredPassword === "admin123") {
           sessionStorage.setItem("exam_admin_local_session", "true");
-          startSessionCountdown(Date.now() + ADMIN_SESSION_DURATION_MS);
-          showToast("Logged in (Direct Browser Mode - 30m Session).", "success");
+          showToast("✓ Logged in (Direct Browser Mode).", "success");
           showDashboard();
         } else {
           msg.textContent = "Incorrect password.";
@@ -5027,9 +4936,6 @@ async function performPresenceCheck() {
       const authCheck = await api("/api/admin/me");
       if (!authCheck || !authCheck.admin) {
         executeLogout(false);
-        showToast("🔒 Admin session expired. Please login again.", "info");
-      } else if (authCheck.sessionExpiresAt) {
-        sessionExpiresAt = authCheck.sessionExpiresAt;
       }
     } catch {}
   }
