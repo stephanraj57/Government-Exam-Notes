@@ -24,6 +24,20 @@ const escapeHtml = v => {
   return e.innerHTML;
 };
 
+function safeSetLocalStorage(key, val) {
+  try {
+    const stringified = typeof val === "string" ? val : JSON.stringify(val);
+    localStorage.setItem(key, stringified);
+  } catch (err) {
+    console.warn(`[Storage] Quota exceeded on key "${key}", applying quota recovery...`);
+    try {
+      if (key !== "exam_notes_custom_uploads") localStorage.removeItem("exam_notes_custom_uploads");
+      const stringified = typeof val === "string" ? val : JSON.stringify(val);
+      localStorage.setItem(key, stringified);
+    } catch {}
+  }
+}
+
 function normalizeSubject(subject = "") {
   const s = (subject || "").toLowerCase().trim();
   if (s.includes("art") || s.includes("culture")) return "Art and Culture";
@@ -3935,35 +3949,30 @@ function setupEventListeners() {
       if (Array.isArray(backupObj.notes)) {
         const clientNotes = backupObj.notes.map(n => {
           const c = { ...n };
-          if (backupObj.images && c.imageUrl) {
-            const cleanName = c.imageUrl.split("?")[0].replace(/^\/uploads\//, "");
-            const base64 = backupObj.images[cleanName] || backupObj.images[c.imageUrl] || backupObj.images[`/uploads/${cleanName}`];
-            if (base64) {
-              c.imageData = base64;
-              if (window.location.protocol === "file:" || isLocalClientMode) {
-                c.imageUrl = base64;
-              }
-            }
+          delete c.imageData;
+          if (c.imageUrl && c.imageUrl.startsWith("data:image/") && c.imageUrl.length > 30000) {
+            c.imageUrl = `/uploads/${c.id || "note"}.jpg`;
           }
           return c;
         });
-        localStorage.setItem("exam_notes_custom_uploads", JSON.stringify(clientNotes));
+        safeSetLocalStorage("exam_notes_custom_uploads", clientNotes);
         allNotes = clientNotes;
       }
       if (backupObj.profile || backupObj.profileAssets) {
+        const pObj = backupObj.profile || {};
         adminProfileState = {
           ...adminProfileState,
-          ...(backupObj.profile || {}),
-          ...(backupObj.profileAssets?.avatarData ? { avatarUrl: backupObj.profileAssets.avatarData } : {}),
-          ...(backupObj.profileAssets?.logoData ? { logoUrl: backupObj.profileAssets.logoData } : {}),
-          ...(backupObj.profileAssets?.instagramQrData ? { instagramQrUrl: backupObj.profileAssets.instagramQrData } : {})
+          ...pObj,
+          ...(pObj.avatarUrl ? { avatarUrl: pObj.avatarUrl } : {}),
+          ...(pObj.logoUrl ? { logoUrl: pObj.logoUrl } : {}),
+          ...(pObj.instagramQrUrl ? { instagramQrUrl: pObj.instagramQrUrl } : {})
         };
-        localStorage.setItem("exam_admin_profile_data", JSON.stringify(adminProfileState));
+        safeSetLocalStorage("exam_admin_profile_data", adminProfileState);
         applyAdminProfileUI(adminProfileState);
       }
       if (backupObj.interactions) {
         liveInteractions = backupObj.interactions;
-        localStorage.setItem("exam_notes_interactions_data", JSON.stringify(liveInteractions));
+        safeSetLocalStorage("exam_notes_interactions_data", liveInteractions);
       }
 
       // Stage 5: Complete (98% -> 100%)
