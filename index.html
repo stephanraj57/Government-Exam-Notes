@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=16.0">
+  <link rel="stylesheet" href="styles.css?v=24.0">
 </head>
 <body>
   <!-- Ambient Radial Mesh Glow Backdrop & Floating Orbs (Obsidian Studio Aesthetic) -->
@@ -39,9 +39,6 @@
       </button>
       <button type="button" class="nav-link" data-view="bookmarks">
         <span class="nav-icon">♡</span> Bookmarks <span id="bookmark-badge" class="badge">0</span>
-      </button>
-      <button type="button" class="nav-link" data-view="recent">
-        <span class="nav-icon">◷</span> Recently Viewed
       </button>
       <button type="button" class="nav-link" data-view="about" title="About Free AI Govt Exam Notes">
         <span class="nav-icon">ⓘ</span> About Us
@@ -158,7 +155,6 @@
       <div class="content-heading">
         <div class="heading-row">
           <h1 id="page-title">All Notes</h1>
-          <span id="active-tag-chip" class="active-tag-chip" hidden></span>
         </div>
         <p id="note-total">Loading revision library…</p>
       </div>
@@ -271,30 +267,6 @@
             "Every student preparing for competitive examinations deserves access to clean, high-retention study resources without financial barriers. <strong>Free AI Govt Exam Notes</strong> was founded on the philosophy that visual synthesis, structured mind maps, and concept clarity can transform preparation outcomes. Our commitment is to keep this knowledge base 100% free, updated, and accessible to every aspirant in India."
           </p>
         </div>
-      </div>
-    </section>
-
-    <!-- 3. Core Stats Grid -->
-    <section class="about-stats-grid" aria-label="Platform Highlights">
-      <div class="about-stat-card">
-        <div class="about-stat-icon">💯</div>
-        <div class="about-stat-number">100% Free</div>
-        <div class="about-stat-label">Zero Subscriptions or Paywalls</div>
-      </div>
-      <div class="about-stat-card">
-        <div class="about-stat-icon">📚</div>
-        <div class="about-stat-number">7+ Subjects</div>
-        <div class="about-stat-label">History, Polity, Economy & More</div>
-      </div>
-      <div class="about-stat-card">
-        <div class="about-stat-icon">🔍</div>
-        <div class="about-stat-number">HD Zoom</div>
-        <div class="about-stat-label">Zero-Loss Lightbox Diagrams</div>
-      </div>
-      <div class="about-stat-card">
-        <div class="about-stat-icon">⚡</div>
-        <div class="about-stat-number">Fast Recall</div>
-        <div class="about-stat-label">Visual Mnemonics for Revision</div>
       </div>
     </section>
 
@@ -512,12 +484,36 @@
           <div class="about-step-number">04</div>
           <div class="about-step-icon">🎯</div>
           <h3 class="about-step-title">Revise Before Exam Day</h3>
-          <p class="about-step-desc">Open your Bookmarks or Recently Viewed tab for ultra-fast, high-yield revision in minutes.</p>
+          <p class="about-step-desc">Open your Saved Bookmarks tab for ultra-fast, high-yield revision in minutes.</p>
         </div>
       </div>
     </section>
 
-    <!-- 7. Call To Action Banner -->
+    <!-- 7. Platform Core Pillars Grid -->
+    <section class="about-stats-grid" aria-label="Platform Highlights">
+      <div class="about-stat-card">
+        <div class="about-stat-icon">💯</div>
+        <div class="about-stat-number">100% Free</div>
+        <div class="about-stat-label">Zero Subscriptions or Paywalls</div>
+      </div>
+      <div class="about-stat-card">
+        <div class="about-stat-icon">📚</div>
+        <div class="about-stat-number">7+ Subjects</div>
+        <div class="about-stat-label">History, Polity, Economy & More</div>
+      </div>
+      <div class="about-stat-card">
+        <div class="about-stat-icon">🔍</div>
+        <div class="about-stat-number">HD Zoom</div>
+        <div class="about-stat-label">Zero-Loss Lightbox Diagrams</div>
+      </div>
+      <div class="about-stat-card">
+        <div class="about-stat-icon">⚡</div>
+        <div class="about-stat-number">Fast Recall</div>
+        <div class="about-stat-label">Visual Mnemonics for Revision</div>
+      </div>
+    </section>
+
+    <!-- 8. Call To Action Banner -->
     <section class="about-cta-card">
       <h2 class="about-cta-title">Ready to Supercharge Your Exam Revision?</h2>
       <p class="about-cta-sub">
@@ -534,8 +530,6 @@
         <button type="button" class="footer-nav-link-btn" onclick="switchView('notes')">Notes Library</button>
         <span>•</span>
         <button type="button" class="footer-nav-link-btn" onclick="switchView('bookmarks')">Saved Bookmarks</button>
-        <span>•</span>
-        <button type="button" class="footer-nav-link-btn" onclick="switchView('recent')">Recently Viewed</button>
         <span>•</span>
         <button type="button" class="footer-nav-link-btn" onclick="switchView('about')">About Us</button>
         <span>•</span>
@@ -558,10 +552,6 @@
       <span class="mob-icon">♡</span>
       <span>Saved</span>
     </button>
-    <button type="button" class="mobile-nav-btn" data-view="recent">
-      <span class="mob-icon">◷</span>
-      <span>Recent</span>
-    </button>
     <button type="button" class="mobile-nav-btn" data-view="about" title="About Exam Notes">
       <span class="mob-icon">ⓘ</span>
       <span>About Us</span>
@@ -583,6 +573,15 @@
             <button id="lightbox-zoom-in" class="icon-action-btn" type="button" title="Zoom In (+)">+</button>
             <button id="lightbox-zoom-reset" class="icon-action-btn" type="button" title="Reset Zoom (0)">↺</button>
           </div>
+          <button id="lightbox-share-btn" class="icon-action-btn" type="button" title="Share Note (WhatsApp, Telegram, Link)" aria-label="Share Note">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="18" cy="5" r="3"></circle>
+              <circle cx="6" cy="12" r="3"></circle>
+              <circle cx="18" cy="19" r="3"></circle>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+            </svg>
+          </button>
           <button id="lightbox-bookmark-btn" class="icon-action-btn" type="button" title="Save Bookmark">♡</button>
           <a id="lightbox-download-btn" class="icon-action-btn" download="exam-note.jpg" title="Download Note" target="_blank" rel="noopener">⬇</a>
           <button id="lightbox-close-btn" class="icon-action-btn close-btn" type="button" title="Close (Esc)">×</button>
@@ -606,9 +605,68 @@
     </div>
   </dialog>
 
+  <!-- Share Note Popover Modal -->
+  <dialog id="share-dialog" class="share-dialog" aria-labelledby="share-dialog-title">
+    <div class="share-dialog-box">
+      <div class="share-dialog-header">
+        <div class="share-header-left">
+          <span class="share-badge-icon">📤</span>
+          <div>
+            <h3 id="share-dialog-title" class="share-dialog-heading">Share Revision Note</h3>
+            <p id="share-dialog-subtitle" class="share-dialog-sub">Share with friends on WhatsApp, Telegram, or copy link</p>
+          </div>
+        </div>
+        <button id="share-dialog-close" class="share-close-btn" type="button" title="Close">×</button>
+      </div>
+
+      <div class="share-preview-card">
+        <div class="share-preview-thumb-wrap">
+          <img id="share-preview-img" src="" alt="Note Thumbnail" class="share-preview-img">
+        </div>
+        <div class="share-preview-info">
+          <span id="share-preview-subject" class="subject-chip">Subject</span>
+          <h4 id="share-preview-title" class="share-preview-note-title">Note Title</h4>
+          <span class="share-preview-url-tag">www.govtexamnotes.online</span>
+        </div>
+      </div>
+
+      <div class="share-platforms-grid">
+        <button type="button" class="share-platform-btn whatsapp" id="share-whatsapp-btn">
+          <span class="platform-icon">💬</span>
+          <span class="platform-name">WhatsApp</span>
+        </button>
+
+        <button type="button" class="share-platform-btn telegram" id="share-telegram-btn">
+          <span class="platform-icon">✈️</span>
+          <span class="platform-name">Telegram</span>
+        </button>
+
+        <button type="button" class="share-platform-btn twitter" id="share-twitter-btn">
+          <span class="platform-icon">𝕏</span>
+          <span class="platform-name">Twitter / X</span>
+        </button>
+
+        <button type="button" class="share-platform-btn native-share" id="share-native-btn">
+          <span class="platform-icon">📱</span>
+          <span class="platform-name">More Apps</span>
+        </button>
+      </div>
+
+      <div class="share-copy-section">
+        <label class="share-copy-label" for="share-link-input">Direct Note Link</label>
+        <div class="share-copy-box">
+          <input type="text" id="share-link-input" readonly class="share-link-input">
+          <button type="button" id="share-copy-btn" class="share-copy-btn">
+            <span id="share-copy-text">Copy Link</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="app.js?v=16.0"></script>
+  <script src="app.js?v=24.0"></script>
 </body>
 </html>

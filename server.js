@@ -349,14 +349,28 @@ async function handleApi(request, response, url) {
     } else if (type === "download") {
       interactions.totalDownloads = (interactions.totalDownloads || 0) + 1;
       if (noteId) {
-        if (!interactions.notes[noteId]) interactions.notes[noteId] = { likes: 0, downloads: 0, impressions: 0 };
+        if (!interactions.notes[noteId]) interactions.notes[noteId] = { likes: 0, downloads: 0, impressions: 0, shares: 0 };
         interactions.notes[noteId].downloads = (interactions.notes[noteId].downloads || 0) + 1;
       }
-    } else if (type === "search") {
+    } else if (type === "share") {
+      interactions.totalShares = (interactions.totalShares || 0) + 1;
+      const platform = String(body.platform || "direct").toLowerCase();
+      if (!interactions.shares) interactions.shares = {};
+      interactions.shares[platform] = (interactions.shares[platform] || 0) + 1;
+      if (noteId) {
+        if (!interactions.notes[noteId]) interactions.notes[noteId] = { likes: 0, downloads: 0, impressions: 0, shares: 0 };
+        interactions.notes[noteId].shares = (interactions.notes[noteId].shares || 0) + 1;
+      }
+    } else if (type === "search" || type === "tag_search") {
       interactions.totalSearches = (interactions.totalSearches || 0) + 1;
       if (query && query.length >= 2) {
-        const qKey = query.slice(0, 40);
+        const qKey = query.slice(0, 50);
         interactions.searches[qKey] = (interactions.searches[qKey] || 0) + 1;
+      }
+      const tag = String(body.tag || "").trim().replace(/^#/, "");
+      if (tag && tag.length >= 2) {
+        const tagKey = `#${tag}`.slice(0, 50);
+        interactions.searches[tagKey] = (interactions.searches[tagKey] || 0) + 1;
       }
     } else if (type === "missing_search" || type === "unfulfilled_search") {
       if (query && query.length >= 2) {

@@ -19,7 +19,7 @@ const $$ = s => document.querySelectorAll(s);
 let notes = [];
 let category = "All Notes";
 let activeTag = null;
-let currentView = "notes"; // "notes" | "bookmarks" | "recent"
+let currentView = "notes"; // "notes" | "bookmarks" | "about"
 let viewMode = localStorage.getItem("exam_notes_view") || "grid";
 let isAdmin = false;
 let currentLightboxIndex = -1;
@@ -290,6 +290,7 @@ async function loadNotes() {
   updatePopularTags();
   handleUrlHash();
   render();
+  checkDeepLinkedNote();
 }
 
 function updateAdminState() {
@@ -373,7 +374,6 @@ function render() {
   let list = notes.filter(n => {
     // View filter
     if (currentView === "bookmarks" && !bookmarks.has(n.id)) return false;
-    if (currentView === "recent" && !recentViewed.includes(n.id)) return false;
 
     // Category filter
     if (currentView === "notes" && category !== "All Notes") {
@@ -389,26 +389,26 @@ function render() {
       if (!matchTag) return false;
     }
 
-    // Search query filter
+    // Search query filter (handles #tag and text keywords)
     if (searchTerm) {
-      const allText = `${n.title} ${n.subject} ${(n.categories || []).join(" ")} ${(n.tags || []).join(" ")}`.toLowerCase();
-      if (!allText.includes(searchTerm)) return false;
+      const cleanSearch = searchTerm.startsWith("#") ? searchTerm.slice(1).trim() : searchTerm;
+      if (cleanSearch) {
+        const allText = `${n.title} ${n.subject} ${(n.categories || []).join(" ")} ${(n.tags || []).join(" ")}`.toLowerCase();
+        const matchesTags = (n.tags || []).some(t => t.toLowerCase().includes(cleanSearch));
+        if (!allText.includes(cleanSearch) && !matchesTags) return false;
+      }
     }
 
     return true;
   });
 
-  // Recency or custom sorting
-  if (currentView === "recent") {
-    list.sort((a, b) => recentViewed.indexOf(a.id) - recentViewed.indexOf(b.id));
+  // Sorting
+  if (sortOption === "title") {
+    list.sort((a, b) => a.title.localeCompare(b.title));
+  } else if (sortOption === "oldest") {
+    list.sort((a, b) => (new Date(a.createdAt || a.date || 0)) - (new Date(b.createdAt || b.date || 0)));
   } else {
-    if (sortOption === "title") {
-      list.sort((a, b) => a.title.localeCompare(b.title));
-    } else if (sortOption === "oldest") {
-      list.sort((a, b) => (new Date(a.createdAt || a.date || 0)) - (new Date(b.createdAt || b.date || 0)));
-    } else {
-      list.sort((a, b) => (new Date(b.createdAt || b.date || 0)) - (new Date(a.createdAt || a.date || 0)));
-    }
+    list.sort((a, b) => (new Date(b.createdAt || b.date || 0)) - (new Date(a.createdAt || a.date || 0)));
   }
 
   currentFilteredList = list;
@@ -461,6 +461,16 @@ function render() {
               ${tagsHtml}
               <div class="note-meta">
                 <span>${dateFormatted} · 1 Image</span>
+                <button class="card-share-btn" data-share="${n.id}" type="button" title="Share Note (WhatsApp, Telegram, Link)" aria-label="Share Note">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="18" cy="5" r="3"></circle>
+                    <circle cx="6" cy="12" r="3"></circle>
+                    <circle cx="18" cy="19" r="3"></circle>
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                  </svg>
+                  <span>Share</span>
+                </button>
               </div>
             </div>
           </article>
@@ -477,20 +487,8 @@ function render() {
   if (pageTitle) {
     if (currentView === "bookmarks") {
       pageTitle.textContent = "Saved Bookmarks";
-    } else if (currentView === "recent") {
-      pageTitle.textContent = "Recently Viewed Notes";
     } else {
       pageTitle.textContent = category;
-    }
-  }
-
-  const activeTagChip = $("#active-tag-chip");
-  if (activeTagChip) {
-    if (activeTag) {
-      activeTagChip.hidden = false;
-      activeTagChip.textContent = `Tag: #${activeTag} ✕`;
-    } else {
-      activeTagChip.hidden = true;
     }
   }
 
@@ -507,8 +505,6 @@ function render() {
     if (emptyMsg) {
       if (currentView === "bookmarks") {
         emptyMsg.textContent = "You haven't bookmarked any notes yet. Tap the heart icon (♡) on any note to save it here.";
-      } else if (currentView === "recent") {
-        emptyMsg.textContent = "No recently viewed notes. Tap any note to open and review it in high resolution.";
       } else if (searchTerm || activeTag || category !== "All Notes") {
         emptyMsg.textContent = "No notes matched your search query or active filter. Try clearing filters or searching for another topic.";
       } else {
@@ -645,7 +641,7 @@ function updateCategoryCounts() {
 // 8. Navigation & View Handling (Unified SPA Panel)
 // ==========================================
 function switchView(viewName, updateHash = true) {
-  if (!["notes", "bookmarks", "recent", "about"].includes(viewName)) {
+  if (!["notes", "bookmarks", "about"].includes(viewName)) {
     viewName = "notes";
   }
   currentView = viewName;
@@ -697,8 +693,6 @@ function handleUrlHash() {
   const rawHash = (window.location.hash || "").replace(/^#/, "").trim().toLowerCase();
   if (rawHash === "bookmarks" || rawHash === "saved") {
     switchView("bookmarks", false);
-  } else if (rawHash === "recent" || rawHash === "recently-viewed") {
-    switchView("recent", false);
   } else if (rawHash === "about" || rawHash === "about-us") {
     switchView("about", false);
   } else if (rawHash === "notes" || rawHash === "all" || !rawHash) {
@@ -979,6 +973,208 @@ function prevLightbox() {
 }
 
 // ==========================================
+// 9.3 Social Share Modal & Deep Link Router
+// ==========================================
+let activeSharingNote = null;
+
+function openShareModal(noteId) {
+  const note = notes.find(n => n.id === noteId) || currentFilteredList.find(n => n.id === noteId);
+  if (!note) return;
+
+  activeSharingNote = note;
+  const shareDialog = $("#share-dialog");
+  if (!shareDialog) return;
+
+  // Build clean direct URL for sharing
+  const baseUrl = window.location.origin + window.location.pathname;
+  const shareUrl = `${baseUrl}?note=${encodeURIComponent(note.id)}`;
+
+  // Populate Preview
+  const previewTitle = $("#share-preview-title");
+  const previewSubject = $("#share-preview-subject");
+  const previewImg = $("#share-preview-img");
+  const linkInput = $("#share-link-input");
+  const copyBtnText = $("#share-copy-text");
+
+  if (previewTitle) previewTitle.textContent = note.title;
+  if (previewSubject) {
+    previewSubject.textContent = note.subject;
+    previewSubject.className = `subject-chip ${getSubjectKey(note.subject)}`;
+  }
+  if (linkInput) linkInput.value = shareUrl;
+  if (copyBtnText) copyBtnText.textContent = "Copy Link";
+
+  if (previewImg) {
+    const rawUrl = note.image || note.imageUrl || (note.images && note.images[0]) || "";
+    if (rawUrl) {
+      previewImg.src = rawUrl.startsWith("/") ? rawUrl.replace(/^\/+/, "") : rawUrl;
+      previewImg.style.display = "block";
+    } else {
+      previewImg.style.display = "none";
+    }
+  }
+
+  // 1. WhatsApp Share
+  const waBtn = $("#share-whatsapp-btn");
+  if (waBtn) {
+    waBtn.onclick = () => {
+      const text = `📖 *${note.title}* (${note.subject})\nHigh-yield visual revision notes for Govt Exams!\n🔗 ${shareUrl}`;
+      const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+      window.open(waUrl, "_blank", "noopener,noreferrer");
+      trackInteraction("share", { noteId: note.id, platform: "whatsapp" });
+    };
+  }
+
+  // 2. Telegram Share
+  const tgBtn = $("#share-telegram-btn");
+  if (tgBtn) {
+    tgBtn.onclick = () => {
+      const text = `📖 ${note.title} (${note.subject}) - Free AI Govt Exam Notes`;
+      const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(text)}`;
+      window.open(tgUrl, "_blank", "noopener,noreferrer");
+      trackInteraction("share", { noteId: note.id, platform: "telegram" });
+    };
+  }
+
+  // 3. Twitter / X Share
+  const twBtn = $("#share-twitter-btn");
+  if (twBtn) {
+    twBtn.onclick = () => {
+      const text = `📖 ${note.title} (${note.subject}) - Visual Revision Notes for Govt Exams:`;
+      const twUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+      window.open(twUrl, "_blank", "noopener,noreferrer");
+      trackInteraction("share", { noteId: note.id, platform: "twitter" });
+    };
+  }
+
+  // 4. Native Device Share Sheet
+  const nativeBtn = $("#share-native-btn");
+  if (nativeBtn) {
+    nativeBtn.onclick = () => {
+      if (navigator.share) {
+        navigator.share({
+          title: `${note.title} - Free AI Govt Exam Notes`,
+          text: `📖 ${note.title} (${note.subject}) - High-yield visual exam revision note`,
+          url: shareUrl
+        }).then(() => {
+          trackInteraction("share", { noteId: note.id, platform: "native" });
+        }).catch(() => {});
+      } else {
+        copyShareLink(shareUrl);
+      }
+    };
+  }
+
+  // 5. Copy Link Button
+  const copyBtn = $("#share-copy-btn");
+  if (copyBtn) {
+    copyBtn.onclick = () => copyShareLink(shareUrl);
+  }
+
+  try {
+    shareDialog.showModal();
+  } catch {
+    shareDialog.setAttribute("open", "");
+  }
+}
+
+function copyShareLink(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    showToast("Direct note link copied to clipboard! 📋", "success");
+    const copyBtnText = $("#share-copy-text");
+    if (copyBtnText) copyBtnText.textContent = "Copied! ✓";
+    setTimeout(() => {
+      if (copyBtnText) copyBtnText.textContent = "Copy Link";
+    }, 2200);
+  }).catch(() => {
+    const input = $("#share-link-input");
+    if (input) {
+      input.select();
+      document.execCommand("copy");
+      showToast("Direct note link copied to clipboard! 📋", "success");
+    }
+  });
+}
+
+function checkDeepLinkedNote() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const noteId = params.get("note") || params.get("id");
+    if (noteId) {
+      const idx = currentFilteredList.findIndex(n => n.id === noteId);
+      if (idx >= 0) {
+        setTimeout(() => openLightbox(idx), 150);
+      } else {
+        const found = notes.find(n => n.id === noteId);
+        if (found) {
+          currentFilteredList = [found];
+          render();
+          setTimeout(() => openLightbox(0), 150);
+        }
+      }
+    }
+  } catch {}
+}
+
+// ==========================================
+// 9.5 Unified Tag Search & Demand Tracking
+// ==========================================
+function searchByTag(tag) {
+  if (!tag) return;
+  const cleanTag = String(tag).trim().replace(/^#/, "");
+  if (!cleanTag) return;
+
+  // 1. Reset specific category to 'All Notes' if needed so notes across all subjects are discovered
+  if (currentView !== "notes") {
+    currentView = "notes";
+    document.querySelectorAll(".nav-link, .mobile-nav-btn").forEach(b => {
+      b.classList.toggle("active", b.dataset.view === "notes");
+    });
+  }
+
+  // 2. Populate Search Bar with hashtag
+  const searchInput = $("#note-search");
+  if (searchInput) {
+    searchInput.value = `#${cleanTag}`;
+  }
+
+  // 3. Set active tag state
+  activeTag = cleanTag;
+  currentPage = 1;
+
+  // 4. Close Lightbox modal if open
+  const lightboxDialog = $("#lightbox-dialog");
+  if (lightboxDialog && lightboxDialog.open) {
+    try { lightboxDialog.close(); } catch { lightboxDialog.removeAttribute("open"); }
+  }
+
+  // 5. Update tag pills active state
+  updatePopularTags();
+
+  // 6. Render filtered notes immediately
+  render();
+
+  // 7. Track search interaction in telemetry for Search Demands log
+  trackInteraction("search", { query: `#${cleanTag}`, tag: cleanTag });
+
+  // 8. If no notes match, log as missing search demand for admin
+  if (currentFilteredList.length === 0) {
+    trackInteraction("missing_search", { query: `#${cleanTag}`, resultCount: 0 });
+  }
+
+  // 9. Smoothly scroll directly to the search box (not the top heading) and focus it
+  const searchBox = document.querySelector(".search-box") || document.querySelector(".toolbar");
+  if (searchBox) {
+    searchBox.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  setTimeout(() => {
+    searchInput?.focus({ preventScroll: true });
+  }, 200);
+
+  showToast(`🔍 Searching notes tagged with #${cleanTag}`, "info");
+}
+
+// ==========================================
 // 10. Event Listeners Setup
 // ==========================================
 function setupEventListeners() {
@@ -1007,57 +1203,45 @@ function setupEventListeners() {
     btn.addEventListener("click", () => selectCategory(btn.dataset.category));
   });
 
-  // Popular Tags Clicks (Sidebar & Card Tag Chips)
+  // Popular Tags Clicks (Sidebar, Card Note Chips & Lightbox Tag Chips)
   document.addEventListener("click", e => {
-    // 1. Tag pill or chip clicked
-    const tagEl = e.target.closest("[data-tag]");
-    if (tagEl && !tagEl.closest(".note-card")) {
+    // 1. Tag pill in sidebar / popular strip
+    const tagEl = e.target.closest(".tag-pill[data-tag]") || (e.target.closest("[data-tag]") && !e.target.closest(".note-card"));
+    if (tagEl) {
+      e.preventDefault();
       const tag = tagEl.dataset.tag;
-      activeTag = activeTag === tag ? null : tag;
-      currentPage = 1;
-      updatePopularTags();
-      if (activeTag) {
-        trackInteraction("search", { query: activeTag });
+      if (activeTag === tag && $("#note-search")?.value) {
+        // Toggle off if clicked again
+        activeTag = null;
+        if ($("#note-search")) $("#note-search").value = "";
+        currentPage = 1;
+        updatePopularTags();
+        render();
+      } else {
+        searchByTag(tag);
       }
-      render();
       return;
     }
 
-    const noteTagChip = e.target.closest(".note-tags-row .note-tag-chip");
+    // 2. Note card tag chip
+    const noteTagChip = e.target.closest(".note-tags-row .note-tag-chip") || e.target.closest(".note-tag-chip[data-tag]");
     if (noteTagChip) {
       e.stopPropagation();
+      e.preventDefault();
       const tag = noteTagChip.dataset.tag;
-      activeTag = activeTag === tag ? null : tag;
-      currentPage = 1;
-      updatePopularTags();
-      if (activeTag) {
-        trackInteraction("search", { query: activeTag });
-      }
-      render();
+      searchByTag(tag);
       return;
     }
 
-    // 2. Lightbox tag clicked
+    // 3. Lightbox tag clicked
     const lightboxTag = e.target.closest("[data-filter-tag]");
     if (lightboxTag) {
-      activeTag = lightboxTag.dataset.filterTag;
-      currentPage = 1;
-      $("#lightbox-dialog")?.close();
-      updatePopularTags();
-      if (activeTag) {
-        trackInteraction("search", { query: activeTag });
-      }
-      render();
+      e.stopPropagation();
+      e.preventDefault();
+      const tag = lightboxTag.dataset.filterTag;
+      searchByTag(tag);
       return;
     }
-  });
-
-  // Active Tag Chip Clear
-  $("#active-tag-chip")?.addEventListener("click", () => {
-    activeTag = null;
-    currentPage = 1;
-    updatePopularTags();
-    render();
   });
 
   // Search Input with Telemetry & Missing Demands Tracking
@@ -1065,11 +1249,21 @@ function setupEventListeners() {
   let missingSearchDebounceTimer = null;
   const searchInput = $("#note-search");
   searchInput?.addEventListener("input", () => {
+    const query = (searchInput.value || "").trim();
+    if (!query) {
+      activeTag = null;
+      updatePopularTags();
+    } else if (query.startsWith("#")) {
+      activeTag = query.slice(1).trim();
+      updatePopularTags();
+    } else {
+      activeTag = null;
+      updatePopularTags();
+    }
     currentPage = 1;
     render();
     clearTimeout(searchDebounceTimer);
     clearTimeout(missingSearchDebounceTimer);
-    const query = (searchInput.value || "").trim();
     if (query.length >= 2) {
       searchDebounceTimer = setTimeout(() => {
         trackInteraction("search", { query });
@@ -1087,7 +1281,9 @@ function setupEventListeners() {
   // Clear Search
   $("#clear-search")?.addEventListener("click", () => {
     if (searchInput) searchInput.value = "";
+    activeTag = null;
     currentPage = 1;
+    updatePopularTags();
     render();
   });
 
@@ -1159,8 +1355,16 @@ function setupEventListeners() {
     }
   });
 
-  // Note Card Clicks (Open Lightbox or Bookmark)
+  // Note Card Clicks (Open Lightbox, Share, or Bookmark)
   $("#notes-grid")?.addEventListener("click", e => {
+    const shareBtn = e.target.closest("[data-share]");
+    if (shareBtn) {
+      e.stopPropagation();
+      e.preventDefault();
+      openShareModal(shareBtn.dataset.share);
+      return;
+    }
+
     const bookmarkBtn = e.target.closest("[data-bookmark]");
     if (bookmarkBtn) {
       toggleBookmark(bookmarkBtn.dataset.bookmark, e);
@@ -1195,6 +1399,17 @@ function setupEventListeners() {
   $("#lightbox-next-btn")?.addEventListener("click", nextLightbox);
   $("#lightbox-close-btn")?.addEventListener("click", () => {
     $("#lightbox-dialog")?.close();
+  });
+
+  $("#lightbox-share-btn")?.addEventListener("click", () => {
+    if (currentLightboxIndex >= 0 && currentLightboxIndex < currentFilteredList.length) {
+      const note = currentFilteredList[currentLightboxIndex];
+      openShareModal(note.id);
+    }
+  });
+
+  $("#share-dialog-close")?.addEventListener("click", () => {
+    $("#share-dialog")?.close();
   });
 
   $("#lightbox-bookmark-btn")?.addEventListener("click", () => {

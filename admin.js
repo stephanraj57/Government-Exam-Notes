@@ -615,14 +615,14 @@ async function loadDashboardData() {
     if (interData && interData.totalLikes !== undefined) {
       liveInteractions = interData;
     } else {
-      liveInteractions = JSON.parse(localStorage.getItem("exam_notes_interactions_data") || '{"totalLikes":0,"totalDownloads":0,"totalSearches":0,"totalImpressions":0,"notes":{},"searches":{}}');
+      liveInteractions = JSON.parse(localStorage.getItem("exam_notes_interactions_data") || '{"totalLikes":0,"totalDownloads":0,"totalShares":0,"totalSearches":0,"totalImpressions":0,"notes":{},"shares":{},"searches":{}}');
     }
   } catch {
     isLocalClientMode = true;
     uploaded = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
     visitsCount = Number(localStorage.getItem("exam_notes_local_visits") || "0");
     todayVisits = Number(localStorage.getItem("exam_notes_local_visits_today") || "0");
-    liveInteractions = JSON.parse(localStorage.getItem("exam_notes_interactions_data") || '{"totalLikes":0,"totalDownloads":0,"totalSearches":0,"totalImpressions":0,"notes":{},"searches":{}}');
+    liveInteractions = JSON.parse(localStorage.getItem("exam_notes_interactions_data") || '{"totalLikes":0,"totalDownloads":0,"totalShares":0,"totalSearches":0,"totalImpressions":0,"notes":{},"shares":{},"searches":{}}');
   }
 
   const localUploads = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
@@ -1123,19 +1123,19 @@ function renderTopNotesTable() {
 function renderInteractionsView() {
   const likesEl = $("#interaction-total-likes");
   const downloadsEl = $("#interaction-total-downloads");
-  const searchesEl = $("#interaction-total-searches");
+  const sharesEl = $("#interaction-total-shares");
   const viewsEl = $("#interaction-total-views");
   const interBadge = $("#interactions-badge");
 
   // Read ACTUAL telemetry values
   const realLikes = Number(liveInteractions.totalLikes) || 0;
   const realDownloads = Number(liveInteractions.totalDownloads) || 0;
-  const realSearches = Number(liveInteractions.totalSearches) || 0;
+  const realShares = Number(liveInteractions.totalShares) || 0;
   const realViews = Number(liveInteractions.totalImpressions) || 0;
 
   animateNumberCounter(likesEl, realLikes, 800);
   animateNumberCounter(downloadsEl, realDownloads, 800);
-  animateNumberCounter(searchesEl, realSearches, 800);
+  animateNumberCounter(sharesEl, realShares, 800);
   animateNumberCounter(viewsEl, realViews, 800);
 
   if (interBadge) {
@@ -1145,44 +1145,44 @@ function renderInteractionsView() {
   // Update Summary Metrics
   const convRateEl = $("#summary-conversion-rate");
   const engRateEl = $("#summary-engagement-rate");
-  const searchVelEl = $("#summary-avg-searches");
+  const sharesAvgEl = $("#summary-avg-shares");
   const convRate = realViews > 0 ? ((realDownloads / realViews) * 100).toFixed(1) + "%" : "0.0%";
   const engRate = realViews > 0 ? ((realLikes / realViews) * 100).toFixed(1) + "%" : "0.0%";
   if (convRateEl) convRateEl.textContent = convRate;
   if (engRateEl) engRateEl.textContent = engRate;
-  if (searchVelEl) searchVelEl.textContent = `${realSearches} Searches`;
+  if (sharesAvgEl) sharesAvgEl.textContent = `${realShares} Shares`;
 
   // Update Progress Bars & Values with animated fill
   const pctViews = $("#pct-val-views");
   const pctDownloads = $("#pct-val-downloads");
-  const pctSearches = $("#pct-val-searches");
+  const pctShares = $("#pct-val-shares");
   const pctLikes = $("#pct-val-likes");
 
   const barViews = $("#bar-fill-views");
   const barDownloads = $("#bar-fill-downloads");
-  const barSearches = $("#bar-fill-searches");
+  const barShares = $("#bar-fill-shares");
   const barLikes = $("#bar-fill-likes");
 
   const barViewsPct = realViews > 0 ? 100 : 0;
   const barDownloadsPct = realViews > 0 ? Math.min(100, Math.round((realDownloads / realViews) * 100)) : 0;
-  const barSearchesPct = realViews > 0 ? Math.min(100, Math.round((realSearches / realViews) * 100)) : (realSearches > 0 ? 50 : 0);
+  const barSharesPct = realViews > 0 ? Math.min(100, Math.round((realShares / realViews) * 100)) : (realShares > 0 ? 50 : 0);
   const barLikesPct = realViews > 0 ? Math.min(100, Math.round((realLikes / realViews) * 100)) : 0;
 
   if (barViews) barViews.style.width = "0%";
   if (barDownloads) barDownloads.style.width = "0%";
-  if (barSearches) barSearches.style.width = "0%";
+  if (barShares) barShares.style.width = "0%";
   if (barLikes) barLikes.style.width = "0%";
 
   setTimeout(() => {
     if (barViews) barViews.style.width = `${barViewsPct}%`;
     if (barDownloads) barDownloads.style.width = `${barDownloadsPct}%`;
-    if (barSearches) barSearches.style.width = `${barSearchesPct}%`;
+    if (barShares) barShares.style.width = `${barSharesPct}%`;
     if (barLikes) barLikes.style.width = `${barLikesPct}%`;
   }, 50);
 
   if (pctViews) pctViews.textContent = realViews.toLocaleString();
   if (pctDownloads) pctDownloads.textContent = realDownloads.toLocaleString();
-  if (pctSearches) pctSearches.textContent = realSearches.toLocaleString();
+  if (pctShares) pctShares.textContent = realShares.toLocaleString();
   if (pctLikes) pctLikes.textContent = realLikes.toLocaleString();
 
   // Render Top Notes Table with Sort
@@ -4262,9 +4262,11 @@ function setupEventListeners() {
         liveInteractions = {
           totalLikes: 0,
           totalDownloads: 0,
+          totalShares: 0,
           totalSearches: backupObj.searchDemands.totalSearchVolume || 0,
           totalImpressions: 0,
           notes: {},
+          shares: {},
           searches: backupObj.searchDemands.allSearches || {},
           missingSearches: (backupObj.searchDemands.unfulfilledDemands || []).reduce((acc, item) => {
             if (item && item.query) acc[item.query] = item;
