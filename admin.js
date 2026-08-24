@@ -1284,6 +1284,39 @@ function renderInteractionsView() {
   $("#kpi-card-views")?.addEventListener("click", () => openViewsAnalysisModal());
   $("#interaction-row-views")?.addEventListener("click", () => openViewsAnalysisModal());
   $("#views-modal-close-btn")?.addEventListener("click", () => $("#views-analysis-dialog")?.close());
+
+  // Clear All Interactions Button
+  $("#clear-all-interactions-btn")?.addEventListener("click", async () => {
+    if (!confirm("Are you sure you want to clear all student interaction telemetry (Likes, Downloads, Shares, Searches & Impressions)? This will reset all counters on this page to 0.")) {
+      return;
+    }
+
+    try {
+      await api("/api/admin/interactions/clear", { method: "POST" });
+    } catch {}
+
+    liveInteractions = {
+      totalLikes: 0,
+      totalDownloads: 0,
+      totalShares: 0,
+      totalSearches: 0,
+      totalImpressions: 0,
+      notes: {},
+      shares: {},
+      searches: {},
+      missingSearches: {}
+    };
+
+    try {
+      localStorage.setItem("exam_notes_interactions_data", JSON.stringify(liveInteractions));
+    } catch {}
+
+    renderInteractionsView();
+    if (typeof loadDashboardData === "function") {
+      loadDashboardData();
+    }
+    showToast("✓ All student interaction telemetry has been cleared!", "success");
+  });
 }
 
 // ==========================================
@@ -1709,7 +1742,6 @@ function openDownloadsAnalysisModal() {
     { name: "Others", icon: "📁", color: "#0284c7", key: "others" }
   ];
 
-  const totalDownloads = Number(liveInteractions.totalDownloads) || 0;
   const totalImpressions = Number(liveInteractions.totalImpressions) || 0;
   const downloadsObj = liveInteractions.downloads || {};
   const notesObj = liveInteractions.notes || {};
@@ -5601,41 +5633,36 @@ function setupEventListeners() {
     }
   });
 
-  // Multi-stage aggressive password clearing on page load & refresh
+  // Clear password input on initial load & reset
   const purgePasswordAutofill = () => {
     const pInput = $("#admin-page-password");
-    if (pInput) {
+    if (pInput && !pInput.matches(":focus")) {
       pInput.value = "";
-      pInput.setAttribute("value", "");
     }
-    const lForm = $("#admin-page-login-form");
-    if (lForm) lForm.reset();
   };
 
   purgePasswordAutofill();
-  [30, 80, 150, 300, 600, 1000].forEach(delay => {
-    setTimeout(purgePasswordAutofill, delay);
-  });
-
-  // Always clear password input on window pageshow / back navigation
-  window.addEventListener("pageshow", () => {
-    purgePasswordAutofill();
-  });
 
   // Login Form Submit
   $("#admin-page-login-form")?.addEventListener("submit", async e => {
     e.preventDefault();
     const msg = $("#admin-page-login-msg");
     const btn = $("#admin-page-login-submit");
+    const pwdInput = $("#admin-page-password");
 
     if (!pwdInput || !msg) return;
 
     const enteredPassword = pwdInput.value.trim();
-    // Instantly wipe password input field for security
-    pwdInput.value = "";
+    if (!enteredPassword) {
+      msg.textContent = "Please enter your admin password.";
+      msg.className = "form-message error";
+      pwdInput.focus();
+      return;
+    }
+
     msg.textContent = "Verifying credentials…";
     msg.className = "form-message";
-    btn.disabled = true;
+    if (btn) btn.disabled = true;
 
     try {
       const loginRes = await api("/api/admin/login", {
@@ -5650,28 +5677,18 @@ function setupEventListeners() {
           authBroadcastChannel.postMessage({ type: "LOGIN", time: Date.now() });
         }
       } catch {}
+      pwdInput.value = "";
       showToast("✓ Authentication successful! Welcome to Admin Studio.", "success");
       showDashboard();
     } catch (err) {
-      if (err.message.includes("Failed to fetch") || window.location.protocol === "file:") {
-        const savedPass = localStorage.getItem("exam_admin_custom_password") || "admin123";
-        if (enteredPassword === savedPass || enteredPassword === "admin123") {
-          sessionStorage.setItem("exam_admin_local_session", "true");
-          showToast("✓ Logged in (Direct Browser Mode).", "success");
-          showDashboard();
-        } else {
-          msg.textContent = "Incorrect password.";
-          msg.className = "form-message error";
-          pwdInput.focus();
-        }
-      } else {
-        msg.textContent = err.message || "Invalid password.";
-        msg.className = "form-message error";
-        pwdInput.focus();
-      }
+      const errMsg = err.message || "The admin password is incorrect.";
+      msg.textContent = errMsg.includes("incorrect") ? "✕ Incorrect admin password. Please try again." : `✕ ${errMsg}`;
+      msg.className = "form-message error";
+      showToast(errMsg.includes("incorrect") ? "Incorrect admin password." : errMsg, "error");
+      pwdInput.focus();
+      pwdInput.select();
     } finally {
-      btn.disabled = false;
-      if (pwdInput) pwdInput.value = "";
+      if (btn) btn.disabled = false;
     }
   });
 

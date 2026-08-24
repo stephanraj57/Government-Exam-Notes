@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=53.0">
+  <link rel="stylesheet" href="styles.css?v=54.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -99,7 +99,7 @@
                   <path d="M21 2l-2 2m-1.5 1.5L16 7l-1.5 1.5-1.5-1.5-3 3 1.5 1.5L8 13l-1.5-1.5-4 4a2.83 2.83 0 0 0 4 4l4-4-1.5-1.5 1.5-1.5 1.5 1.5 3-3-1.5-1.5 1.5-1.5 1.5 1.5 1.5-1.5L22 3l-1-1z"></path>
                 </svg>
               </span>
-              <input id="admin-page-password" type="password" name="admin_auth_code_secure" autocomplete="new-password" placeholder="Enter password to unlock..." required readonly onfocus="this.removeAttribute('readonly');" onpointerdown="this.removeAttribute('readonly');">
+              <input id="admin-page-password" type="password" name="admin_auth_code_secure" autocomplete="current-password" placeholder="Enter password to unlock..." required>
               <button id="toggle-pwd-visibility" class="obsidian-pwd-toggle" type="button" title="Show/Hide Password" aria-label="Toggle password visibility">
                 <svg id="pwd-eye-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -2531,6 +2531,6 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=41.0"></script>
+  <script src="admin.js?v=42.0"></script>
 </body>
 </html>

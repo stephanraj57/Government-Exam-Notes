@@ -11,20 +11,18 @@ const ROOT = path.dirname(fileURLToPath(import.meta.url));
 try {
   const envPath = path.join(ROOT, ".env");
   if (fsSync.existsSync(envPath)) {
-    const envContent = fsSync.readFileSync(envPath, "utf8");
+    const envContent = fsSync.readFileSync(envPath, "utf8").replace(/^\uFEFF/, "");
     for (const line of envContent.split("\n")) {
-      const trimmed = line.trim();
+      const trimmed = line.replace(/\r/g, "").trim();
       if (!trimmed || trimmed.startsWith("#")) continue;
       const eqIdx = trimmed.indexOf("=");
       if (eqIdx > 0) {
-        const key = trimmed.slice(0, eqIdx).trim();
+        const key = trimmed.slice(0, eqIdx).trim().replace(/^\uFEFF/, "");
         let val = trimmed.slice(eqIdx + 1).trim();
         if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
           val = val.slice(1, -1);
         }
-        if (!process.env[key]) {
-          process.env[key] = val;
-        }
+        process.env[key] = val;
       }
     }
   }
