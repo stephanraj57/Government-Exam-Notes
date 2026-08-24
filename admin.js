@@ -4227,6 +4227,55 @@ function setupEventListeners() {
   setupFileDrop();
   setupPublishStudio();
 
+  // Permanent & Delegated Interaction Analysis Modal Click Triggers
+  document.addEventListener("click", e => {
+    const likeTrigger = e.target.closest("#kpi-card-likes, #interaction-row-likes");
+    if (likeTrigger) {
+      e.preventDefault();
+      openLikesAnalysisModal();
+      return;
+    }
+    const dlTrigger = e.target.closest("#kpi-card-downloads, #interaction-row-downloads");
+    if (dlTrigger) {
+      e.preventDefault();
+      openDownloadsAnalysisModal();
+      return;
+    }
+    const shareTrigger = e.target.closest("#kpi-card-shares, #interaction-row-shares");
+    if (shareTrigger) {
+      e.preventDefault();
+      openSharesAnalysisModal();
+      return;
+    }
+    const viewTrigger = e.target.closest("#kpi-card-views, #interaction-row-views");
+    if (viewTrigger) {
+      e.preventDefault();
+      openViewsAnalysisModal();
+      return;
+    }
+  });
+
+  // Close buttons & backdrop click to close for all 4 analysis modals
+  [
+    { id: "likes-analysis-dialog", btn: "likes-modal-close-btn" },
+    { id: "downloads-analysis-dialog", btn: "downloads-modal-close-btn" },
+    { id: "shares-analysis-dialog", btn: "shares-modal-close-btn" },
+    { id: "views-analysis-dialog", btn: "views-modal-close-btn" }
+  ].forEach(({ id, btn }) => {
+    const dialog = document.getElementById(id);
+    const closeBtn = document.getElementById(btn);
+    if (closeBtn && dialog) {
+      closeBtn.onclick = () => dialog.close();
+    }
+    if (dialog) {
+      dialog.onclick = (e) => {
+        const rect = dialog.getBoundingClientRect();
+        const isInDialog = (rect.top <= e.clientY && e.clientY <= rect.top + rect.height && rect.left <= e.clientX && e.clientX <= rect.left + rect.width);
+        if (!isInDialog) dialog.close();
+      };
+    }
+  });
+
   // Live Spelling Correction & Red Underline Notifications
   attachSpellChecker(
     $("#studio-note-title"),
