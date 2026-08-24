@@ -827,6 +827,7 @@ function recordRecentView(noteId) {
 // ==========================================
 // 9. Lightbox Modal Zoom & Pan Engine
 // ==========================================
+// ==========================================
 // 9. Lightbox Modal & High-Res Zoom Viewer (Zero Scroll)
 // ==========================================
 let currentZoom = 1.0;
@@ -837,32 +838,41 @@ let dragStartX = 0;
 let dragStartY = 0;
 
 function applyZoomTransform() {
-  const layer = $("#lightbox-media-container .lightbox-img-transform-layer");
   const container = $("#lightbox-media-container");
+  const layer = $("#lightbox-media-container .lightbox-img-transform-layer") || $("#lightbox-media-container img");
   const zoomText = $("#lightbox-zoom-level");
 
-  if (zoomText) zoomText.textContent = `${Math.round(currentZoom * 100)}%`;
+  if (zoomText) {
+    zoomText.textContent = `${Math.round(currentZoom * 100)}%`;
+  }
 
   if (layer) {
-    if (currentZoom <= 1.05) {
+    if (currentZoom <= 1.02) {
       panX = 0;
       panY = 0;
     }
-    layer.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+    layer.style.transformOrigin = "center center";
+    layer.style.transition = isDragging ? "none" : "transform 0.16s ease-out";
+    layer.style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${currentZoom})`;
   }
 
   if (container) {
-    container.classList.toggle("is-zoomed", currentZoom > 1.05);
+    container.classList.toggle("is-zoomed", currentZoom > 1.02);
   }
 }
 
 function setZoom(scale) {
-  currentZoom = Math.min(Math.max(scale, 0.6), 3.5);
+  currentZoom = Math.min(Math.max(Math.round(scale * 100) / 100, 0.5), 4.0);
   applyZoomTransform();
 }
 
-function zoomIn() { setZoom(currentZoom + 0.25); }
-function zoomOut() { setZoom(currentZoom - 0.25); }
+function zoomIn() {
+  setZoom(currentZoom + 0.25);
+}
+
+function zoomOut() {
+  setZoom(currentZoom - 0.25);
+}
 
 function resetZoom() {
   currentZoom = 1.0;
@@ -1136,6 +1146,8 @@ function searchByTag(tag) {
   const searchInput = $("#note-search");
   if (searchInput) {
     searchInput.value = `#${cleanTag}`;
+    const clearBtn = $("#clear-search");
+    if (clearBtn) clearBtn.hidden = false;
   }
 
   // 3. Set active tag state
@@ -1248,7 +1260,16 @@ function setupEventListeners() {
   let searchDebounceTimer = null;
   let missingSearchDebounceTimer = null;
   const searchInput = $("#note-search");
+  const clearSearchBtn = $("#clear-search");
+
+  function syncClearSearchBtn() {
+    if (clearSearchBtn && searchInput) {
+      clearSearchBtn.hidden = !searchInput.value.trim();
+    }
+  }
+
   searchInput?.addEventListener("input", () => {
+    syncClearSearchBtn();
     const query = (searchInput.value || "").trim();
     if (!query) {
       activeTag = null;
@@ -1279,12 +1300,14 @@ function setupEventListeners() {
   });
 
   // Clear Search
-  $("#clear-search")?.addEventListener("click", () => {
+  clearSearchBtn?.addEventListener("click", () => {
     if (searchInput) searchInput.value = "";
+    syncClearSearchBtn();
     activeTag = null;
     currentPage = 1;
     updatePopularTags();
     render();
+    searchInput?.focus();
   });
 
   // Sort Dropdown
@@ -1391,9 +1414,21 @@ function setupEventListeners() {
   });
 
   // Lightbox Zoom & Navigation Actions
-  $("#lightbox-zoom-in")?.addEventListener("click", zoomIn);
-  $("#lightbox-zoom-out")?.addEventListener("click", zoomOut);
-  $("#lightbox-zoom-reset")?.addEventListener("click", resetZoom);
+  $("#lightbox-zoom-in")?.addEventListener("click", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    zoomIn();
+  });
+  $("#lightbox-zoom-out")?.addEventListener("click", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    zoomOut();
+  });
+  $("#lightbox-zoom-reset")?.addEventListener("click", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    resetZoom();
+  });
 
   $("#lightbox-prev-btn")?.addEventListener("click", prevLightbox);
   $("#lightbox-next-btn")?.addEventListener("click", nextLightbox);
@@ -1401,23 +1436,8 @@ function setupEventListeners() {
     $("#lightbox-dialog")?.close();
   });
 
-  $("#lightbox-share-btn")?.addEventListener("click", () => {
-    if (currentLightboxIndex >= 0 && currentLightboxIndex < currentFilteredList.length) {
-      const note = currentFilteredList[currentLightboxIndex];
-      openShareModal(note.id);
-    }
-  });
-
   $("#share-dialog-close")?.addEventListener("click", () => {
     $("#share-dialog")?.close();
-  });
-
-  $("#lightbox-bookmark-btn")?.addEventListener("click", () => {
-    if (currentLightboxIndex >= 0 && currentLightboxIndex < currentFilteredList.length) {
-      const note = currentFilteredList[currentLightboxIndex];
-      toggleBookmark(note.id);
-      updateLightboxContent(note);
-    }
   });
 
   $("#lightbox-download-btn")?.addEventListener("click", () => {

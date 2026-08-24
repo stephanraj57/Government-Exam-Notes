@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=24.0">
+  <link rel="stylesheet" href="styles.css?v=53.0">
 </head>
 <body>
   <!-- Ambient Radial Mesh Glow Backdrop & Floating Orbs (Obsidian Studio Aesthetic) -->
@@ -566,26 +566,7 @@
           <span id="lightbox-badge" class="subject-chip">Subject</span>
           <h2 id="lightbox-title">Note Title</h2>
         </div>
-        <div class="lightbox-actions">
-          <div class="zoom-controls" role="group" aria-label="Image Zoom">
-            <button id="lightbox-zoom-out" class="icon-action-btn" type="button" title="Zoom Out (-)">−</button>
-            <span id="lightbox-zoom-level" class="zoom-level-text">100%</span>
-            <button id="lightbox-zoom-in" class="icon-action-btn" type="button" title="Zoom In (+)">+</button>
-            <button id="lightbox-zoom-reset" class="icon-action-btn" type="button" title="Reset Zoom (0)">↺</button>
-          </div>
-          <button id="lightbox-share-btn" class="icon-action-btn" type="button" title="Share Note (WhatsApp, Telegram, Link)" aria-label="Share Note">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="18" cy="5" r="3"></circle>
-              <circle cx="6" cy="12" r="3"></circle>
-              <circle cx="18" cy="19" r="3"></circle>
-              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-            </svg>
-          </button>
-          <button id="lightbox-bookmark-btn" class="icon-action-btn" type="button" title="Save Bookmark">♡</button>
-          <a id="lightbox-download-btn" class="icon-action-btn" download="exam-note.jpg" title="Download Note" target="_blank" rel="noopener">⬇</a>
-          <button id="lightbox-close-btn" class="icon-action-btn close-btn" type="button" title="Close (Esc)">×</button>
-        </div>
+        <button id="lightbox-close-btn" class="icon-action-btn close-btn" type="button" title="Close (Esc)" aria-label="Close Note Popup">×</button>
       </div>
 
       <div class="lightbox-body">
@@ -599,8 +580,24 @@
       </div>
 
       <div class="lightbox-footer">
-        <span id="lightbox-meta" class="lightbox-meta-date">📅 Date</span>
-        <div id="lightbox-tags" class="lightbox-tags"></div>
+        <div class="lightbox-footer-left">
+          <div class="zoom-controls" role="group" aria-label="Image Zoom">
+            <button id="lightbox-zoom-out" class="icon-action-btn" type="button" title="Zoom Out (-)">−</button>
+            <span id="lightbox-zoom-level" class="zoom-level-text">100%</span>
+            <button id="lightbox-zoom-in" class="icon-action-btn" type="button" title="Zoom In (+)">+</button>
+            <button id="lightbox-zoom-reset" class="icon-action-btn" type="button" title="Reset Zoom (0)">↺</button>
+          </div>
+          <a id="lightbox-download-btn" class="icon-action-btn" download="exam-note.jpg" title="Download High-Res Note" target="_blank" rel="noopener" aria-label="Download Note">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+          </a>
+        </div>
+        <div class="lightbox-footer-right">
+          <div id="lightbox-tags" class="lightbox-tags"></div>
+        </div>
       </div>
     </div>
   </dialog>
@@ -631,23 +628,43 @@
       </div>
 
       <div class="share-platforms-grid">
-        <button type="button" class="share-platform-btn whatsapp" id="share-whatsapp-btn">
-          <span class="platform-icon">💬</span>
+        <button type="button" class="share-platform-btn whatsapp" id="share-whatsapp-btn" title="Share on WhatsApp">
+          <span class="platform-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.15C10.57 20.15 9.12 19.75 7.85 19L7.55 18.82L4.43 19.64L5.26 16.6L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.68 12.04 3.68C14.25 3.68 16.31 4.54 17.87 6.1C19.42 7.66 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.15 12.05 20.15ZM16.57 14.45C16.32 14.33 15.1 13.73 14.88 13.65C14.65 13.57 14.49 13.53 14.32 13.77C14.16 14.02 13.68 14.58 13.53 14.75C13.39 14.91 13.24 14.93 12.99 14.81C12.75 14.68 11.96 14.43 11.02 13.59C10.29 12.94 9.8 12.13 9.65 11.89C9.51 11.64 9.64 11.51 9.76 11.38C9.87 11.27 10.01 11.09 10.13 10.95C10.26 10.8 10.3 10.7 10.38 10.54C10.46 10.37 10.42 10.23 10.36 10.11C10.3 9.98 9.81 8.78 9.61 8.28C9.41 7.8 9.2 7.86 9.05 7.85C8.91 7.85 8.74 7.85 8.58 7.85C8.41 7.85 8.14 7.91 7.91 8.16C7.68 8.41 7.04 9.01 7.04 10.23C7.04 11.45 7.93 12.63 8.05 12.79C8.18 12.96 9.8 15.46 12.28 16.53C12.87 16.79 13.33 16.94 13.69 17.05C14.28 17.24 14.82 17.21 15.25 17.15C15.72 17.08 16.71 16.55 16.92 15.97C17.12 15.39 17.12 14.89 17.06 14.79C17 14.68 16.82 14.58 16.57 14.45Z"/>
+            </svg>
+          </span>
           <span class="platform-name">WhatsApp</span>
         </button>
 
-        <button type="button" class="share-platform-btn telegram" id="share-telegram-btn">
-          <span class="platform-icon">✈️</span>
+        <button type="button" class="share-platform-btn telegram" id="share-telegram-btn" title="Share on Telegram">
+          <span class="platform-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM16.64 8.8L15.51 15.99C15.37 16.74 15.09 16.99 14.83 17.02C14.25 17.07 13.81 16.64 13.25 16.27L11.02 14.77C10.03 14.12 10.67 13.76 11.24 13.18C11.39 13.03 13.95 10.7 14 10.49C14.01 10.46 14.01 10.35 13.93 10.3C13.85 10.25 13.74 10.28 13.66 10.3C13.54 10.33 11.67 11.57 8.05 14.02C7.52 14.38 7.04 14.56 6.61 14.55C6.14 14.54 5.23 14.28 4.56 14.06C3.73 13.79 3.07 13.64 3.13 13.18C3.16 12.94 3.5 12.69 4.15 12.43C8.13 10.7 10.79 9.55 12.12 8.99C15.91 7.41 16.7 7.13 17.22 7.12C17.33 7.12 17.59 7.15 17.76 7.29C17.9 7.41 17.94 7.57 17.96 7.74C17.94 7.81 17.94 7.87 17.93 7.96L16.64 8.8Z"/>
+            </svg>
+          </span>
           <span class="platform-name">Telegram</span>
         </button>
 
-        <button type="button" class="share-platform-btn twitter" id="share-twitter-btn">
-          <span class="platform-icon">𝕏</span>
+        <button type="button" class="share-platform-btn twitter" id="share-twitter-btn" title="Share on Twitter / X">
+          <span class="platform-icon">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+          </span>
           <span class="platform-name">Twitter / X</span>
         </button>
 
-        <button type="button" class="share-platform-btn native-share" id="share-native-btn">
-          <span class="platform-icon">📱</span>
+        <button type="button" class="share-platform-btn native-share" id="share-native-btn" title="More Sharing Options">
+          <span class="platform-icon">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="18" cy="5" r="3"></circle>
+              <circle cx="6" cy="12" r="3"></circle>
+              <circle cx="18" cy="19" r="3"></circle>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+            </svg>
+          </span>
           <span class="platform-name">More Apps</span>
         </button>
       </div>
@@ -667,6 +684,6 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="app.js?v=24.0"></script>
+  <script src="app.js?v=36.0"></script>
 </body>
 </html>

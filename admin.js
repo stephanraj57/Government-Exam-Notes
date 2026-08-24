@@ -609,8 +609,8 @@ async function loadDashboardData() {
     ]);
 
     uploaded = notesData.notes || [];
-    visitsCount = visitsData.count || 0;
-    todayVisits = visitsData.today || 0;
+    todayVisits = Number(visitsData.today) || 0;
+    visitsCount = Math.max(Number(visitsData.count) || 0, todayVisits);
     activeUsers = (visitsData && visitsData.activeUsers) || (interData && interData.activeUsers) || 1;
     if (interData && interData.totalLikes !== undefined) {
       liveInteractions = interData;
@@ -620,8 +620,8 @@ async function loadDashboardData() {
   } catch {
     isLocalClientMode = true;
     uploaded = JSON.parse(localStorage.getItem("exam_notes_custom_uploads") || "[]");
-    visitsCount = Number(localStorage.getItem("exam_notes_local_visits") || "0");
     todayVisits = Number(localStorage.getItem("exam_notes_local_visits_today") || "0");
+    visitsCount = Math.max(Number(localStorage.getItem("exam_notes_local_visits") || "0"), todayVisits);
     liveInteractions = JSON.parse(localStorage.getItem("exam_notes_interactions_data") || '{"totalLikes":0,"totalDownloads":0,"totalShares":0,"totalSearches":0,"totalImpressions":0,"notes":{},"shares":{},"searches":{}}');
   }
 
@@ -1267,6 +1267,1017 @@ function renderInteractionsView() {
     if (paneTopNotes) paneTopNotes.hidden = true;
     if (paneTopSearches) paneTopSearches.hidden = false;
   });
+
+  // Interaction In-Depth Analysis Modal Triggers
+  $("#kpi-card-likes")?.addEventListener("click", () => openLikesAnalysisModal());
+  $("#interaction-row-likes")?.addEventListener("click", () => openLikesAnalysisModal());
+  $("#likes-modal-close-btn")?.addEventListener("click", () => $("#likes-analysis-dialog")?.close());
+
+  $("#kpi-card-downloads")?.addEventListener("click", () => openDownloadsAnalysisModal());
+  $("#interaction-row-downloads")?.addEventListener("click", () => openDownloadsAnalysisModal());
+  $("#downloads-modal-close-btn")?.addEventListener("click", () => $("#downloads-analysis-dialog")?.close());
+
+  $("#kpi-card-shares")?.addEventListener("click", () => openSharesAnalysisModal());
+  $("#interaction-row-shares")?.addEventListener("click", () => openSharesAnalysisModal());
+  $("#shares-modal-close-btn")?.addEventListener("click", () => $("#shares-analysis-dialog")?.close());
+
+  $("#kpi-card-views")?.addEventListener("click", () => openViewsAnalysisModal());
+  $("#interaction-row-views")?.addEventListener("click", () => openViewsAnalysisModal());
+  $("#views-modal-close-btn")?.addEventListener("click", () => $("#views-analysis-dialog")?.close());
+}
+
+// ==========================================
+// Generic Helper: Bind Modal Table Sorting & Live Search
+// ==========================================
+function bindModalTableSortingAndSearch({
+  dialog,
+  searchInputId,
+  sortSelectId,
+  countBadgeId,
+  tableBodyId,
+  notesCountBadgeId,
+  items,
+  defaultSortKey = "likes",
+  defaultSortDir = "desc",
+  metricBadgeLabel = "Notes",
+  renderRowHtml
+}) {
+  const searchInput = $(`#${searchInputId}`);
+  const sortSelect = $(`#${sortSelectId}`);
+  const countBadge = $(`#${countBadgeId}`);
+  const tableBody = $(`#${tableBodyId}`);
+  const notesCountBadge = $(`#${notesCountBadgeId}`);
+
+  let currentSortKey = defaultSortKey;
+  let currentSortDir = defaultSortDir;
+
+  if (notesCountBadge) {
+    notesCountBadge.textContent = `${items.length} ${metricBadgeLabel}`;
+  }
+
+  // Pre-calculate natural ranks based on default primary metric
+  const naturalRankingMap = new Map();
+  const naturalSorted = [...items].sort((a, b) => {
+    const valA = Number(a[defaultSortKey]) || 0;
+    const valB = Number(b[defaultSortKey]) || 0;
+    return valB - valA;
+  });
+  naturalSorted.forEach((item, idx) => {
+    naturalRankingMap.set(item.note.id, idx + 1);
+  });
+
+  const renderTableRows = (list) => {
+    if (!tableBody) return;
+    if (list.length === 0) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="10" class="likes-table-empty-row">
+            <div class="likes-table-empty">
+              <span>🔍</span>
+              <p>No study notes matching your query.</p>
+            </div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tableBody.innerHTML = list.map((item, idx) => {
+      const naturalRank = naturalRankingMap.get(item.note?.id || item.id) || (idx + 1);
+      return renderRowHtml(item, naturalRank);
+    }).join("");
+
+    tableBody.querySelectorAll("[data-view-note-id]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        dialog.close();
+        openLightbox(btn.dataset.viewNoteId);
+      });
+    });
+  };
+
+  const applySortAndFilter = () => {
+    const q = (searchInput?.value || "").trim().toLowerCase();
+    let filtered = items;
+    if (q) {
+      filtered = items.filter(item => {
+        const titleMatch = (item.note?.title || "").toLowerCase().includes(q);
+        const subjMatch = (item.note?.subject || "").toLowerCase().includes(q);
+        const tagMatch = (item.note?.tags || []).some(t => (t || "").toLowerCase().includes(q));
+        return titleMatch || subjMatch || tagMatch;
+      });
+    }
+
+    const sorted = [...filtered].sort((a, b) => {
+      let diff = 0;
+      if (currentSortKey === "rank") {
+        const rankA = naturalRankingMap.get(a.note?.id || a.id) || 0;
+        const rankB = naturalRankingMap.get(b.note?.id || b.id) || 0;
+        diff = rankA - rankB;
+      } else if (currentSortKey === "title") {
+        diff = (a.note?.title || "").localeCompare(b.note?.title || "");
+      } else if (currentSortKey === "subject") {
+        diff = (a.note?.subject || "").localeCompare(b.note?.subject || "");
+      } else {
+        const numA = Number(a[currentSortKey]) || 0;
+        const numB = Number(b[currentSortKey]) || 0;
+        diff = numA - numB;
+      }
+      return currentSortDir === "asc" ? diff : -diff;
+    });
+
+    renderTableRows(sorted);
+
+    if (countBadge) {
+      if (q) {
+        countBadge.textContent = `Showing ${sorted.length} of ${items.length} notes`;
+      } else {
+        countBadge.textContent = `Showing all ${items.length} notes`;
+      }
+    }
+
+    // Update Header Sort Arrows & active class
+    dialog.querySelectorAll(".likes-th-sortable").forEach(th => {
+      const key = th.dataset.sortKey;
+      const arrow = th.querySelector(".likes-th-arrow");
+      if (key === currentSortKey) {
+        th.classList.add("active");
+        if (arrow) arrow.textContent = currentSortDir === "asc" ? "↑" : "↓";
+      } else {
+        th.classList.remove("active");
+        if (arrow) arrow.textContent = "↕";
+      }
+    });
+
+    // Sync Dropdown Select value
+    if (sortSelect) {
+      const compositeVal = `${currentSortKey}-${currentSortDir}`;
+      if (sortSelect.querySelector(`option[value="${compositeVal}"]`)) {
+        sortSelect.value = compositeVal;
+      }
+    }
+  };
+
+  // Wire search input with clone replacement
+  if (searchInput) {
+    searchInput.value = "";
+    const newSearchInput = searchInput.cloneNode(true);
+    searchInput.parentNode.replaceChild(newSearchInput, searchInput);
+    newSearchInput.addEventListener("input", applySortAndFilter);
+  }
+
+  // Wire sort dropdown
+  if (sortSelect) {
+    const compositeVal = `${defaultSortKey}-${defaultSortDir}`;
+    if (sortSelect.querySelector(`option[value="${compositeVal}"]`)) {
+      sortSelect.value = compositeVal;
+    }
+    const newSortSelect = sortSelect.cloneNode(true);
+    sortSelect.parentNode.replaceChild(newSortSelect, sortSelect);
+    newSortSelect.addEventListener("change", (e) => {
+      const parts = (e.target.value || "").split("-");
+      if (parts.length === 2) {
+        currentSortKey = parts[0];
+        currentSortDir = parts[1];
+        applySortAndFilter();
+      }
+    });
+  }
+
+  // Wire sortable table header clicks
+  dialog.querySelectorAll(".likes-th-sortable").forEach(th => {
+    const newTh = th.cloneNode(true);
+    th.parentNode.replaceChild(newTh, th);
+    newTh.addEventListener("click", () => {
+      const key = newTh.dataset.sortKey;
+      if (!key) return;
+      if (currentSortKey === key) {
+        currentSortDir = currentSortDir === "asc" ? "desc" : "asc";
+      } else {
+        currentSortKey = key;
+        currentSortDir = (key === "title" || key === "subject" || key === "rank") ? "asc" : "desc";
+      }
+      applySortAndFilter();
+    });
+  });
+
+  // Initial render
+  applySortAndFilter();
+}
+
+// ==========================================
+// 4.025 Likes & Student Favorites In-Depth Analysis Modal
+// ==========================================
+function openLikesAnalysisModal() {
+  const dialog = $("#likes-analysis-dialog");
+  if (!dialog) return;
+
+  const categories = [
+    { name: "History", icon: "📜", color: "#d97706", key: "history" },
+    { name: "Polity", icon: "⚖️", color: "#2563eb", key: "polity" },
+    { name: "Economy", icon: "📈", color: "#059669", key: "economy" },
+    { name: "Geography", icon: "🌍", color: "#0891b2", key: "geography" },
+    { name: "Art and Culture", icon: "🎨", color: "#7c3aed", key: "art-and-culture" },
+    { name: "Maths", icon: "📐", color: "#ea580c", key: "maths" },
+    { name: "Science", icon: "🔬", color: "#e11d48", key: "science" },
+    { name: "Others", icon: "📁", color: "#0284c7", key: "others" }
+  ];
+
+  const totalLikesRaw = Number(liveInteractions.totalLikes) || 0;
+  const likesObj = liveInteractions.likes || {};
+  const notesObj = liveInteractions.notes || {};
+
+  // Calculate note-by-note likes & category aggregation
+  const catLikesMap = {};
+  categories.forEach(c => { catLikesMap[c.name] = 0; });
+  let uniqueLikedCount = 0;
+
+  const notesWithLikes = allNotes.map(n => {
+    const noteData = notesObj[n.id] || {};
+    const noteLikes = Number(noteData.likes) || Number(likesObj[n.id]) || 0;
+    const noteDownloads = Number(noteData.downloads) || Number((liveInteractions.downloads || {})[n.id]) || 0;
+    
+    if (noteLikes > 0) uniqueLikedCount++;
+
+    const normSubj = normalizeSubject(n.subject);
+    if (catLikesMap[normSubj] !== undefined) {
+      catLikesMap[normSubj] += noteLikes;
+    } else {
+      catLikesMap["History"] += noteLikes;
+    }
+
+    return {
+      note: n,
+      likes: noteLikes,
+      downloads: noteDownloads
+    };
+  });
+
+  const totalLikes = notesWithLikes.reduce((sum, item) => sum + item.likes, 0);
+
+  const totalNotesCount = allNotes.length || 0;
+  const adoptionPct = totalNotesCount > 0 ? ((uniqueLikedCount / totalNotesCount) * 100).toFixed(1) : "0.0";
+  const avgLikesPerNote = totalNotesCount > 0 ? (totalLikes / totalNotesCount).toFixed(1) : "0.0";
+
+  // Aggregate categories sorted by likes
+  const sortedCategories = [...categories]
+    .map(c => {
+      const count = catLikesMap[c.name] || 0;
+      return {
+        ...c,
+        count,
+        pct: totalLikes > 0 ? (((count) / totalLikes) * 100).toFixed(1) : "0.0"
+      };
+    })
+    .sort((a, b) => b.count - a.count);
+
+  const topSubject = sortedCategories[0]?.count > 0 ? sortedCategories[0].name : "None Yet";
+  const topSubjectShare = sortedCategories[0]?.count > 0 ? sortedCategories[0].pct : "0.0";
+
+  // 1. Populate Top 4 Key Metric Tiles
+  const kpiTotal = $("#likes-kpi-total");
+  const kpiUnique = $("#likes-kpi-unique-count");
+  const kpiAdoption = $("#likes-kpi-adoption-rate");
+  const kpiTopSubj = $("#likes-kpi-top-subject");
+  const kpiTopSubjShare = $("#likes-kpi-top-subject-share");
+  const kpiAvg = $("#likes-kpi-avg");
+
+  if (kpiTotal) kpiTotal.textContent = totalLikes.toLocaleString();
+  if (kpiUnique) kpiUnique.textContent = uniqueLikedCount.toLocaleString();
+  if (kpiAdoption) kpiAdoption.textContent = `${adoptionPct}%`;
+  if (kpiTopSubj) kpiTopSubj.textContent = topSubject;
+  if (kpiTopSubjShare) {
+    kpiTopSubjShare.textContent = totalLikes > 0 
+      ? `${topSubjectShare}% of total bookmarks` 
+      : "No student likes recorded yet";
+  }
+  if (kpiAvg) kpiAvg.textContent = avgLikesPerNote;
+
+  // 2. Populate Full-Width Subject Preference Breakdown Chart (Dashboard Style)
+  const chartGraph = $("#likes-category-bar-chart");
+  const chartStrip = $("#likes-segmented-strip");
+  const chartGrid = $("#likes-category-stats-grid");
+  const subjBadge = $("#likes-subject-count-badge");
+
+  if (subjBadge) {
+    subjBadge.textContent = totalLikes > 0 
+      ? `8 Subjects Active · ${totalLikes.toLocaleString()} Likes` 
+      : `8 Subjects Active · 0 Likes`;
+  }
+
+  const maxLikeCount = Math.max(...categories.map(c => catLikesMap[c.name] || 0), 1);
+
+  // A. Vertical Column Bar Chart
+  if (chartGraph) {
+    chartGraph.innerHTML = categories.map(c => {
+      const count = catLikesMap[c.name] || 0;
+      const heightPct = count === 0 ? 6 : Math.max(14, Math.round((count / maxLikeCount) * 100));
+      const pct = totalLikes > 0 ? Math.round((count / totalLikes) * 100) : 0;
+      return `
+        <div class="chart-col-item" title="${c.name}: ${count} likes (${pct}%)">
+          <span class="chart-col-val" style="color: ${c.color};">${count}</span>
+          <div class="chart-col-bar" style="height: ${heightPct}%; background-color: ${c.color};"></div>
+          <span class="chart-col-label">${c.icon} ${c.name}</span>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // B. Proportional Multi-Segment Progress Strip
+  if (chartStrip) {
+    if (totalLikes === 0) {
+      chartStrip.innerHTML = `<div class="chart-segment" style="width: 100%; background-color: var(--border);" title="No student likes recorded yet"></div>`;
+    } else {
+      chartStrip.innerHTML = categories.map(c => {
+        const count = catLikesMap[c.name] || 0;
+        if (count === 0) return "";
+        const pct = ((count / totalLikes) * 100).toFixed(1);
+        return `<div class="chart-segment" style="width: ${pct}%; background-color: ${c.color};" title="${c.name}: ${count} likes (${pct}%)"></div>`;
+      }).join("");
+    }
+  }
+
+  // C. 8 Category Stats Grid with Click-to-Filter
+  if (chartGrid) {
+    chartGrid.innerHTML = categories.map(c => {
+      const count = catLikesMap[c.name] || 0;
+      const pct = totalLikes > 0 ? Math.round((count / totalLikes) * 100) : 0;
+      return `
+        <div class="cat-stat-card" data-cat-filter="${c.name}" title="Click to filter by ${c.name}" style="cursor: pointer;">
+          <div class="cat-stat-top">
+            <span class="cat-stat-icon">${c.icon}</span>
+            <span class="cat-stat-name">${c.name}</span>
+            <strong class="cat-stat-count" style="color: ${c.color};">${count}</strong>
+          </div>
+          <div class="cat-stat-bar-track">
+            <div class="cat-stat-bar-fill" style="width: ${Math.max(pct, count > 0 ? 8 : 0)}%; background-color: ${c.color};"></div>
+          </div>
+          <div class="cat-stat-sub">
+            <span>${count} ${count === 1 ? 'like' : 'likes'}</span>
+            <span>${pct}%</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    chartGrid.querySelectorAll(".cat-stat-card").forEach(card => {
+      card.addEventListener("click", () => {
+        const catName = card.dataset.catFilter;
+        const searchInput = $("#likes-notes-search");
+        if (searchInput && catName) {
+          searchInput.value = catName;
+          searchInput.dispatchEvent(new Event("input"));
+        }
+      });
+    });
+  }
+
+  // 3. Ranked Top Liked Notes Table with Live Search
+  bindModalTableSortingAndSearch({
+    dialog,
+    searchInputId: "likes-notes-search",
+    sortSelectId: null,
+    countBadgeId: "likes-search-count-badge",
+    tableBodyId: "likes-table-body",
+    notesCountBadgeId: "likes-notes-count-badge",
+    items: notesWithLikes,
+    defaultSortKey: "likes",
+    defaultSortDir: "desc",
+    metricBadgeLabel: "Notes Ranked by Likes",
+    renderRowHtml: (item, originalRank) => {
+      const rankClass = originalRank === 1 ? "top-1" : (originalRank === 2 ? "top-2" : (originalRank === 3 ? "top-3" : ""));
+      const n = item.note;
+      const subKey = getSubjectKey(n.subject);
+      return `
+        <tr class="likes-table-row">
+          <td style="text-align: center;">
+            <div class="likes-rank-badge ${rankClass}">#${originalRank}</div>
+          </td>
+          <td>
+            <div class="likes-table-title-cell">
+              <strong class="likes-table-title" title="${escapeHtml(n.title)}">${escapeHtml(n.title)}</strong>
+              ${n.tags && n.tags.length ? `<span class="likes-table-tags">${escapeHtml(n.tags.slice(0, 2).join(" "))}</span>` : ""}
+            </div>
+          </td>
+          <td>
+            <span class="subject-chip ${subKey}">${escapeHtml(n.subject)}</span>
+          </td>
+          <td style="text-align: center;">
+            <strong class="likes-table-num-likes">❤️ ${item.likes.toLocaleString()}</strong>
+          </td>
+          <td style="text-align: center;">
+            <button type="button" class="likes-table-view-btn" data-view-note-id="${n.id}" title="Inspect Note in Viewer">
+              👁️ View
+            </button>
+          </td>
+        </tr>
+      `;
+    }
+  });
+
+  // 4. Dynamic Insight Text
+  const insightText = $("#likes-insight-text");
+  if (insightText) {
+    if (totalLikes > 0 && sortedCategories[0]?.count > 0) {
+      insightText.innerHTML = `<strong>${escapeHtml(topSubject)}</strong> is currently your highest-rated student subject (${topSubjectShare}% of total bookmarks). Keep publishing visual flowchart diagrams in <strong>${escapeHtml(topSubject)}</strong> to drive maximum student engagement!`;
+    } else {
+      insightText.innerHTML = `Encourage students to bookmark high-yield exam diagrams using the heart icon on the public portal. As students interact, personalized subject-level revision recommendations will appear here.`;
+    }
+  }
+
+  try {
+    dialog.showModal();
+  } catch {
+    dialog.setAttribute("open", "");
+  }
+}
+
+// ==========================================
+// 4.026 Downloads & Export In-Depth Analysis Modal
+// ==========================================
+function openDownloadsAnalysisModal() {
+  const dialog = $("#downloads-analysis-dialog");
+  if (!dialog) return;
+
+  const categories = [
+    { name: "History", icon: "📜", color: "#d97706", key: "history" },
+    { name: "Polity", icon: "⚖️", color: "#2563eb", key: "polity" },
+    { name: "Economy", icon: "📈", color: "#059669", key: "economy" },
+    { name: "Geography", icon: "🌍", color: "#0891b2", key: "geography" },
+    { name: "Art and Culture", icon: "🎨", color: "#7c3aed", key: "art-and-culture" },
+    { name: "Maths", icon: "📐", color: "#ea580c", key: "maths" },
+    { name: "Science", icon: "🔬", color: "#e11d48", key: "science" },
+    { name: "Others", icon: "📁", color: "#0284c7", key: "others" }
+  ];
+
+  const totalDownloads = Number(liveInteractions.totalDownloads) || 0;
+  const totalImpressions = Number(liveInteractions.totalImpressions) || 0;
+  const downloadsObj = liveInteractions.downloads || {};
+  const notesObj = liveInteractions.notes || {};
+
+  const catDownloadsMap = {};
+  categories.forEach(c => { catDownloadsMap[c.name] = 0; });
+  let uniqueDownloadedCount = 0;
+
+  const notesWithDownloads = allNotes.map(n => {
+    const noteData = notesObj[n.id] || {};
+    const noteDownloads = Number(noteData.downloads) || Number(downloadsObj[n.id]) || 0;
+    const noteLikes = Number(noteData.likes) || Number((liveInteractions.likes || {})[n.id]) || 0;
+
+    if (noteDownloads > 0) uniqueDownloadedCount++;
+
+    const normSubj = normalizeSubject(n.subject);
+    if (catDownloadsMap[normSubj] !== undefined) {
+      catDownloadsMap[normSubj] += noteDownloads;
+    } else {
+      catDownloadsMap["History"] += noteDownloads;
+    }
+
+    return {
+      note: n,
+      downloads: noteDownloads,
+      likes: noteLikes
+    };
+  });
+
+  const totalDownloads = notesWithDownloads.reduce((sum, item) => sum + item.downloads, 0);
+  const totalNotesCount = allNotes.length || 0;
+  const adoptionPct = totalNotesCount > 0 ? ((uniqueDownloadedCount / totalNotesCount) * 100).toFixed(1) : "0.0";
+  const conversionRate = totalImpressions > 0 ? ((totalDownloads / totalImpressions) * 100).toFixed(1) + "%" : "0.0%";
+
+  const sortedCategories = [...categories]
+    .map(c => ({
+      ...c,
+      count: catDownloadsMap[c.name] || 0,
+      pct: totalDownloads > 0 ? (((catDownloadsMap[c.name] || 0) / totalDownloads) * 100).toFixed(1) : "0.0"
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const topSubject = sortedCategories[0]?.count > 0 ? sortedCategories[0].name : "None Yet";
+  const topSubjectShare = sortedCategories[0]?.count > 0 ? sortedCategories[0].pct : "0.0";
+
+  // 1. Populate Top 4 KPI Tiles
+  const kpiTotal = $("#downloads-kpi-total");
+  const kpiUnique = $("#downloads-kpi-unique-count");
+  const kpiAdoption = $("#downloads-kpi-adoption-rate");
+  const kpiTopSubj = $("#downloads-kpi-top-subject");
+  const kpiTopSubjShare = $("#downloads-kpi-top-subject-share");
+  const kpiConversion = $("#downloads-kpi-conversion");
+
+  if (kpiTotal) kpiTotal.textContent = totalDownloads.toLocaleString();
+  if (kpiUnique) kpiUnique.textContent = `${uniqueDownloadedCount} / ${totalNotesCount}`;
+  if (kpiAdoption) kpiAdoption.textContent = `${adoptionPct}% Library`;
+  if (kpiTopSubj) kpiTopSubj.textContent = topSubject;
+  if (kpiTopSubjShare) kpiTopSubjShare.textContent = totalDownloads > 0 ? `${topSubjectShare}% of total exports` : "No downloads yet";
+  if (kpiConversion) kpiConversion.textContent = conversionRate;
+
+  // 2. Populate Full-Width Subject Export Breakdown Chart (Dashboard Style)
+  const chartGraph = $("#downloads-category-bar-chart");
+  const chartStrip = $("#downloads-segmented-strip");
+  const chartGrid = $("#downloads-category-stats-grid");
+  const subjBadge = $("#downloads-subject-count-badge");
+
+  if (subjBadge) subjBadge.textContent = totalDownloads > 0 ? `8 Subjects Active · ${totalDownloads.toLocaleString()} Downloads` : `8 Subjects Active`;
+
+  const maxDownloadCount = Math.max(...categories.map(c => catDownloadsMap[c.name] || 0), 1);
+
+  // A. Vertical Column Bar Chart
+  if (chartGraph) {
+    chartGraph.innerHTML = categories.map(c => {
+      const count = catDownloadsMap[c.name] || 0;
+      const heightPct = count === 0 ? 6 : Math.max(14, Math.round((count / maxDownloadCount) * 100));
+      const pct = totalDownloads > 0 ? Math.round((count / totalDownloads) * 100) : 0;
+      return `
+        <div class="chart-col-item" title="${c.name}: ${count} downloads (${pct}%)">
+          <span class="chart-col-val" style="color: ${c.color};">${count}</span>
+          <div class="chart-col-bar" style="height: ${heightPct}%; background-color: ${c.color};"></div>
+          <span class="chart-col-label">${c.icon} ${c.name}</span>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // B. Proportional Multi-Segment Progress Strip
+  if (chartStrip) {
+    if (totalDownloads === 0) {
+      chartStrip.innerHTML = `<div class="chart-segment" style="width: 100%; background-color: var(--border);" title="No downloads recorded yet"></div>`;
+    } else {
+      chartStrip.innerHTML = categories.map(c => {
+        const count = catDownloadsMap[c.name] || 0;
+        if (count === 0) return "";
+        const pct = ((count / totalDownloads) * 100).toFixed(1);
+        return `<div class="chart-segment" style="width: ${pct}%; background-color: ${c.color};" title="${c.name}: ${count} downloads (${pct}%)"></div>`;
+      }).join("");
+    }
+  }
+
+  // C. 8 Category Stats Grid
+  if (chartGrid) {
+    chartGrid.innerHTML = categories.map(c => {
+      const count = catDownloadsMap[c.name] || 0;
+      const pct = totalDownloads > 0 ? Math.round((count / totalDownloads) * 100) : 0;
+      return `
+        <div class="cat-stat-card">
+          <div class="cat-stat-top">
+            <span class="cat-stat-icon">${c.icon}</span>
+            <span class="cat-stat-name">${c.name}</span>
+            <strong class="cat-stat-count" style="color: ${c.color};">${count}</strong>
+          </div>
+          <div class="cat-stat-bar-track">
+            <div class="cat-stat-bar-fill" style="width: ${Math.max(pct, count > 0 ? 8 : 0)}%; background-color: ${c.color};"></div>
+          </div>
+          <div class="cat-stat-sub">
+            <span>${count} ${count === 1 ? 'download' : 'downloads'}</span>
+            <span>${pct}%</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // 3. Ranked Top Downloaded Notes Table with Live Search & Sort
+  bindModalTableSortingAndSearch({
+    dialog,
+    searchInputId: "downloads-notes-search",
+    sortSelectId: "downloads-notes-sort",
+    countBadgeId: "downloads-search-count-badge",
+    tableBodyId: "downloads-table-body",
+    notesCountBadgeId: "downloads-notes-count-badge",
+    items: notesWithDownloads,
+    defaultSortKey: "downloads",
+    defaultSortDir: "desc",
+    metricBadgeLabel: "Notes Ranked by Downloads",
+    renderRowHtml: (item, originalRank) => {
+      const rankClass = originalRank === 1 ? "top-1" : (originalRank === 2 ? "top-2" : (originalRank === 3 ? "top-3" : ""));
+      const n = item.note;
+      const subKey = getSubjectKey(n.subject);
+      return `
+        <tr class="likes-table-row">
+          <td style="text-align: center;">
+            <div class="likes-rank-badge ${rankClass}">#${originalRank}</div>
+          </td>
+          <td>
+            <div class="likes-table-title-cell">
+              <strong class="likes-table-title" title="${escapeHtml(n.title)}">${escapeHtml(n.title)}</strong>
+              ${n.tags && n.tags.length ? `<span class="likes-table-tags">${escapeHtml(n.tags.slice(0, 2).join(" "))}</span>` : ""}
+            </div>
+          </td>
+          <td>
+            <span class="subject-chip ${subKey}">${escapeHtml(n.subject)}</span>
+          </td>
+          <td style="text-align: center;">
+            <strong class="downloads-val-tag" style="color: #2563eb; font-weight: 800; font-size: 0.84rem;">⬇️ ${item.downloads.toLocaleString()}</strong>
+          </td>
+          <td style="text-align: center;">
+            <span class="likes-val-tag">❤️ ${item.likes.toLocaleString()}</span>
+          </td>
+          <td style="text-align: center;">
+            <button type="button" class="likes-table-view-btn" data-view-note-id="${n.id}" title="Inspect Note in Viewer">
+              👁️ View
+            </button>
+          </td>
+        </tr>
+      `;
+    }
+  });
+
+  // Dynamic Insight Text
+  const insightText = $("#downloads-insight-text");
+  if (insightText) {
+    if (totalDownloads > 0 && sortedCategories[0]?.count > 0) {
+      insightText.innerHTML = `Students have downloaded <strong>${escapeHtml(topSubject)}</strong> materials the most (${topSubjectShare}% of total exports). Ensure your diagrams in <strong>${escapeHtml(topSubject)}</strong> maintain sharp typography for offline printing and quick exam-hall review!`;
+    } else {
+      insightText.innerHTML = `High-yield summary charts and mind maps see the highest download rates as students prepare for offline revisions.`;
+    }
+  }
+
+  try {
+    dialog.showModal();
+  } catch {
+    dialog.setAttribute("open", "");
+  }
+}
+
+// ==========================================
+// 4.027 Social Sharing & Virality In-Depth Analysis Modal
+// ==========================================
+function openSharesAnalysisModal() {
+  const dialog = $("#shares-analysis-dialog");
+  if (!dialog) return;
+
+  const totalShares = Number(liveInteractions.totalShares) || 0;
+  const rawShares = liveInteractions.shares || {};
+  const notesObj = liveInteractions.notes || {};
+
+  const platforms = [
+    { name: "WhatsApp", icon: "💬", color: "#25d366", count: Number(rawShares.whatsapp) || 0 },
+    { name: "Telegram", icon: "✈️", color: "#229ed9", count: Number(rawShares.telegram) || 0 },
+    { name: "Twitter / X", icon: "𝕏", color: "#0f172a", count: Number(rawShares.twitter) || 0 },
+    { name: "Direct Link Copy", icon: "🔗", color: "#2563eb", count: Number(rawShares.direct) || 0 },
+    { name: "Native Share", icon: "📱", color: "#8b5cf6", count: Number(rawShares.native) || 0 }
+  ];
+
+  const totalPlatformSum = platforms.reduce((acc, p) => acc + p.count, 0) || totalShares || 1;
+  platforms.forEach(p => {
+    p.pct = totalPlatformSum > 0 ? ((p.count / totalPlatformSum) * 100).toFixed(1) : "0.0";
+  });
+
+  const sortedPlatforms = [...platforms].sort((a, b) => b.count - a.count);
+  const topPlatform = sortedPlatforms[0]?.count > 0 ? sortedPlatforms[0].name : "WhatsApp";
+  const topPlatformShare = sortedPlatforms[0]?.count > 0 ? sortedPlatforms[0].pct : "0.0";
+
+  let uniqueSharedCount = 0;
+  const notesWithShares = allNotes.map(n => {
+    const noteData = notesObj[n.id] || {};
+    const noteShares = Number(noteData.shares) || 0;
+    if (noteShares > 0) uniqueSharedCount++;
+    return {
+      note: n,
+      shares: noteShares,
+      likes: Number(noteData.likes) || Number((liveInteractions.likes || {})[n.id]) || 0
+    };
+  });
+
+  const totalNotesCount = allNotes.length || 0;
+  const adoptionPct = totalNotesCount > 0 ? ((uniqueSharedCount / totalNotesCount) * 100).toFixed(1) : "0.0";
+  const spreadVelocity = uniqueSharedCount > 0 ? (totalShares / uniqueSharedCount).toFixed(1) : (totalShares > 0 ? totalShares.toFixed(1) : "0.0");
+
+  // 1. Populate Top 4 KPI Tiles
+  const kpiTotal = $("#shares-kpi-total");
+  const kpiTopPlat = $("#shares-kpi-top-platform");
+  const kpiPlatShare = $("#shares-kpi-platform-share");
+  const kpiUnique = $("#shares-kpi-unique-count");
+  const kpiAdoption = $("#shares-kpi-adoption-rate");
+  const kpiVelocity = $("#shares-kpi-velocity");
+
+  if (kpiTotal) kpiTotal.textContent = totalShares.toLocaleString();
+  if (kpiTopPlat) kpiTopPlat.textContent = topPlatform;
+  if (kpiPlatShare) kpiPlatShare.textContent = totalShares > 0 ? `${topPlatformShare}% of all shares` : "No shares yet";
+  if (kpiUnique) kpiUnique.textContent = `${uniqueSharedCount} / ${totalNotesCount}`;
+  if (kpiAdoption) kpiAdoption.textContent = `${adoptionPct}% Library`;
+  if (kpiVelocity) kpiVelocity.textContent = spreadVelocity;
+
+  // 2. Populate Full-Width Platform Distribution Breakdown Chart (Dashboard Style)
+  const chartGraph = $("#shares-platform-bar-chart");
+  const chartStrip = $("#shares-segmented-strip");
+  const chartGrid = $("#shares-platform-stats-grid");
+  const platBadge = $("#shares-platform-count-badge");
+
+  if (platBadge) platBadge.textContent = totalShares > 0 ? `5 Channels Active · ${totalShares.toLocaleString()} Shares` : `5 Channels Active`;
+
+  const maxPlatformCount = Math.max(...platforms.map(p => p.count), 1);
+
+  // A. Vertical Column Bar Chart
+  if (chartGraph) {
+    chartGraph.innerHTML = platforms.map(p => {
+      const heightPct = p.count === 0 ? 6 : Math.max(14, Math.round((p.count / maxPlatformCount) * 100));
+      return `
+        <div class="chart-col-item" title="${p.name}: ${p.count} shares (${p.pct}%)">
+          <span class="chart-col-val" style="color: ${p.color};">${p.count}</span>
+          <div class="chart-col-bar" style="height: ${heightPct}%; background-color: ${p.color};"></div>
+          <span class="chart-col-label">${p.icon} ${p.name}</span>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // B. Proportional Multi-Segment Progress Strip
+  if (chartStrip) {
+    if (totalShares === 0) {
+      chartStrip.innerHTML = `<div class="chart-segment" style="width: 100%; background-color: var(--border);" title="No shares recorded yet"></div>`;
+    } else {
+      chartStrip.innerHTML = platforms.map(p => {
+        if (p.count === 0) return "";
+        return `<div class="chart-segment" style="width: ${p.pct}%; background-color: ${p.color};" title="${p.name}: ${p.count} shares (${p.pct}%)"></div>`;
+      }).join("");
+    }
+  }
+
+  // C. 5 Platform Stats Grid
+  if (chartGrid) {
+    chartGrid.innerHTML = platforms.map(p => `
+      <div class="cat-stat-card">
+        <div class="cat-stat-top">
+          <span class="cat-stat-icon">${p.icon}</span>
+          <span class="cat-stat-name">${p.name}</span>
+          <strong class="cat-stat-count" style="color: ${p.color};">${p.count}</strong>
+        </div>
+        <div class="cat-stat-bar-track">
+          <div class="cat-stat-bar-fill" style="width: ${Math.max(Number(p.pct), p.count > 0 ? 8 : 0)}%; background-color: ${p.color};"></div>
+        </div>
+        <div class="cat-stat-sub">
+          <span>${p.count} ${p.count === 1 ? 'share' : 'shares'}</span>
+          <span>${p.pct}%</span>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  // 3. Ranked Most Shared Notes Table with Live Search & Sort
+  bindModalTableSortingAndSearch({
+    dialog,
+    searchInputId: "shares-notes-search",
+    sortSelectId: "shares-notes-sort",
+    countBadgeId: "shares-search-count-badge",
+    tableBodyId: "shares-table-body",
+    notesCountBadgeId: "shares-notes-count-badge",
+    items: notesWithShares,
+    defaultSortKey: "shares",
+    defaultSortDir: "desc",
+    metricBadgeLabel: "Notes Ranked by Shares",
+    renderRowHtml: (item, originalRank) => {
+      const rankClass = originalRank === 1 ? "top-1" : (originalRank === 2 ? "top-2" : (originalRank === 3 ? "top-3" : ""));
+      const n = item.note;
+      const subKey = getSubjectKey(n.subject);
+      return `
+        <tr class="likes-table-row">
+          <td style="text-align: center;">
+            <div class="likes-rank-badge ${rankClass}">#${originalRank}</div>
+          </td>
+          <td>
+            <div class="likes-table-title-cell">
+              <strong class="likes-table-title" title="${escapeHtml(n.title)}">${escapeHtml(n.title)}</strong>
+              ${n.tags && n.tags.length ? `<span class="likes-table-tags">${escapeHtml(n.tags.slice(0, 2).join(" "))}</span>` : ""}
+            </div>
+          </td>
+          <td>
+            <span class="subject-chip ${subKey}">${escapeHtml(n.subject)}</span>
+          </td>
+          <td style="text-align: center;">
+            <strong class="likes-val-tag" style="color: #8b5cf6; font-weight: 800; font-size: 0.84rem;">📤 ${item.shares.toLocaleString()}</strong>
+          </td>
+          <td style="text-align: center;">
+            <span class="likes-val-tag">❤️ ${item.likes.toLocaleString()}</span>
+          </td>
+          <td style="text-align: center;">
+            <button type="button" class="likes-table-view-btn" data-view-note-id="${n.id}" title="Inspect Note in Viewer">
+              👁️ View
+            </button>
+          </td>
+        </tr>
+      `;
+    }
+  });
+
+  // Dynamic Insight Text
+  const insightText = $("#shares-insight-text");
+  if (insightText) {
+    if (totalShares > 0) {
+      insightText.innerHTML = `<strong>${escapeHtml(topPlatform)}</strong> is your primary viral engine (${topPlatformShare}% of shares). Students actively distribute study links through study groups; ensure your shared note previews contain crisp subject chips!`;
+    } else {
+      insightText.innerHTML = `Study group referrals on WhatsApp & Telegram drive instant peer engagement. Each shared note link opens directly in the viewer.`;
+    }
+  }
+
+  try {
+    dialog.showModal();
+  } catch {
+    dialog.setAttribute("open", "");
+  }
+}
+
+// ==========================================
+// 4.028 Note Impressions & Viewer Traffic In-Depth Analysis Modal
+// ==========================================
+function openViewsAnalysisModal() {
+  const dialog = $("#views-analysis-dialog");
+  if (!dialog) return;
+
+  const categories = [
+    { name: "History", icon: "📜", color: "#d97706", key: "history" },
+    { name: "Polity", icon: "⚖️", color: "#2563eb", key: "polity" },
+    { name: "Economy", icon: "📈", color: "#059669", key: "economy" },
+    { name: "Geography", icon: "🌍", color: "#0891b2", key: "geography" },
+    { name: "Art and Culture", icon: "🎨", color: "#7c3aed", key: "art-and-culture" },
+    { name: "Maths", icon: "📐", color: "#ea580c", key: "maths" },
+    { name: "Science", icon: "🔬", color: "#e11d48", key: "science" },
+    { name: "Others", icon: "📁", color: "#0284c7", key: "others" }
+  ];
+
+  const totalViews = Number(liveInteractions.totalImpressions) || 0;
+  const totalLikes = Number(liveInteractions.totalLikes) || 0;
+  const totalDownloads = Number(liveInteractions.totalDownloads) || 0;
+  const totalShares = Number(liveInteractions.totalShares) || 0;
+  const impressionsObj = liveInteractions.impressions || {};
+  const notesObj = liveInteractions.notes || {};
+
+  const catViewsMap = {};
+  categories.forEach(c => { catViewsMap[c.name] = 0; });
+
+  const notesWithViews = allNotes.map(n => {
+    const noteData = notesObj[n.id] || {};
+    const noteViews = Number(noteData.impressions) || Number(impressionsObj[n.id]) || 0;
+    const noteLikes = Number(noteData.likes) || Number((liveInteractions.likes || {})[n.id]) || 0;
+    const noteDownloads = Number(noteData.downloads) || Number((liveInteractions.downloads || {})[n.id]) || 0;
+
+    const normSubj = normalizeSubject(n.subject);
+    if (catViewsMap[normSubj] !== undefined) {
+      catViewsMap[normSubj] += noteViews;
+    } else {
+      catViewsMap["History"] += noteViews;
+    }
+
+    return {
+      note: n,
+      views: noteViews,
+      likes: noteLikes,
+      downloads: noteDownloads
+    };
+  });
+
+  const totalNotesCount = allNotes.length || 0;
+  const avgViewsPerNote = totalNotesCount > 0 ? (totalViews / totalNotesCount).toFixed(1) : "0.0";
+  const totalConversions = totalLikes + totalDownloads + totalShares;
+  const conversionRate = totalViews > 0 ? ((totalConversions / totalViews) * 100).toFixed(1) + "%" : "0.0%";
+
+  const sortedCategories = [...categories]
+    .map(c => ({
+      ...c,
+      count: catViewsMap[c.name] || 0,
+      pct: totalViews > 0 ? (((catViewsMap[c.name] || 0) / totalViews) * 100).toFixed(1) : "0.0"
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const topSubject = sortedCategories[0]?.count > 0 ? sortedCategories[0].name : "None Yet";
+  const topSubjectShare = sortedCategories[0]?.count > 0 ? sortedCategories[0].pct : "0.0";
+
+  // 1. Populate Top 4 KPI Tiles
+  const kpiTotal = $("#views-kpi-total");
+  const kpiTopSubj = $("#views-kpi-top-subject");
+  const kpiTopSubjShare = $("#views-kpi-top-subject-share");
+  const kpiAvg = $("#views-kpi-avg");
+  const kpiConversion = $("#views-kpi-conversion");
+
+  if (kpiTotal) kpiTotal.textContent = totalViews.toLocaleString();
+  if (kpiTopSubj) kpiTopSubj.textContent = topSubject;
+  if (kpiTopSubjShare) kpiTopSubjShare.textContent = totalViews > 0 ? `${topSubjectShare}% of viewer attention` : "No impressions yet";
+  if (kpiAvg) kpiAvg.textContent = avgViewsPerNote;
+  if (kpiConversion) kpiConversion.textContent = conversionRate;
+
+  // 2. Populate Full-Width Subject Traffic Breakdown Chart (Dashboard Style)
+  const chartGraph = $("#views-category-bar-chart");
+  const chartStrip = $("#views-segmented-strip");
+  const chartGrid = $("#views-category-stats-grid");
+  const subjBadge = $("#views-subject-count-badge");
+
+  if (subjBadge) subjBadge.textContent = totalViews > 0 ? `8 Subjects Active · ${totalViews.toLocaleString()} Impressions` : `8 Subjects Active`;
+
+  const maxViewCount = Math.max(...categories.map(c => catViewsMap[c.name] || 0), 1);
+
+  // A. Vertical Column Bar Chart
+  if (chartGraph) {
+    chartGraph.innerHTML = categories.map(c => {
+      const count = catViewsMap[c.name] || 0;
+      const heightPct = count === 0 ? 6 : Math.max(14, Math.round((count / maxViewCount) * 100));
+      const pct = totalViews > 0 ? Math.round((count / totalViews) * 100) : 0;
+      return `
+        <div class="chart-col-item" title="${c.name}: ${count} views (${pct}%)">
+          <span class="chart-col-val" style="color: ${c.color};">${count}</span>
+          <div class="chart-col-bar" style="height: ${heightPct}%; background-color: ${c.color};"></div>
+          <span class="chart-col-label">${c.icon} ${c.name}</span>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // B. Proportional Multi-Segment Progress Strip
+  if (chartStrip) {
+    if (totalViews === 0) {
+      chartStrip.innerHTML = `<div class="chart-segment" style="width: 100%; background-color: var(--border);" title="No impressions recorded yet"></div>`;
+    } else {
+      chartStrip.innerHTML = categories.map(c => {
+        const count = catViewsMap[c.name] || 0;
+        if (count === 0) return "";
+        const pct = ((count / totalViews) * 100).toFixed(1);
+        return `<div class="chart-segment" style="width: ${pct}%; background-color: ${c.color};" title="${c.name}: ${count} views (${pct}%)"></div>`;
+      }).join("");
+    }
+  }
+
+  // C. 8 Category Stats Grid
+  if (chartGrid) {
+    chartGrid.innerHTML = categories.map(c => {
+      const count = catViewsMap[c.name] || 0;
+      const pct = totalViews > 0 ? Math.round((count / totalViews) * 100) : 0;
+      return `
+        <div class="cat-stat-card">
+          <div class="cat-stat-top">
+            <span class="cat-stat-icon">${c.icon}</span>
+            <span class="cat-stat-name">${c.name}</span>
+            <strong class="cat-stat-count" style="color: ${c.color};">${count}</strong>
+          </div>
+          <div class="cat-stat-bar-track">
+            <div class="cat-stat-bar-fill" style="width: ${Math.max(pct, count > 0 ? 8 : 0)}%; background-color: ${c.color};"></div>
+          </div>
+          <div class="cat-stat-sub">
+            <span>${count} ${count === 1 ? 'view' : 'views'}</span>
+            <span>${pct}%</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // 3. Ranked Most Explored Notes Table with Live Search & Sort
+  bindModalTableSortingAndSearch({
+    dialog,
+    searchInputId: "views-notes-search",
+    sortSelectId: "views-notes-sort",
+    countBadgeId: "views-search-count-badge",
+    tableBodyId: "views-table-body",
+    notesCountBadgeId: "views-notes-count-badge",
+    items: notesWithViews,
+    defaultSortKey: "views",
+    defaultSortDir: "desc",
+    metricBadgeLabel: "Notes Ranked by Impressions",
+    renderRowHtml: (item, originalRank) => {
+      const rankClass = originalRank === 1 ? "top-1" : (originalRank === 2 ? "top-2" : (originalRank === 3 ? "top-3" : ""));
+      const n = item.note;
+      const subKey = getSubjectKey(n.subject);
+      return `
+        <tr class="likes-table-row">
+          <td style="text-align: center;">
+            <div class="likes-rank-badge ${rankClass}">#${originalRank}</div>
+          </td>
+          <td>
+            <div class="likes-table-title-cell">
+              <strong class="likes-table-title" title="${escapeHtml(n.title)}">${escapeHtml(n.title)}</strong>
+              ${n.tags && n.tags.length ? `<span class="likes-table-tags">${escapeHtml(n.tags.slice(0, 2).join(" "))}</span>` : ""}
+            </div>
+          </td>
+          <td>
+            <span class="subject-chip ${subKey}">${escapeHtml(n.subject)}</span>
+          </td>
+          <td style="text-align: center;">
+            <strong style="color: #f59e0b; font-weight: 800; font-size: 0.84rem;">👁️ ${item.views.toLocaleString()}</strong>
+          </td>
+          <td style="text-align: center;">
+            <span class="likes-val-tag">❤️ ${item.likes.toLocaleString()}</span>
+          </td>
+          <td style="text-align: center;">
+            <button type="button" class="likes-table-view-btn" data-view-note-id="${n.id}" title="Inspect Note in Viewer">
+              👁️ View
+            </button>
+          </td>
+        </tr>
+      `;
+    }
+  });
+
+  // Dynamic Insight Text
+  const insightText = $("#views-insight-text");
+  if (insightText) {
+    if (totalViews > 0 && sortedCategories[0]?.count > 0) {
+      insightText.innerHTML = `<strong>${escapeHtml(topSubject)}</strong> commands the highest student viewing attention (${topSubjectShare}% of total viewer traffic). Notes in this category have high click-through engagement!`;
+    } else {
+      insightText.innerHTML = `Impressions measure every time a student opens a diagram in full resolution to study.`;
+    }
+  }
+
+  try {
+    dialog.showModal();
+  } catch {
+    dialog.setAttribute("open", "");
+  }
 }
 
 // ==========================================
@@ -3218,8 +4229,18 @@ function setupEventListeners() {
 
   attachSpellChecker(
     $("#edit-note-title"),
-    $("#edit-title-spell-alert")
+    $("#edit-title-spell-alert"),
+    () => {
+      const titleInput = $("#edit-note-title");
+      const charCount = $("#edit-title-char-count");
+      if (charCount && titleInput) charCount.textContent = `${titleInput.value.length}/80`;
+    }
   );
+
+  $("#edit-note-title")?.addEventListener("input", e => {
+    const charCount = $("#edit-title-char-count");
+    if (charCount) charCount.textContent = `${e.target.value.length}/80`;
+  });
 
   attachSpellChecker(
     $("#edit-note-tags"),
@@ -4856,9 +5877,21 @@ function setupEventListeners() {
   $("#category-bar-chart")?.addEventListener("click", handleCatFilterClick);
 
   // Lightbox Zoom & Navigation Actions
-  $("#lightbox-zoom-in")?.addEventListener("click", zoomIn);
-  $("#lightbox-zoom-out")?.addEventListener("click", zoomOut);
-  $("#lightbox-zoom-reset")?.addEventListener("click", resetZoom);
+  $("#lightbox-zoom-in")?.addEventListener("click", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    zoomIn();
+  });
+  $("#lightbox-zoom-out")?.addEventListener("click", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    zoomOut();
+  });
+  $("#lightbox-zoom-reset")?.addEventListener("click", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    resetZoom();
+  });
 
   $("#lightbox-prev-btn")?.addEventListener("click", prevLightbox);
   $("#lightbox-next-btn")?.addEventListener("click", nextLightbox);
@@ -4988,27 +6021,31 @@ let dragStartX = 0;
 let dragStartY = 0;
 
 function applyZoomTransform() {
-  const layer = $("#lightbox-media-container .lightbox-img-transform-layer");
   const container = $("#lightbox-media-container");
+  const layer = $("#lightbox-media-container .lightbox-img-transform-layer") || $("#lightbox-media-container img");
   const zoomText = $("#lightbox-zoom-level");
 
-  if (zoomText) zoomText.textContent = `${Math.round(currentZoom * 100)}%`;
+  if (zoomText) {
+    zoomText.textContent = `${Math.round(currentZoom * 100)}%`;
+  }
 
   if (layer) {
-    if (currentZoom <= 1.05) {
+    if (currentZoom <= 1.02) {
       panX = 0;
       panY = 0;
     }
-    layer.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+    layer.style.transformOrigin = "center center";
+    layer.style.transition = isDragging ? "none" : "transform 0.16s ease-out";
+    layer.style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${currentZoom})`;
   }
 
   if (container) {
-    container.classList.toggle("is-zoomed", currentZoom > 1.05);
+    container.classList.toggle("is-zoomed", currentZoom > 1.02);
   }
 }
 
 function setZoom(scale) {
-  currentZoom = Math.min(Math.max(scale, 0.6), 3.5);
+  currentZoom = Math.min(Math.max(Math.round(scale * 100) / 100, 0.5), 4.0);
   applyZoomTransform();
 }
 

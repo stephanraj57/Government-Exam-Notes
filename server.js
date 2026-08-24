@@ -216,11 +216,15 @@ function registerSessionHeartbeat(request, body = null, isLeave = false) {
 }
 
 function getLocalDateKey() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  try {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
+  } catch {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
 }
 
 async function handleApi(request, response, url) {
@@ -238,13 +242,17 @@ async function handleApi(request, response, url) {
   if (request.method === "GET" && url.pathname === "/api/visits") {
     registerSessionHeartbeat(request);
     const visits = await readJson(VISITS_FILE).catch(() => ({ count: 0, daily: {} }));
+    if (!visits.daily) visits.daily = {};
     const todayKey = getLocalDateKey();
-    const todayCount = (visits.daily && visits.daily[todayKey]) || 0;
+    const todayCount = Number(visits.daily[todayKey]) || 0;
+    const dailySum = Object.values(visits.daily).reduce((sum, val) => sum + (Number(val) || 0), 0);
+    const totalCount = Math.max(Number(visits.count) || 0, dailySum, todayCount);
+
     sendJson(response, 200, {
-      count: visits.count || 0,
+      count: totalCount,
       today: todayCount,
       activeUsers: getActiveUsersCount(),
-      daily: visits.daily || {}
+      daily: visits.daily
     });
     return true;
   }
@@ -261,16 +269,20 @@ async function handleApi(request, response, url) {
 
     // Track Today's Unique Visitor (if client hasn't visited today yet)
     if (cookies.examVisitorDay !== todayKey) {
-      visits.daily[todayKey] = (visits.daily[todayKey] || 0) + 1;
+      visits.daily[todayKey] = (Number(visits.daily[todayKey]) || 0) + 1;
+      visits.count = (Number(visits.count) || 0) + 1;
       setCookiesList.push(`examVisitorDay=${todayKey}; Path=/; Max-Age=86400; SameSite=Lax`);
       shouldSave = true;
     }
 
-    // Track Lifetime Unique Visitor (if first time ever visiting website)
     if (!cookies.examVisitorUid) {
-      visits.count = (visits.count || 0) + 1;
       const uid = crypto.randomUUID();
       setCookiesList.push(`examVisitorUid=${uid}; Path=/; Max-Age=31536000; SameSite=Lax`);
+    }
+
+    const dailySum = Object.values(visits.daily).reduce((sum, val) => sum + (Number(val) || 0), 0);
+    if ((Number(visits.count) || 0) < dailySum) {
+      visits.count = dailySum;
       shouldSave = true;
     }
 
@@ -283,9 +295,11 @@ async function handleApi(request, response, url) {
       headers["Set-Cookie"] = setCookiesList.length === 1 ? setCookiesList[0] : setCookiesList;
     }
 
-    const todayCount = visits.daily[todayKey] || 0;
+    const todayCount = Number(visits.daily[todayKey]) || 0;
+    const finalCount = Math.max(Number(visits.count) || 0, dailySum, todayCount);
+
     sendJson(response, 200, {
-      count: visits.count || 0,
+      count: finalCount,
       today: todayCount,
       activeUsers: getActiveUsersCount(),
       daily: visits.daily
@@ -310,7 +324,34 @@ async function handleApi(request, response, url) {
       searches: {},
       missingSearches: {}
     }));
+    if (!interactions.notes) interactions.notes = {};
+    if (!interactions.searches) interactions.searches = {};
+    if (!interactions.missingSearches) interactions.missingSearches = {};
+
+    const notes = await readJson(NOTES_FILE).catch(() => []);
+    const activeNoteIds = new Set(notes.map(n => n.id));
+
+    let syncedLikes = 0;
+    let syncedDownloads = 0;
+    let syncedImpressions = 0;
+
+    for (const [id, data] of Object.entries(interactions.notes)) {
+      if (activeNoteIds.has(id) || id.startsWith("sample-")) {
+        syncedLikes += (Number(data.likes) || 0);
+        syncedDownloads += (Number(data.downloads) || 0);
+        syncedImpressions += (Number(data.impressions) || 0);
+      } else {
+        delete interactions.notes[id];
+      }
+    }
+
+    interactions.totalLikes = syncedLikes;
+    interactions.totalDownloads = syncedDownloads;
+    interactions.totalImpressions = Math.max(syncedImpressions, Number(interactions.totalImpressions) || 0);
     interactions.activeUsers = getActiveUsersCount();
+
+    await writeJson(INTERACTIONS_FILE, interactions).catch(() => {});
+
     sendJson(response, 200, interactions);
     return true;
   }
@@ -739,6 +780,32 @@ async function handleApi(request, response, url) {
     interactions.missingSearches = {};
     await writeJson(INTERACTIONS_FILE, interactions);
     sendJson(response, 200, { success: true, missingSearches: {} });
+    return true;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/admin/interactions/clear") {
+    if (!isAdmin(request)) {
+      const body = await readBody(request).catch(() => ({}));
+      const enteredPassword = String(body.password || request.headers["x-admin-password"] || "").trim();
+      if (!safePasswordMatch(enteredPassword)) {
+        return sendUnauthorized(response), true;
+      }
+    }
+
+    const clearedInteractions = {
+      totalLikes: 0,
+      totalDownloads: 0,
+      totalShares: 0,
+      totalSearches: 0,
+      totalImpressions: 0,
+      notes: {},
+      shares: {},
+      searches: {},
+      missingSearches: {}
+    };
+
+    await writeJson(INTERACTIONS_FILE, clearedInteractions);
+    sendJson(response, 200, { success: true, cleared: true });
     return true;
   }
 

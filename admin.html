@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=25.0">
+  <link rel="stylesheet" href="styles.css?v=53.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -448,10 +448,23 @@
       <!-- View: User Interactions (Likes, Downloads, Searches, Views Analytics) -->
       <div id="admin-view-interactions" class="admin-view-pane" hidden>
         
+        <!-- Top Action Header for Interactions Page -->
+        <div class="interactions-pane-header">
+          <div class="interactions-header-left">
+            <h2 class="interactions-page-title">⚡ Student Interactions Analytics</h2>
+            <p class="interactions-page-sub">Track student favorites, downloads, social shares, and visual search discovery</p>
+          </div>
+          <div class="interactions-header-actions">
+            <button type="button" id="clear-all-interactions-btn" class="clear-interactions-btn" title="Clear all likes, downloads, shares, searches, and views data from this page">
+              <span>🗑️</span> Clear All
+            </button>
+          </div>
+        </div>
+
         <!-- Top 4 Interaction Stat Cards -->
         <div class="interactions-metrics-grid">
           
-          <div class="metric-card interaction-kpi-card kpi-likes">
+          <div class="metric-card interaction-kpi-card kpi-likes clickable-kpi-card" id="kpi-card-likes" role="button" tabindex="0" title="Click to view Likes breakdown & student favorites">
             <div class="metric-icon-wrap icon-likes">❤️</div>
             <div class="metric-info">
               <p class="metric-label">Total Notes Liked</p>
@@ -460,7 +473,7 @@
             </div>
           </div>
 
-          <div class="metric-card interaction-kpi-card kpi-downloads">
+          <div class="metric-card interaction-kpi-card kpi-downloads clickable-kpi-card" id="kpi-card-downloads" role="button" tabindex="0" title="Click to view Downloads breakdown & high-res exports">
             <div class="metric-icon-wrap icon-downloads">⬇️</div>
             <div class="metric-info">
               <p class="metric-label">Total Downloads</p>
@@ -469,7 +482,7 @@
             </div>
           </div>
 
-          <div class="metric-card interaction-kpi-card kpi-shares">
+          <div class="metric-card interaction-kpi-card kpi-shares clickable-kpi-card" id="kpi-card-shares" role="button" tabindex="0" title="Click to view Notes Shared & social referral distribution">
             <div class="metric-icon-wrap icon-shares">📤</div>
             <div class="metric-info">
               <p class="metric-label">Notes Shared</p>
@@ -478,7 +491,7 @@
             </div>
           </div>
 
-          <div class="metric-card interaction-kpi-card kpi-views">
+          <div class="metric-card interaction-kpi-card kpi-views clickable-kpi-card" id="kpi-card-views" role="button" tabindex="0" title="Click to view Note Impressions & viewer traffic breakdown">
             <div class="metric-icon-wrap icon-views">👁️</div>
             <div class="metric-info">
               <p class="metric-label">Note Impressions</p>
@@ -505,7 +518,7 @@
             <div class="interaction-bars-container">
               
               <!-- Bar 1: Views -->
-              <div class="interaction-bar-row">
+              <div class="interaction-bar-row clickable-interaction-row" id="interaction-row-views" role="button" tabindex="0" title="Click to view Note Impressions">
                 <div class="interaction-row-label">
                   <span class="interaction-icon">👁️</span>
                   <strong>Lightbox Views</strong>
@@ -517,7 +530,7 @@
               </div>
 
               <!-- Bar 2: Downloads -->
-              <div class="interaction-bar-row">
+              <div class="interaction-bar-row clickable-interaction-row" id="interaction-row-downloads" role="button" tabindex="0" title="Click to view Note Downloads">
                 <div class="interaction-row-label">
                   <span class="interaction-icon">⬇️</span>
                   <strong>Note Downloads</strong>
@@ -529,7 +542,7 @@
               </div>
 
               <!-- Bar 3: Shares -->
-              <div class="interaction-bar-row">
+              <div class="interaction-bar-row clickable-interaction-row" id="interaction-row-shares" role="button" tabindex="0" title="Click to view Notes Shared">
                 <div class="interaction-row-label">
                   <span class="interaction-icon">📤</span>
                   <strong>Notes Shared</strong>
@@ -541,7 +554,7 @@
               </div>
 
               <!-- Bar 4: Likes -->
-              <div class="interaction-bar-row">
+              <div class="interaction-bar-row clickable-interaction-row" id="interaction-row-likes" role="button" tabindex="0" title="Click to view Likes & Saves breakdown">
                 <div class="interaction-row-label">
                   <span class="interaction-icon">❤️</span>
                   <strong>Likes & Saves</strong>
@@ -1288,138 +1301,171 @@
     </section>
   </main>
 
-  <!-- Edit Note Modal Dialog -->
-  <dialog id="admin-edit-dialog" class="dialog edit-note-dialog">
-    <form id="admin-edit-form" class="edit-dialog-form">
-      <button class="close-button" type="button" data-close title="Close">×</button>
+  <!-- Edit Note Modal Dialog (Ultra-Glassmorphic Studio Modal) -->
+  <dialog id="admin-edit-dialog" class="dialog edit-note-dialog edit-note-glass-dialog">
+    <form id="admin-edit-form" class="edit-dialog-form edit-glass-form">
       
-      <div class="edit-dialog-header">
-        <p class="eyebrow">Content Studio</p>
-        <h2>Edit Revision Note</h2>
-        <p class="dialog-sub">Update topic title, subject, and tags.</p>
+      <div class="edit-dialog-header edit-glass-header">
+        <div class="edit-header-left">
+          <div class="edit-badge-icon">✏️</div>
+          <div>
+            <h3 class="edit-modal-title">Edit Revision Note</h3>
+            <p class="edit-modal-sub">Update topic title, academic subject, and search keywords</p>
+          </div>
+        </div>
+        <button class="edit-modal-close" type="button" data-close title="Close (Esc)">×</button>
       </div>
       
       <input id="edit-note-id" type="hidden">
 
-      <div class="edit-fields-grid">
-        <div class="form-group">
-          <label class="form-label-title" for="edit-note-title">Topic Title</label>
-          <input id="edit-note-title" class="form-control" type="text" maxlength="80" placeholder="e.g. Fundamental Rights" required spellcheck="true" lang="en">
+      <div class="edit-fields-grid edit-glass-fields-grid">
+        <div class="edit-field-card">
+          <div class="edit-field-label-row">
+            <label class="form-label-title" for="edit-note-title">
+              <span class="label-icon">✍️</span> Topic Title <span class="req-star" style="color: #ef4444;">*</span>
+            </label>
+            <span class="char-count" id="edit-title-char-count">0/80</span>
+          </div>
+          <div class="publish-input-wrap">
+            <input id="edit-note-title" class="form-control edit-glass-input" type="text" maxlength="80" placeholder="e.g. Fundamental Rights (Articles 12–35)" required spellcheck="true" lang="en">
+          </div>
           <div id="edit-title-spell-alert" class="spelling-alert-container" hidden></div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label-title" for="edit-note-subject">Subject & Category</label>
-          <select id="edit-note-subject" class="form-control" required>
-            <option value="History">📜 History</option>
-            <option value="Polity">⚖️ Polity</option>
-            <option value="Economy">📈 Economy</option>
-            <option value="Geography">🌍 Geography</option>
-            <option value="Art and Culture">🎨 Art and Culture</option>
-            <option value="Maths">📐 Maths</option>
-            <option value="Science">🔬 Science</option>
-            <option value="Others">📁 Others</option>
-          </select>
+        <div class="edit-field-card">
+          <label class="form-label-title" for="edit-note-subject">
+            <span class="label-icon">📚</span> Subject & Category <span class="req-star" style="color: #ef4444;">*</span>
+          </label>
+          <div class="publish-input-wrap">
+            <select id="edit-note-subject" class="form-control edit-glass-select" required>
+              <option value="History">📜 History</option>
+              <option value="Polity">⚖️ Polity</option>
+              <option value="Economy">📈 Economy</option>
+              <option value="Geography">🌍 Geography</option>
+              <option value="Art and Culture">🎨 Art and Culture</option>
+              <option value="Maths">📐 Maths</option>
+              <option value="Science">🔬 Science</option>
+              <option value="Others">📁 Others</option>
+            </select>
+          </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label-title" for="edit-note-tags">Multiple Tags (Comma-separated)</label>
-          <input id="edit-note-tags" class="form-control" type="text" placeholder="e.g. UPSC, Constitution, Articles" spellcheck="true" lang="en">
+        <div class="edit-field-card">
+          <label class="form-label-title" for="edit-note-tags">
+            <span class="label-icon">🏷️</span> Multiple Tags (Comma-separated)
+          </label>
+          <div class="publish-input-wrap">
+            <input id="edit-note-tags" class="form-control edit-glass-input" type="text" placeholder="e.g. UPSC, Constitution, Articles, Prelims 2025" spellcheck="true" lang="en">
+          </div>
           <div id="edit-tags-spell-alert" class="spelling-alert-container" hidden></div>
         </div>
       </div>
 
       <p id="edit-form-msg" class="form-message"></p>
 
-      <div class="modal-btn-row">
-        <button class="outline-button" type="button" data-close>Cancel</button>
-        <button id="edit-submit-btn" class="upload-button" type="submit">
+      <div class="modal-btn-row edit-modal-btn-row">
+        <button class="outline-button edit-glass-cancel-btn" type="button" data-close>Cancel</button>
+        <button id="edit-submit-btn" class="upload-button edit-glass-submit-btn" type="submit">
           <span>✓</span> Save Changes
         </button>
       </div>
     </form>
   </dialog>
 
-  <!-- High-Security Clean All Data Confirmation Modal Dialog -->
-  <dialog id="admin-clean-data-dialog" class="dialog edit-dialog clean-data-dialog">
-    <form id="admin-clean-data-form" class="edit-dialog-content" style="max-width: 460px;">
-      <button class="close-button" type="button" data-close title="Close">×</button>
-      
-      <div class="edit-dialog-header">
-        <p class="eyebrow" style="color: #ef4444;">⚠️ High-Security Action</p>
-        <h2>Clean All Website Data</h2>
-        <p class="dialog-sub">Permanently wipe all revision notes, visitor metrics, search demands, and local caches.</p>
-      </div>
-
-      <div class="clean-data-warning-box">
-        <span class="warning-icon" style="font-size: 1.5rem;">🚨</span>
-        <div class="warning-text">
-          <strong style="color: #ef4444; font-size: 0.9rem;">Irreversible Operation</strong>
-          <p style="margin: 3px 0 0; font-size: 0.82rem; color: var(--ink-sub); line-height: 1.4;">Enter your Super Administrator password to authorize wiping all platform data.</p>
+  <!-- High-Security Clean All Data Confirmation Modal Dialog (Ultra-Glassmorphic) -->
+  <dialog id="admin-clean-data-dialog" class="dialog edit-dialog clean-data-dialog clean-data-glass-dialog">
+    <form id="admin-clean-data-form" class="edit-dialog-content clean-data-glass-content">
+      <div class="edit-dialog-header clean-data-glass-header">
+        <div class="edit-header-left">
+          <div class="clean-badge-icon">🚨</div>
+          <div>
+            <h3 class="edit-modal-title" style="color: #ef4444;">Clean All Website Data</h3>
+            <p class="edit-modal-sub">Permanently wipe all revision notes, visitor metrics, search demands, and local caches</p>
+          </div>
         </div>
+        <button class="edit-modal-close" type="button" data-close title="Close (Esc)">×</button>
       </div>
 
-      <div class="form-group" style="margin-top: 16px;">
-        <label class="form-label-title" for="clean-data-password-input">Super Admin Password <span class="req-star" style="color: #ef4444;">*</span></label>
-        <div class="pwd-input-wrap">
-          <input id="clean-data-password-input" class="form-control" type="password" placeholder="Enter admin password to confirm" required autocomplete="current-password">
-          <button type="button" id="toggle-clean-pwd-visibility" class="pwd-visibility-btn" title="Toggle password visibility">
-            <svg id="clean-pwd-eye-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-              <circle cx="12" cy="12" r="3"></circle>
-            </svg>
-          </button>
+      <div class="clean-data-glass-body">
+        <div class="clean-data-warning-box clean-data-glass-warning">
+          <span class="warning-icon" style="font-size: 1.6rem;">⚠️</span>
+          <div class="warning-text">
+            <strong style="color: #ef4444; font-size: 0.92rem;">Irreversible Platform Operation</strong>
+            <p style="margin: 3px 0 0; font-size: 0.82rem; color: var(--ink-sub); line-height: 1.45;">Enter your Super Administrator password to authorize wiping all platform data.</p>
+          </div>
         </div>
+
+        <div class="edit-field-card clean-pwd-field-card" style="margin-top: 12px;">
+          <label class="form-label-title" for="clean-data-password-input">
+            <span class="label-icon">🔒</span> Super Admin Password <span class="req-star" style="color: #ef4444;">*</span>
+          </label>
+          <div class="pwd-input-wrap" style="position: relative; display: flex; align-items: center;">
+            <input id="clean-data-password-input" class="form-control edit-glass-input" type="password" placeholder="Enter admin password to confirm" required autocomplete="current-password" style="padding-right: 38px;">
+            <button type="button" id="toggle-clean-pwd-visibility" class="pwd-visibility-btn" title="Toggle password visibility" style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: var(--ink-muted); display: flex; align-items: center; padding: 4px;">
+              <svg id="clean-pwd-eye-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <p id="clean-data-error-msg" class="form-message" style="margin-top: 8px;"></p>
       </div>
 
-      <p id="clean-data-error-msg" class="form-message" style="margin-top: 8px;"></p>
-
-      <div class="modal-btn-row" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 10px;">
-        <button class="outline-button" type="button" data-close>Cancel</button>
-        <button id="clean-data-submit-btn" class="danger-btn bulk-btn" type="submit" style="padding: 10px 18px; font-weight: 700; background: #ef4444; color: #fff; border: 0; border-radius: var(--radius-md); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+      <div class="modal-btn-row clean-data-glass-footer">
+        <button class="outline-button edit-glass-cancel-btn" type="button" data-close>Cancel</button>
+        <button id="clean-data-submit-btn" class="danger-btn bulk-btn clean-data-submit-btn" type="submit" style="padding: 10px 18px; font-weight: 700; background: #ef4444; color: #fff; border: 0; border-radius: var(--radius-md); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
           <span>🗑️</span> Confirm & Wipe All Data
         </button>
       </div>
     </form>
   </dialog>
 
-  <!-- High-Security Delete Note Confirmation Modal Dialog -->
-  <dialog id="admin-delete-note-dialog" class="dialog edit-dialog delete-note-dialog">
-    <form id="admin-delete-note-form" class="edit-dialog-content" style="max-width: 460px;">
-      <button class="close-button" type="button" data-close title="Close">×</button>
-      
-      <div class="edit-dialog-header">
-        <p class="eyebrow" style="color: #ef4444;">⚠️ Permanent Removal</p>
-        <h2 id="delete-note-modal-heading">Delete Note from Library</h2>
-        <p id="delete-note-modal-desc" class="dialog-sub">Permanently delete note and its diagram from the student revision library.</p>
-      </div>
-
-      <div class="clean-data-warning-box">
-        <span class="warning-icon" style="font-size: 1.5rem;">🗑️</span>
-        <div class="warning-text">
-          <strong id="delete-note-target-name" style="color: var(--ink); font-size: 0.9rem; display: block; word-break: break-word;">Note Title</strong>
-          <p style="margin: 3px 0 0; font-size: 0.82rem; color: var(--ink-sub); line-height: 1.4;">Enter your Super Administrator password to authorize this deletion.</p>
+  <!-- High-Security Delete Note Confirmation Modal Dialog (Ultra-Glassmorphic) -->
+  <dialog id="admin-delete-note-dialog" class="dialog edit-dialog delete-note-dialog delete-note-glass-dialog">
+    <form id="admin-delete-note-form" class="edit-dialog-content delete-note-glass-content">
+      <div class="edit-dialog-header delete-note-glass-header">
+        <div class="edit-header-left">
+          <div class="delete-badge-icon">🗑️</div>
+          <div>
+            <h3 id="delete-note-modal-heading" class="edit-modal-title" style="color: #ef4444;">Delete Note from Library</h3>
+            <p id="delete-note-modal-desc" class="edit-modal-sub">Permanently delete note and its diagram from the student revision library</p>
+          </div>
         </div>
+        <button class="edit-modal-close" type="button" data-close title="Close (Esc)">×</button>
       </div>
 
-      <div class="form-group" style="margin-top: 16px;">
-        <label class="form-label-title" for="delete-note-password-input">Super Admin Password <span class="req-star" style="color: #ef4444;">*</span></label>
-        <div class="pwd-input-wrap">
-          <input id="delete-note-password-input" class="form-control" type="password" placeholder="Enter admin password to confirm" required autocomplete="current-password">
-          <button type="button" id="toggle-delete-pwd-visibility" class="pwd-visibility-btn" title="Toggle password visibility">
-            <svg id="delete-pwd-eye-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-              <circle cx="12" cy="12" r="3"></circle>
-            </svg>
-          </button>
+      <div class="delete-note-glass-body">
+        <div class="clean-data-warning-box delete-note-glass-target-box">
+          <span class="warning-icon" style="font-size: 1.6rem;">📄</span>
+          <div class="warning-text">
+            <strong id="delete-note-target-name" style="color: var(--ink); font-size: 0.92rem; display: block; word-break: break-word;">Note Title</strong>
+            <p style="margin: 3px 0 0; font-size: 0.82rem; color: var(--ink-sub); line-height: 1.45;">Enter your Super Administrator password to authorize this deletion.</p>
+          </div>
         </div>
+
+        <div class="edit-field-card delete-pwd-field-card" style="margin-top: 12px;">
+          <label class="form-label-title" for="delete-note-password-input">
+            <span class="label-icon">🔒</span> Super Admin Password <span class="req-star" style="color: #ef4444;">*</span>
+          </label>
+          <div class="pwd-input-wrap" style="position: relative; display: flex; align-items: center;">
+            <input id="delete-note-password-input" class="form-control edit-glass-input" type="password" placeholder="Enter admin password to confirm" required autocomplete="current-password" style="padding-right: 38px;">
+            <button type="button" id="toggle-delete-pwd-visibility" class="pwd-visibility-btn" title="Toggle password visibility" style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: var(--ink-muted); display: flex; align-items: center; padding: 4px;">
+              <svg id="delete-pwd-eye-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <p id="delete-note-error-msg" class="form-message" style="margin-top: 8px;"></p>
       </div>
 
-      <p id="delete-note-error-msg" class="form-message" style="margin-top: 8px;"></p>
-
-      <div class="modal-btn-row" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 10px;">
-        <button class="outline-button" type="button" data-close>Cancel</button>
-        <button id="delete-note-submit-btn" class="danger-btn bulk-btn" type="submit" style="padding: 10px 18px; font-weight: 700; background: #ef4444; color: #fff; border: 0; border-radius: var(--radius-md); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+      <div class="modal-btn-row delete-note-glass-footer">
+        <button class="outline-button edit-glass-cancel-btn" type="button" data-close>Cancel</button>
+        <button id="delete-note-submit-btn" class="danger-btn bulk-btn delete-note-submit-btn" type="submit" style="padding: 10px 18px; font-weight: 700; background: #ef4444; color: #fff; border: 0; border-radius: var(--radius-md); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
           <span>🗑️</span> Confirm Delete
         </button>
       </div>
@@ -1427,9 +1473,8 @@
   </dialog>
 
   <!-- Edit Admin Profile Details Modal Dialog (Spacious Studio Modal) -->
-  <dialog id="admin-edit-profile-dialog" class="dialog edit-dialog edit-profile-dialog edit-profile-dialog-spacious">
-    <form id="admin-edit-profile-form" class="edit-dialog-content edit-dialog-spacious-content">
-      <button class="close-button" type="button" data-close title="Close">×</button>
+  <dialog id="admin-edit-profile-dialog" class="dialog edit-dialog edit-profile-dialog edit-profile-dialog-spacious edit-profile-glass-dialog">
+    <form id="admin-edit-profile-form" class="edit-dialog-content edit-dialog-spacious-content edit-profile-glass-content">
       
       <!-- Top Brand Header Bar with Home Page Logo -->
       <div class="edit-dialog-brand-header">
@@ -1444,173 +1489,178 @@
         </div>
         <div class="edit-dialog-header-meta">
           <span class="edit-modal-badge">✦ Admin Profile Studio ✦</span>
+          <button class="edit-modal-close" type="button" data-close title="Close (Esc)">×</button>
         </div>
       </div>
 
-      <!-- 2-Column Main Studio Grid -->
-      <div class="edit-profile-grid-2col">
-        
-        <!-- Left Column: Visual Identity, Logo, Avatar & Instagram Barcode Uploaders -->
-        <div class="edit-profile-left-col">
+      <!-- Scrollable Studio Content Body -->
+      <div class="edit-profile-body-scroll">
+        <!-- 2-Column Main Studio Grid -->
+        <div class="edit-profile-grid-2col">
           
-          <!-- Creator Avatar Preview Card -->
-          <div class="edit-profile-card-box">
-            <span class="edit-box-label">📸 Creator Profile Photo</span>
+          <!-- Left Column: Visual Identity, Logo, Avatar & Instagram Barcode Uploaders -->
+          <div class="edit-profile-left-col">
             
-            <div class="edit-avatar-center-wrap">
-              <div class="edit-avatar-preview-ring" id="edit-avatar-preview-ring" role="button" tabindex="0" title="Click to choose a new photo">
-                <img id="edit-avatar-preview-img" src="assets/admin.jpg" alt="Admin Avatar" class="edit-avatar-preview-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
-                <div id="edit-avatar-preview-fallback" class="edit-avatar-preview-fallback" style="display:none;">SR</div>
-                <div class="edit-avatar-upload-overlay" title="Upload New Profile Picture">
-                  <span class="camera-icon">📷</span>
-                  <small>Change</small>
+            <!-- Creator Avatar Preview Card -->
+            <div class="edit-profile-card-box">
+              <span class="edit-box-label">📸 Creator Profile Photo</span>
+              
+              <div class="edit-avatar-center-wrap">
+                <div class="edit-avatar-preview-ring" id="edit-avatar-preview-ring" role="button" tabindex="0" title="Click to choose a new photo">
+                  <img id="edit-avatar-preview-img" src="assets/admin.jpg" alt="Admin Avatar" class="edit-avatar-preview-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
+                  <div id="edit-avatar-preview-fallback" class="edit-avatar-preview-fallback" style="display:none;">SR</div>
+                  <div class="edit-avatar-upload-overlay" title="Upload New Profile Picture">
+                    <span class="camera-icon">📷</span>
+                    <small>Change</small>
+                  </div>
+                </div>
+                <input type="file" id="edit-avatar-file-input" accept="image/png,image/jpeg,image/webp,image/jpg" style="display:none;">
+                <button type="button" id="edit-avatar-trigger-btn" class="profile-act-btn secondary edit-photo-btn">
+                  <span>📷</span> Change Photo
+                </button>
+                <p class="avatar-upload-hint">Updates avatar across About Us and Admin Header</p>
+              </div>
+            </div>
+
+            <!-- Website Brand Logo Uploader Card (All Pages) -->
+            <div class="edit-profile-card-box edit-logo-showcase-box">
+              <div class="edit-logo-box-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span class="edit-box-label" style="margin-bottom: 0;">🖼️ Website Brand Logo</span>
+                <span class="edit-asset-badge">All Pages</span>
+              </div>
+
+              <div class="edit-logo-preview-body" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px;">
+                <div class="edit-logo-preview-frame">
+                  <img id="edit-logo-preview-img" src="assets/ailogo.png" alt="Website Logo Preview" class="edit-logo-preview-img" onerror="this.onerror=null; this.src='favicon.png';">
+                </div>
+                <input type="file" id="edit-logo-file-input" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/jpg" style="display:none;">
+                <button type="button" id="edit-logo-trigger-btn" class="profile-act-btn secondary edit-photo-btn" style="width: 100%; margin-top: 4px;">
+                  <span>🎨</span> Upload New Logo
+                </button>
+                <p class="avatar-upload-hint" style="margin-top: 2px;">Updates brand logo across Home, About Us, and Admin</p>
+              </div>
+            </div>
+
+            <!-- Official Instagram Community & Scannable QR / Barcode Card (About Us Page) -->
+            <div class="edit-profile-card-box edit-ig-showcase-box">
+              <div class="edit-ig-box-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span class="edit-ig-pulse-dot"></span>
+                  <span class="edit-ig-box-title">INSTAGRAM QR & BARCODE</span>
+                </div>
+                <span class="edit-asset-badge ig-badge">About Us</span>
+              </div>
+
+              <div class="edit-ig-preview-body">
+                <div class="edit-ig-qr-frame">
+                  <img id="edit-ig-qr-img" src="assets/instagram_qr.svg?v=3.1" alt="Instagram Barcode QR Code" class="edit-ig-qr-img" width="120" height="120">
+                </div>
+                
+                <div class="edit-ig-meta-wrap">
+                  <strong id="edit-preview-ig-handle" class="edit-ig-handle-text">@smart_ai_notes</strong>
+                  <input type="file" id="edit-ig-qr-file-input" accept="image/svg+xml,image/png,image/jpeg,image/webp,image/jpg" style="display:none;">
+                  <button type="button" id="edit-ig-qr-trigger-btn" class="profile-act-btn secondary edit-photo-btn" style="width: 100%; margin-top: 5px;">
+                    <span>🔄</span> Change QR Image
+                  </button>
+                  <p class="avatar-upload-hint" style="margin-top: 3px;">Replaces QR barcode on About Us page</p>
+                  <a id="edit-ig-test-link" href="https://www.instagram.com/smart_ai_notes/" target="_blank" rel="noopener noreferrer" class="edit-ig-test-btn" style="margin-top: 6px;" title="Test Instagram Link in new tab">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                    </svg>
+                    <span>Test Link ↗</span>
+                  </a>
                 </div>
               </div>
-              <input type="file" id="edit-avatar-file-input" accept="image/png,image/jpeg,image/webp,image/jpg" style="display:none;">
-              <button type="button" id="edit-avatar-trigger-btn" class="profile-act-btn secondary edit-photo-btn">
-                <span>📷</span> Change Photo
-              </button>
-              <p class="avatar-upload-hint">Updates avatar across About Us and Admin Header</p>
-            </div>
-          </div>
-
-          <!-- Website Brand Logo Uploader Card (All Pages) -->
-          <div class="edit-profile-card-box edit-logo-showcase-box">
-            <div class="edit-logo-box-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <span class="edit-box-label" style="margin-bottom: 0;">🖼️ Website Brand Logo</span>
-              <span class="edit-asset-badge">All Pages</span>
             </div>
 
-            <div class="edit-logo-preview-body" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px;">
-              <div class="edit-logo-preview-frame">
-                <img id="edit-logo-preview-img" src="assets/ailogo.png" alt="Website Logo Preview" class="edit-logo-preview-img" onerror="this.onerror=null; this.src='favicon.png';">
-              </div>
-              <input type="file" id="edit-logo-file-input" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/jpg" style="display:none;">
-              <button type="button" id="edit-logo-trigger-btn" class="profile-act-btn secondary edit-photo-btn" style="width: 100%; margin-top: 4px;">
-                <span>🎨</span> Upload New Logo
-              </button>
-              <p class="avatar-upload-hint" style="margin-top: 2px;">Updates brand logo across Home, About Us, and Admin</p>
-            </div>
           </div>
 
-          <!-- Official Instagram Community & Scannable QR / Barcode Card (About Us Page) -->
-          <div class="edit-profile-card-box edit-ig-showcase-box">
-            <div class="edit-ig-box-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <span class="edit-ig-pulse-dot"></span>
-                <span class="edit-ig-box-title">INSTAGRAM QR & BARCODE</span>
-              </div>
-              <span class="edit-asset-badge ig-badge">About Us</span>
-            </div>
-
-            <div class="edit-ig-preview-body">
-              <div class="edit-ig-qr-frame">
-                <img id="edit-ig-qr-img" src="assets/instagram_qr.svg?v=3.1" alt="Instagram Barcode QR Code" class="edit-ig-qr-img" width="120" height="120">
-              </div>
-              
-              <div class="edit-ig-meta-wrap">
-                <strong id="edit-preview-ig-handle" class="edit-ig-handle-text">@smart_ai_notes</strong>
-                <input type="file" id="edit-ig-qr-file-input" accept="image/svg+xml,image/png,image/jpeg,image/webp,image/jpg" style="display:none;">
-                <button type="button" id="edit-ig-qr-trigger-btn" class="profile-act-btn secondary edit-photo-btn" style="width: 100%; margin-top: 5px;">
-                  <span>🔄</span> Change QR Image
-                </button>
-                <p class="avatar-upload-hint" style="margin-top: 3px;">Replaces QR barcode on About Us page</p>
-                <a id="edit-ig-test-link" href="https://www.instagram.com/smart_ai_notes/" target="_blank" rel="noopener noreferrer" class="edit-ig-test-btn" style="margin-top: 6px;" title="Test Instagram Link in new tab">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
-                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                  </svg>
-                  <span>Test Link ↗</span>
-                </a>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Right Column: Profile Credentials & Vision Details Form -->
-        <div class="edit-profile-right-col">
-          
-          <div class="form-group">
-            <label class="form-label-title" for="edit-admin-name">
-              <span>👤</span> Full Name <span class="req-star" style="color: var(--primary);">*</span>
-            </label>
-            <input id="edit-admin-name" class="form-control" type="text" maxlength="50" placeholder="e.g. Stephanraj" required autocomplete="name">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label-title" for="edit-admin-role">
-              <span>🛡️</span> Role & Designation
-            </label>
-            <input id="edit-admin-role" class="form-control" type="text" maxlength="60" placeholder="e.g. Master Admin & Platform Creator">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label-title" for="edit-admin-instagram">
-              <span>📷</span> Instagram Handle / Username
-            </label>
-            <div class="input-prefix-wrap">
-              <span class="input-prefix">@</span>
-              <input id="edit-admin-instagram" class="form-control input-with-prefix" type="text" maxlength="50" placeholder="smart_ai_notes">
-            </div>
-            <small class="field-subtext">Automatically updates QR link and Instagram follow buttons across the website</small>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label-title" for="edit-admin-bio">
-              <span>💡</span> Founder's Vision & Bio Statement (Shown on About Us)
-            </label>
-            <textarea id="edit-admin-bio" class="form-control edit-bio-textarea" rows="3" placeholder="Enter your vision or founder's message for students"></textarea>
-          </div>
-
-          <div class="edit-fields-row-2col">
+          <!-- Right Column: Profile Credentials & Vision Details Form -->
+          <div class="edit-profile-right-col">
+            
             <div class="form-group">
-              <label class="form-label-title" for="edit-admin-email">
-                <span>✉️</span> Email Address <span class="req-star" style="color: var(--primary);">*</span>
+              <label class="form-label-title" for="edit-admin-name">
+                <span>👤</span> Full Name <span class="req-star" style="color: var(--primary);">*</span>
               </label>
-              <input id="edit-admin-email" class="form-control" type="email" maxlength="80" placeholder="e.g. stephanraj@examalertindia.com" required autocomplete="email" spellcheck="false">
-              <div id="edit-admin-email-feedback" class="field-validation-feedback" hidden></div>
+              <input id="edit-admin-name" class="form-control" type="text" maxlength="50" placeholder="e.g. Stephanraj" required autocomplete="name">
             </div>
 
             <div class="form-group">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <label class="form-label-title" for="edit-admin-phone" style="margin-bottom: 0;">
-                  <span>📱</span> Mobile Number <span class="req-star" style="color: var(--primary);">*</span>
-                </label>
-                <span id="edit-admin-phone-counter" class="phone-digit-counter">0/10 digits</span>
+              <label class="form-label-title" for="edit-admin-role">
+                <span>🛡️</span> Role & Designation
+              </label>
+              <input id="edit-admin-role" class="form-control" type="text" maxlength="60" placeholder="e.g. Master Admin & Platform Creator">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label-title" for="edit-admin-instagram">
+                <span>📷</span> Instagram Handle / Username
+              </label>
+              <div class="input-prefix-wrap">
+                <span class="input-prefix">@</span>
+                <input id="edit-admin-instagram" class="form-control input-with-prefix" type="text" maxlength="50" placeholder="smart_ai_notes">
               </div>
-              <input id="edit-admin-phone" class="form-control" type="tel" maxlength="18" placeholder="e.g. 9876543210 or +91 98765 43210" required autocomplete="tel">
-              <div id="edit-admin-phone-feedback" class="field-validation-feedback" hidden></div>
+              <small class="field-subtext">Automatically updates QR link and Instagram follow buttons across the website</small>
             </div>
-          </div>
-          <div class="form-group edit-profile-pwd-box" style="margin-top: 10px; padding: 10px 14px; background: rgba(59, 130, 246, 0.06); border: 1px solid rgba(59, 130, 246, 0.22); border-radius: 12px;">
-            <label class="form-label-title" for="edit-admin-password" style="display: flex; align-items: center; justify-content: space-between; font-weight: 700; margin-bottom: 5px;">
-              <span><span style="color: var(--primary);">🔒</span> Admin Password Confirmation <span class="req-star" style="color: #ef4444;">*</span></span>
-              <small style="font-size: 0.7rem; color: var(--ink-muted);">Required to save changes</small>
-            </label>
-            <div class="pwd-input-wrap" style="position: relative; display: flex; align-items: center;">
-              <input id="edit-admin-password" class="form-control" type="password" placeholder="Enter your admin password" required autocomplete="current-password" style="padding-right: 38px;">
-              <button type="button" id="toggle-edit-profile-pwd-visibility" class="pwd-toggle-btn" title="Toggle password visibility" style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: var(--ink-muted); display: flex; align-items: center; padding: 4px;">
-                <svg id="edit-profile-pwd-eye-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-              </button>
+
+            <div class="form-group">
+              <label class="form-label-title" for="edit-admin-bio">
+                <span>💡</span> Founder's Vision & Bio Statement (Shown on About Us)
+              </label>
+              <textarea id="edit-admin-bio" class="form-control edit-bio-textarea" rows="3" placeholder="Enter your vision or founder's message for students"></textarea>
             </div>
+
+            <div class="edit-fields-row-2col">
+              <div class="form-group">
+                <label class="form-label-title" for="edit-admin-email">
+                  <span>✉️</span> Email Address <span class="req-star" style="color: var(--primary);">*</span>
+                </label>
+                <input id="edit-admin-email" class="form-control" type="email" maxlength="80" placeholder="e.g. stephanraj@examalertindia.com" required autocomplete="email" spellcheck="false">
+                <div id="edit-admin-email-feedback" class="field-validation-feedback" hidden></div>
+              </div>
+
+              <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <label class="form-label-title" for="edit-admin-phone" style="margin-bottom: 0;">
+                    <span>📱</span> Mobile Number <span class="req-star" style="color: var(--primary);">*</span>
+                  </label>
+                  <span id="edit-admin-phone-counter" class="phone-digit-counter">0/10 digits</span>
+                </div>
+                <input id="edit-admin-phone" class="form-control" type="tel" maxlength="18" placeholder="e.g. 9876543210 or +91 98765 43210" required autocomplete="tel">
+                <div id="edit-admin-phone-feedback" class="field-validation-feedback" hidden></div>
+              </div>
+            </div>
+            <div class="form-group edit-profile-pwd-box" style="margin-top: 10px; padding: 10px 14px; background: rgba(59, 130, 246, 0.06); border: 1px solid rgba(59, 130, 246, 0.22); border-radius: 12px;">
+              <label class="form-label-title" for="edit-admin-password" style="display: flex; align-items: center; justify-content: space-between; font-weight: 700; margin-bottom: 5px;">
+                <span><span style="color: var(--primary);">🔒</span> Admin Password Confirmation <span class="req-star" style="color: #ef4444;">*</span></span>
+                <small style="font-size: 0.7rem; color: var(--ink-muted);">Required to save changes</small>
+              </label>
+              <div class="pwd-input-wrap" style="position: relative; display: flex; align-items: center;">
+                <input id="edit-admin-password" class="form-control" type="password" placeholder="Enter your admin password" required autocomplete="current-password" style="padding-right: 38px;">
+                <button type="button" id="toggle-edit-profile-pwd-visibility" class="pwd-toggle-btn" title="Toggle password visibility" style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: var(--ink-muted); display: flex; align-items: center; padding: 4px;">
+                  <svg id="edit-profile-pwd-eye-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
           </div>
 
         </div>
 
+        <p id="edit-admin-profile-msg" class="form-message" style="margin-top: 10px;"></p>
       </div>
 
-      <p id="edit-admin-profile-msg" class="form-message" style="margin-top: 10px;"></p>
-
-      <div class="modal-btn-row edit-modal-footer" style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+      <!-- Fixed Bottom Action Bar -->
+      <div class="modal-btn-row edit-modal-footer">
         <button id="modal-quick-backup-btn" class="profile-act-btn secondary" type="button" title="Download backup including profile picture, website logo, and Instagram QR barcode" style="font-size: 0.78rem; padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: var(--ink);">
           <span>📥</span> Download Full Backup (Includes Logo & QR)
         </button>
         <div style="display: flex; gap: 10px; align-items: center;">
-          <button class="outline-button" type="button" data-close>Cancel</button>
-          <button id="edit-admin-profile-submit" class="upload-button" type="submit" style="padding: 11px 24px; font-weight: 800;">
+          <button class="outline-button edit-glass-cancel-btn" type="button" data-close>Cancel</button>
+          <button id="edit-admin-profile-submit" class="upload-button edit-glass-submit-btn" type="submit" style="padding: 10px 22px; font-weight: 800;">
             <span>💾</span> Save Profile Changes
           </button>
         </div>
@@ -1618,23 +1668,26 @@
     </form>
   </dialog>
 
-  <!-- Publish Note Image Verification Popup Window -->
-  <dialog id="admin-publish-verify-dialog" class="dialog publish-verify-dialog">
-    <div class="verify-dialog-content">
+  <!-- Publish Note Image Verification Popup Window (Ultra-Glassmorphic) -->
+  <dialog id="admin-publish-verify-dialog" class="dialog publish-verify-dialog publish-verify-glass-dialog">
+    <div class="verify-dialog-content publish-verify-glass-content">
       <!-- Header -->
-      <div class="verify-dialog-header">
+      <div class="verify-dialog-header publish-verify-glass-header">
         <div class="verify-header-left">
-          <p class="eyebrow">Quality Inspection & Verification</p>
-          <h2>Verify Revision Note Image & Details</h2>
+          <div class="verify-badge-icon">🔍</div>
+          <div>
+            <h3 class="edit-modal-title">Verify Note & Quality Inspection</h3>
+            <p class="edit-modal-sub">High-definition student view inspection before live public publishing</p>
+          </div>
         </div>
-        <button id="verify-close-btn" class="close-button" type="button" title="Close & Cancel">×</button>
+        <button id="verify-close-btn" class="edit-modal-close" type="button" title="Close & Cancel (Esc)">×</button>
       </div>
 
       <!-- Main Body: High-Res Image Viewport & Metadata Confirmation -->
-      <div class="verify-dialog-body">
+      <div class="verify-dialog-body publish-verify-glass-body">
         
-        <!-- High-Res Image Viewport with interactive zoom -->
-        <div class="verify-media-viewport">
+        <!-- High-Res Image Viewport with interactive zoom (Deep Black Contrast Canvas) -->
+        <div class="verify-media-viewport publish-verify-deep-canvas">
           <div class="verify-zoom-bar">
             <button id="verify-zoom-out" class="verify-zoom-btn" type="button" title="Zoom Out (−)">−</button>
             <span id="verify-zoom-level" class="verify-zoom-level">100%</span>
@@ -1649,7 +1702,7 @@
 
         <!-- Note Summary Card & Metadata Confirmation -->
         <div class="verify-info-panel">
-          <div class="verify-info-card">
+          <div class="verify-info-card publish-verify-glass-card">
             <span class="verify-info-heading">Public Note Specifications</span>
             
             <div class="verify-meta-item">
@@ -1678,7 +1731,7 @@
             </div>
           </div>
 
-          <div class="verify-tip-box">
+          <div class="verify-tip-box publish-verify-glass-tip">
             <span>💡 <strong>Live Rendering:</strong> This is the exact high-definition view students will inspect in the note lightbox.</span>
           </div>
         </div>
@@ -1686,41 +1739,41 @@
       </div>
 
       <!-- Action Footer -->
-      <div class="verify-dialog-footer">
-        <button type="button" id="verify-cancel-btn" class="outline-button verify-cancel-btn">
+      <div class="verify-dialog-footer publish-verify-glass-footer">
+        <button type="button" id="verify-cancel-btn" class="outline-button edit-glass-cancel-btn">
           <span>←</span> Back to Edit
         </button>
-        <button type="button" id="verify-confirm-btn" class="publish-confirm-action-btn">
+        <button type="button" id="verify-confirm-btn" class="publish-confirm-action-btn edit-glass-submit-btn">
           <span>🚀</span> Confirm & Publish to Live Website
         </button>
       </div>
     </div>
   </dialog>
 
-  <!-- Full Interactive Academic & Exam Calendar Popup Modal -->
-  <dialog id="admin-full-calendar-dialog" class="admin-dialog-modal calendar-modal" aria-labelledby="cal-modal-title">
-    <div class="calendar-modal-content">
+  <!-- Full Interactive Academic & Exam Calendar Popup Modal (Ultra-Glassmorphic) -->
+  <dialog id="admin-full-calendar-dialog" class="admin-dialog-modal calendar-modal calendar-glass-dialog" aria-labelledby="cal-modal-title">
+    <div class="calendar-modal-content calendar-glass-content">
       <!-- Calendar Header -->
-      <div class="calendar-modal-header">
+      <div class="calendar-modal-header calendar-glass-header">
         <div class="calendar-header-left">
-          <span class="calendar-header-icon">📅</span>
+          <span class="calendar-header-icon calendar-badge-icon">📅</span>
           <div>
-            <h3 id="cal-modal-title" class="calendar-modal-title">Interactive Live Calendar</h3>
-            <span id="cal-modal-subtitle" class="calendar-modal-subtitle">System Realtime Clock & Month View</span>
+            <h3 id="cal-modal-title" class="calendar-modal-title edit-modal-title">Interactive Live Calendar</h3>
+            <span id="cal-modal-subtitle" class="calendar-modal-subtitle edit-modal-sub">System Realtime Clock & Month View</span>
           </div>
         </div>
         <div class="calendar-header-actions">
           <button type="button" id="cal-jump-today-btn" class="cal-action-pill" title="Jump to Today's Date">
             ● Today
           </button>
-          <button type="button" id="admin-calendar-close-btn" class="calendar-modal-close-btn" aria-label="Close Calendar" title="Close Calendar (Esc)">
+          <button type="button" id="admin-calendar-close-btn" class="edit-modal-close" aria-label="Close Calendar" title="Close Calendar (Esc)">
             ✕
           </button>
         </div>
       </div>
 
       <!-- Month & Year Navigation Bar -->
-      <div class="calendar-nav-bar">
+      <div class="calendar-nav-bar calendar-glass-nav-bar">
         <button type="button" id="cal-prev-month-btn" class="cal-nav-arrow" title="Previous Month" aria-label="Previous Month">
           ‹
         </button>
@@ -1734,7 +1787,7 @@
       </div>
 
       <!-- Days Grid -->
-      <div class="calendar-grid-wrap">
+      <div class="calendar-grid-wrap calendar-glass-grid-wrap">
         <div class="calendar-weekdays-row">
           <span>Sun</span>
           <span>Mon</span>
@@ -1750,7 +1803,7 @@
       </div>
 
       <!-- Live Time & Today Status Bar -->
-      <div class="calendar-modal-footer">
+      <div class="calendar-modal-footer calendar-glass-footer">
         <div class="cal-footer-time-badge">
           <span class="live-pulse-dot"></span>
           <span>Live Clock: <strong id="cal-modal-live-clock">--:--:--</strong> (<span id="cal-modal-live-date">--/--/----</span>)</span>
@@ -1762,7 +1815,7 @@
     </div>
   </dialog>
 
-  <!-- Lightbox / High-Res Note Preview Popup Window -->
+  <!-- Lightbox / High-Res Note Preview Popup Window (Matching Home Page UI) -->
   <dialog id="lightbox-dialog" class="lightbox-dialog">
     <div class="lightbox-content">
       <div class="lightbox-header">
@@ -1770,46 +1823,54 @@
           <span id="lightbox-badge" class="subject-chip">Subject</span>
           <h2 id="lightbox-title">Note Title</h2>
         </div>
-        <div class="lightbox-actions">
-          <div class="zoom-controls" role="group" aria-label="Image Zoom">
-            <button id="lightbox-zoom-out" class="icon-action-btn" type="button" title="Zoom Out (-)">−</button>
-            <span id="lightbox-zoom-level" class="zoom-level-text">100%</span>
-            <button id="lightbox-zoom-in" class="icon-action-btn" type="button" title="Zoom In (+)">+</button>
-            <button id="lightbox-zoom-reset" class="icon-action-btn" type="button" title="Reset Zoom (0)">↺</button>
-          </div>
-          <a id="lightbox-download-btn" class="icon-action-btn" download="exam-note.jpg" title="Download Note" target="_blank" rel="noopener">⬇</a>
-          <button id="lightbox-close-btn" class="icon-action-btn close-btn" type="button" title="Close (Esc)">×</button>
-        </div>
+        <button id="lightbox-close-btn" class="icon-action-btn close-btn" type="button" title="Close (Esc)" aria-label="Close Note Popup">×</button>
       </div>
 
       <div class="lightbox-body">
         <button id="lightbox-prev-btn" class="lightbox-nav-btn prev" type="button" aria-label="Previous Note">‹</button>
         
         <div id="lightbox-media-container" class="lightbox-media">
-          <!-- Dynamic high-res image -->
+          <!-- Dynamic high-res image or rich rendered card -->
         </div>
 
         <button id="lightbox-next-btn" class="lightbox-nav-btn next" type="button" aria-label="Next Note">›</button>
       </div>
 
       <div class="lightbox-footer">
-        <span id="lightbox-meta" class="lightbox-meta-date">📅 Date</span>
-        <div id="lightbox-tags" class="lightbox-tags"></div>
+        <div class="lightbox-footer-left">
+          <div class="zoom-controls" role="group" aria-label="Image Zoom">
+            <button id="lightbox-zoom-out" class="icon-action-btn" type="button" title="Zoom Out (-)">−</button>
+            <span id="lightbox-zoom-level" class="zoom-level-text">100%</span>
+            <button id="lightbox-zoom-in" class="icon-action-btn" type="button" title="Zoom In (+)">+</button>
+            <button id="lightbox-zoom-reset" class="icon-action-btn" type="button" title="Reset Zoom (0)">↺</button>
+          </div>
+          <a id="lightbox-download-btn" class="icon-action-btn" download="exam-note.jpg" title="Download High-Res Note" target="_blank" rel="noopener" aria-label="Download Note">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+          </a>
+        </div>
+        <div class="lightbox-footer-right">
+          <span id="lightbox-meta" class="lightbox-meta-date" style="margin-right: 6px;">📅 Date</span>
+          <div id="lightbox-tags" class="lightbox-tags"></div>
+        </div>
       </div>
     </div>
   </dialog>
 
-  <!-- Windows-Style Backup Restore Progress Popup Window Dialog -->
-  <dialog id="backup-restore-progress-dialog" class="dialog backup-progress-dialog">
-    <div class="win-transfer-card">
+  <!-- Windows-Style Backup Restore Progress Popup Window Dialog (Ultra-Glassmorphic) -->
+  <dialog id="backup-restore-progress-dialog" class="dialog backup-progress-dialog backup-progress-glass-dialog">
+    <div class="win-transfer-card win-transfer-glass-card">
       <!-- Windows Window Title Bar -->
-      <div class="win-window-titlebar">
+      <div class="win-window-titlebar win-titlebar-glass">
         <div class="win-titlebar-left">
           <span class="win-titlebar-icon">📁</span>
           <span class="win-titlebar-text" id="win-window-title">Restoring System Backup</span>
         </div>
         <div class="win-titlebar-controls">
-          <button type="button" id="win-dialog-close-btn" class="win-titlebar-btn" title="Close window" onclick="document.getElementById('backup-restore-progress-dialog').close()">✕</button>
+          <button type="button" id="win-dialog-close-btn" class="win-titlebar-btn edit-modal-close" title="Close window" onclick="document.getElementById('backup-restore-progress-dialog').close()">✕</button>
         </div>
       </div>
 
@@ -1879,9 +1940,597 @@
     </div>
   </dialog>
 
+  <!-- Likes & Student Favorites In-Depth Dialog -->
+  <dialog id="likes-analysis-dialog" class="dialog likes-analysis-dialog" aria-labelledby="likes-modal-title">
+    <div class="likes-modal-card">
+      <div class="likes-modal-header">
+        <div class="likes-header-left">
+          <div class="likes-badge-icon">❤️</div>
+          <div>
+            <h3 id="likes-modal-title" class="likes-modal-title">Student Favorites & Likes</h3>
+            <p class="likes-modal-sub">Deep-dive breakdown of student bookmarks, subject preferences, and top-rated notes</p>
+          </div>
+        </div>
+        <button type="button" id="likes-modal-close-btn" class="likes-modal-close" title="Close Window">×</button>
+      </div>
+
+      <div class="likes-modal-body">
+        <!-- 4 Key KPI Tiles -->
+        <div class="likes-stats-row">
+          <div class="likes-stat-tile">
+            <span class="likes-stat-label">Total Likes Registered</span>
+            <div class="likes-stat-val-row">
+              <strong id="likes-kpi-total" class="likes-stat-num">0</strong>
+              <span class="likes-kpi-pill">Live Telemetry</span>
+            </div>
+            <span class="likes-stat-desc">Bookmarks across all notes</span>
+          </div>
+
+          <div class="likes-stat-tile">
+            <span class="likes-stat-label">Unique Notes Liked</span>
+            <div class="likes-stat-val-row">
+              <strong id="likes-kpi-unique-count" class="likes-stat-num">0</strong>
+              <span id="likes-kpi-adoption-rate" class="likes-kpi-pct">0%</span>
+            </div>
+            <span class="likes-stat-desc">Library favorite coverage</span>
+          </div>
+
+          <div class="likes-stat-tile">
+            <span class="likes-stat-label">Top Favorited Subject</span>
+            <div class="likes-stat-val-row">
+              <strong id="likes-kpi-top-subject" class="likes-stat-text">—</strong>
+            </div>
+            <span id="likes-kpi-top-subject-share" class="likes-stat-desc">0% of total likes</span>
+          </div>
+
+          <div class="likes-stat-tile">
+            <span class="likes-stat-label">Average Likes / Note</span>
+            <div class="likes-stat-val-row">
+              <strong id="likes-kpi-avg" class="likes-stat-num">0.0</strong>
+            </div>
+            <span class="likes-stat-desc">Student engagement density</span>
+          </div>
+        </div>
+
+        <!-- Full-Width 1: Subject Preference Breakdown Chart (Dashboard Style) -->
+        <div class="likes-fullwidth-card">
+          <div class="likes-section-header">
+            <div>
+              <h4 class="likes-section-title">Subject Preference Breakdown</h4>
+              <p class="likes-section-sub">Where students are focusing their bookmarks across academic subjects</p>
+            </div>
+            <span class="badge live-badge" id="likes-subject-count-badge">8 Subjects</span>
+          </div>
+
+          <!-- Vertical Bar Graph with Dynamic Heights & Count Labels -->
+          <div class="category-chart-graph-wrap likes-chart-wrap">
+            <div class="category-bar-chart" id="likes-category-bar-chart">
+              <!-- Dynamically populated vertical bars -->
+            </div>
+          </div>
+
+          <!-- Proportional Segmented Progress Strip -->
+          <div class="category-segmented-strip" id="likes-segmented-strip" title="Subject Likes Share Distribution">
+            <!-- Dynamically populated proportional segments -->
+          </div>
+
+          <!-- 8 Category Stat Cards Grid -->
+          <div class="category-stats-grid likes-category-stats-grid" id="likes-category-stats-grid">
+            <!-- Dynamically populated category tiles -->
+          </div>
+        </div>
+
+        <!-- Full-Width 2: Top Liked Revision Notes Table with Search Bar -->
+        <div class="likes-fullwidth-card">
+          <div class="likes-section-header likes-table-header">
+            <div>
+              <h4 class="likes-section-title">Top Liked Revision Notes</h4>
+              <p class="likes-section-sub">Ranked list of study diagrams sorted by student favorites count</p>
+            </div>
+            <span class="badge" id="likes-notes-count-badge">Ranked by Likes</span>
+          </div>
+
+          <!-- Live Search Bar for Table -->
+          <div class="likes-search-bar-wrap">
+            <div class="likes-search-input-group">
+              <span class="likes-search-icon">🔍</span>
+              <input type="search" id="likes-notes-search" class="likes-search-input" placeholder="Search liked notes by title, subject, or tag..." autocomplete="off">
+            </div>
+            <span id="likes-search-count-badge" class="likes-search-count">Showing all notes</span>
+          </div>
+
+          <!-- Responsive Leaderboard Table -->
+          <div class="likes-table-scroll-wrap">
+            <table class="likes-leaderboard-table">
+              <thead>
+                <tr>
+                  <th style="width: 75px; text-align: center;">Rank</th>
+                  <th>Note Title</th>
+                  <th style="width: 140px;">Subject</th>
+                  <th style="width: 110px; text-align: center;">Likes ❤️</th>
+                  <th style="width: 90px; text-align: center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="likes-table-body">
+                <!-- Dynamically populated ranked note rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Strategic Content Recommendation Banner -->
+        <div class="likes-insights-banner">
+          <div class="likes-insight-icon">💡</div>
+          <div class="likes-insight-content">
+            <strong>Actionable Study Material Insight:</strong>
+            <p id="likes-insight-text">Loading student engagement recommendations…</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Note Downloads & Export Dialog -->
+  <dialog id="downloads-analysis-dialog" class="dialog likes-analysis-dialog downloads-dialog" aria-labelledby="downloads-modal-title">
+    <div class="likes-modal-card">
+      <div class="likes-modal-header downloads-header">
+        <div class="likes-header-left">
+          <div class="likes-badge-icon downloads-badge">⬇️</div>
+          <div>
+            <h3 id="downloads-modal-title" class="likes-modal-title">Note Downloads & Exports</h3>
+            <p class="likes-modal-sub">Deep-dive breakdown of high-res note downloads, subject export volumes, and offline revision demand</p>
+          </div>
+        </div>
+        <button type="button" id="downloads-modal-close-btn" class="likes-modal-close" title="Close Window">×</button>
+      </div>
+
+      <div class="likes-modal-body">
+        <!-- 4 Key KPI Tiles -->
+        <div class="likes-stats-row">
+          <div class="likes-stat-tile">
+            <span class="likes-stat-label">Total Downloads</span>
+            <div class="likes-stat-val-row">
+              <strong id="downloads-kpi-total" class="likes-stat-num" style="color: #3b82f6;">0</strong>
+              <span class="likes-kpi-pill" style="color: #3b82f6; background: rgba(59, 130, 246, 0.1);">Live Telemetry</span>
+            </div>
+            <span class="likes-stat-desc">High-res study image exports</span>
+          </div>
+
+          <div class="likes-stat-tile">
+            <span class="likes-stat-label">Unique Notes Exported</span>
+            <div class="likes-stat-val-row">
+              <strong id="downloads-kpi-unique-count" class="likes-stat-num" style="color: #3b82f6;">0</strong>
+              <span id="downloads-kpi-adoption-rate" class="likes-kpi-pct">0%</span>
+            </div>
+            <span class="likes-stat-desc">Library download coverage</span>
+          </div>
+
+          <div class="likes-stat-tile">
+            <span class="likes-stat-label">Top Exported Subject</span>
+            <div class="likes-stat-val-row">
+              <strong id="downloads-kpi-top-subject" class="likes-stat-text">—</strong>
+            </div>
+            <span id="downloads-kpi-top-subject-share" class="likes-stat-desc">0% of total exports</span>
+          </div>
+
+          <div class="likes-stat-tile">
+            <span class="likes-stat-label">Download Conversion Rate</span>
+            <div class="likes-stat-val-row">
+              <strong id="downloads-kpi-conversion" class="likes-stat-num" style="color: #10b981;">0.0%</strong>
+            </div>
+            <span class="likes-stat-desc">Downloads per popup open</span>
+          </div>
+        </div>
+
+        <!-- Full-Width 1: Subject Export Breakdown Chart (Dashboard Style) -->
+        <div class="likes-fullwidth-card">
+          <div class="likes-section-header">
+            <div>
+              <h4 class="likes-section-title">Subject Export Breakdown</h4>
+              <p class="likes-section-sub">Where students are downloading high-res notes across academic subjects</p>
+            </div>
+            <span class="badge live-badge" id="downloads-subject-count-badge">8 Subjects</span>
+          </div>
+
+          <!-- Vertical Bar Graph with Dynamic Heights & Count Labels -->
+          <div class="category-chart-graph-wrap likes-chart-wrap">
+            <div class="category-bar-chart" id="downloads-category-bar-chart">
+              <!-- Dynamically populated vertical bars -->
+            </div>
+          </div>
+
+          <!-- Proportional Segmented Progress Strip -->
+          <div class="category-segmented-strip" id="downloads-segmented-strip" title="Subject Downloads Share Distribution">
+            <!-- Dynamically populated proportional segments -->
+          </div>
+
+          <!-- 8 Category Stat Cards Grid -->
+          <div class="category-stats-grid likes-category-stats-grid" id="downloads-category-stats-grid">
+            <!-- Dynamically populated category tiles -->
+          </div>
+        </div>
+
+        <!-- Full-Width 2: Top Downloaded Revision Notes Table with Search Bar & Sort -->
+        <div class="likes-fullwidth-card">
+          <div class="likes-section-header likes-table-header">
+            <div>
+              <h4 class="likes-section-title">Most Downloaded Revision Notes</h4>
+              <p class="likes-section-sub">Ranked list of study diagrams sorted by offline download count</p>
+            </div>
+            <span class="badge" id="downloads-notes-count-badge">Ranked by Downloads</span>
+          </div>
+
+          <!-- Live Search Bar for Table with Sort Selector -->
+          <div class="likes-search-bar-wrap">
+            <div class="likes-search-input-group">
+              <span class="likes-search-icon">🔍</span>
+              <input type="search" id="downloads-notes-search" class="likes-search-input" placeholder="Search downloaded notes by title, subject, or tag..." autocomplete="off">
+            </div>
+            <div class="likes-sort-control">
+              <label for="downloads-notes-sort" class="likes-sort-label">Sort By:</label>
+              <select id="downloads-notes-sort" class="likes-sort-select">
+                <option value="downloads-desc">⬇️ Most Downloads</option>
+                <option value="downloads-asc">⬆️ Least Downloads</option>
+                <option value="likes-desc">❤️ Most Likes</option>
+                <option value="title-asc">🔤 Title (A → Z)</option>
+                <option value="title-desc">🔤 Title (Z → A)</option>
+                <option value="subject-asc">📚 Subject (A → Z)</option>
+                <option value="rank-asc">🏆 Rank (#1 First)</option>
+              </select>
+            </div>
+            <span id="downloads-search-count-badge" class="likes-search-count">Showing all notes</span>
+          </div>
+
+          <!-- Responsive Leaderboard Table -->
+          <div class="likes-table-scroll-wrap">
+            <table class="likes-leaderboard-table">
+              <thead>
+                <tr>
+                  <th class="likes-th-sortable" data-sort-key="rank" style="width: 75px; text-align: center;" title="Sort by Rank">
+                    <div class="likes-th-inner">Rank <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th class="likes-th-sortable" data-sort-key="title" title="Sort by Title">
+                    <div class="likes-th-inner">Note Title <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th class="likes-th-sortable" data-sort-key="subject" style="width: 140px;" title="Sort by Subject">
+                    <div class="likes-th-inner">Subject <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th class="likes-th-sortable active" data-sort-key="downloads" style="width: 110px; text-align: center;" title="Sort by Downloads">
+                    <div class="likes-th-inner">Downloads ⬇️ <span class="likes-th-arrow">↓</span></div>
+                  </th>
+                  <th class="likes-th-sortable" data-sort-key="likes" style="width: 110px; text-align: center;" title="Sort by Likes">
+                    <div class="likes-th-inner">Likes ❤️ <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th style="width: 90px; text-align: center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="downloads-table-body">
+                <!-- Dynamically populated ranked note rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Strategic Content Recommendation Banner -->
+        <div class="likes-insights-banner" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%); border-color: rgba(59, 130, 246, 0.25);">
+          <div class="likes-insight-icon">📥</div>
+          <div class="likes-insight-content">
+            <strong>Actionable Offline Study Demand Insight:</strong>
+            <p id="downloads-insight-text">Loading download recommendations…</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Notes Shared & Social Virality Dialog -->
+  <dialog id="shares-analysis-dialog" class="dialog likes-analysis-dialog shares-dialog" aria-labelledby="shares-modal-title">
+    <div class="likes-modal-card">
+      <div class="likes-modal-header shares-header">
+        <div class="likes-header-left">
+          <div class="likes-badge-icon shares-badge">📤</div>
+          <div>
+            <h3 id="shares-modal-title" class="likes-modal-title">Social Sharing & Virality</h3>
+            <p class="likes-modal-sub">Deep-dive breakdown of WhatsApp, Telegram, X, and peer-to-peer study group referrals</p>
+          </div>
+        </div>
+        <button type="button" id="shares-modal-close-btn" class="likes-modal-close" title="Close Window">×</button>
+      </div>
+
+      <div class="likes-modal-body">
+        <!-- 4 Key KPI Tiles -->
+        <div class="likes-stats-row">
+          <div class="likes-stat-tile">
+            <span class="likes-stat-label">Total Notes Shared</span>
+            <div class="likes-stat-val-row">
+              <strong id="shares-kpi-total" class="likes-stat-num" style="color: #8b5cf6;">0</strong>
+              <span class="likes-kpi-pill" style="color: #8b5cf6; background: rgba(139, 92, 246, 0.1);">Live Telemetry</span>
+            </div>
+            <span class="likes-stat-desc">Multi-platform shares & links</span>
+          </div>
+
+          <div class="likes-stat-tile">
+            <span class="likes-stat-label">Top Sharing Channel</span>
+            <div class="likes-stat-val-row">
+              <strong id="shares-kpi-top-platform" class="likes-stat-text">—</strong>
+            </div>
+            <span id="shares-kpi-platform-share" class="likes-stat-desc">0% of total shares</span>
+          </div>
+
+          <div class="likes-stat-tile">
+            <span class="likes-stat-label">Unique Notes Shared</span>
+            <div class="likes-stat-val-row">
+              <strong id="shares-kpi-unique-count" class="likes-stat-num" style="color: #8b5cf6;">0</strong>
+              <span id="shares-kpi-adoption-rate" class="likes-kpi-pct">0%</span>
+            </div>
+            <span class="likes-stat-desc">Library virality reach</span>
+          </div>
+
+          <div class="likes-stat-tile">
+            <span class="likes-stat-label">Viral Spread Velocity</span>
+            <div class="likes-stat-val-row">
+              <strong id="shares-kpi-velocity" class="likes-stat-num" style="color: #8b5cf6;">0.0</strong>
+            </div>
+            <span class="likes-stat-desc">Avg. shares per shared note</span>
+          </div>
+        </div>
+
+        <!-- Full-Width 1: Platform Distribution Breakdown Chart (Dashboard Style) -->
+        <div class="likes-fullwidth-card">
+          <div class="likes-section-header">
+            <div>
+              <h4 class="likes-section-title">Platform Distribution Breakdown</h4>
+              <p class="likes-section-sub">Where students share your study materials across messaging & social apps</p>
+            </div>
+            <span class="badge live-badge" id="shares-platform-count-badge">5 Channels Active</span>
+          </div>
+
+          <!-- Vertical Bar Graph with Dynamic Heights & Count Labels -->
+          <div class="category-chart-graph-wrap likes-chart-wrap">
+            <div class="category-bar-chart" id="shares-platform-bar-chart">
+              <!-- Dynamically populated vertical bars -->
+            </div>
+          </div>
+
+          <!-- Proportional Segmented Progress Strip -->
+          <div class="category-segmented-strip" id="shares-segmented-strip" title="Platform Shares Distribution">
+            <!-- Dynamically populated proportional segments -->
+          </div>
+
+          <!-- 5 Platform Stat Cards Grid -->
+          <div class="category-stats-grid likes-category-stats-grid" id="shares-platform-stats-grid">
+            <!-- Dynamically populated platform tiles -->
+          </div>
+        </div>
+
+        <!-- Full-Width 2: Most Shared Revision Notes Table with Search Bar & Sort -->
+        <div class="likes-fullwidth-card">
+          <div class="likes-section-header likes-table-header">
+            <div>
+              <h4 class="likes-section-title">Most Viral & Shared Revision Notes</h4>
+              <p class="likes-section-sub">Ranked list of study diagrams sorted by social sharing count</p>
+            </div>
+            <span class="badge" id="shares-notes-count-badge">Ranked by Shares</span>
+          </div>
+
+          <!-- Live Search Bar for Table with Sort Selector -->
+          <div class="likes-search-bar-wrap">
+            <div class="likes-search-input-group">
+              <span class="likes-search-icon">🔍</span>
+              <input type="search" id="shares-notes-search" class="likes-search-input" placeholder="Search shared notes by title, subject, or tag..." autocomplete="off">
+            </div>
+            <div class="likes-sort-control">
+              <label for="shares-notes-sort" class="likes-sort-label">Sort By:</label>
+              <select id="shares-notes-sort" class="likes-sort-select">
+                <option value="shares-desc">📤 Most Shares</option>
+                <option value="shares-asc">📥 Least Shares</option>
+                <option value="likes-desc">❤️ Most Likes</option>
+                <option value="title-asc">🔤 Title (A → Z)</option>
+                <option value="title-desc">🔤 Title (Z → A)</option>
+                <option value="subject-asc">📚 Subject (A → Z)</option>
+                <option value="rank-asc">🏆 Rank (#1 First)</option>
+              </select>
+            </div>
+            <span id="shares-search-count-badge" class="likes-search-count">Showing all notes</span>
+          </div>
+
+          <!-- Responsive Leaderboard Table -->
+          <div class="likes-table-scroll-wrap">
+            <table class="likes-leaderboard-table">
+              <thead>
+                <tr>
+                  <th class="likes-th-sortable" data-sort-key="rank" style="width: 75px; text-align: center;" title="Sort by Rank">
+                    <div class="likes-th-inner">Rank <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th class="likes-th-sortable" data-sort-key="title" title="Sort by Title">
+                    <div class="likes-th-inner">Note Title <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th class="likes-th-sortable" data-sort-key="subject" style="width: 140px;" title="Sort by Subject">
+                    <div class="likes-th-inner">Subject <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th class="likes-th-sortable active" data-sort-key="shares" style="width: 110px; text-align: center;" title="Sort by Shares">
+                    <div class="likes-th-inner">Shares 📤 <span class="likes-th-arrow">↓</span></div>
+                  </th>
+                  <th class="likes-th-sortable" data-sort-key="likes" style="width: 110px; text-align: center;" title="Sort by Likes">
+                    <div class="likes-th-inner">Likes ❤️ <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th style="width: 90px; text-align: center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="shares-table-body">
+                <!-- Dynamically populated ranked note rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Strategic Content Recommendation Banner -->
+        <div class="likes-insights-banner" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(37, 211, 102, 0.05) 100%); border-color: rgba(139, 92, 246, 0.25);">
+          <div class="likes-insight-icon">🚀</div>
+          <div class="likes-insight-content">
+            <strong>Actionable Viral Growth Insight:</strong>
+            <p id="shares-insight-text">Loading viral sharing recommendations…</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Note Impressions & Viewer Traffic Dialog -->
+  <dialog id="views-analysis-dialog" class="dialog likes-analysis-dialog views-dialog" aria-labelledby="views-modal-title">
+    <div class="likes-modal-card">
+      <div class="likes-modal-header views-header">
+        <div class="likes-header-left">
+          <div class="likes-badge-icon views-badge">👁️</div>
+          <div>
+            <h3 id="views-modal-title" class="likes-modal-title">Note Impressions & Viewer Traffic</h3>
+            <p class="likes-modal-sub">Deep-dive breakdown of student study attention, popup viewers opened, and subject interest</p>
+          </div>
+        </div>
+        <button type="button" id="views-modal-close-btn" class="likes-modal-close" title="Close Window">×</button>
+      </div>
+
+      <div class="likes-modal-body">
+        <!-- 4 Key KPI Tiles -->
+        <div class="likes-stats-row">
+          <div class="likes-stat-tile">
+            <span class="likes-stat-label">Total Note Impressions</span>
+            <div class="likes-stat-val-row">
+              <strong id="views-kpi-total" class="likes-stat-num" style="color: #f59e0b;">0</strong>
+              <span class="likes-kpi-pill" style="color: #f59e0b; background: rgba(245, 158, 11, 0.1);">Live Telemetry</span>
+            </div>
+            <span class="likes-stat-desc">Full popup viewer opens</span>
+          </div>
+
+          <div class="likes-stat-tile">
+            <span class="likes-stat-label">Top Explored Subject</span>
+            <div class="likes-stat-val-row">
+              <strong id="views-kpi-top-subject" class="likes-stat-text">—</strong>
+            </div>
+            <span id="views-kpi-top-subject-share" class="likes-stat-desc">0% of total viewer traffic</span>
+          </div>
+
+          <div class="likes-stat-tile">
+            <span class="likes-stat-label">Average Views / Note</span>
+            <div class="likes-stat-val-row">
+              <strong id="views-kpi-avg" class="likes-stat-num" style="color: #f59e0b;">0.0</strong>
+            </div>
+            <span class="likes-stat-desc">Student exploration depth</span>
+          </div>
+
+          <div class="likes-stat-tile">
+            <span class="likes-stat-label">Engagement Conversion</span>
+            <div class="likes-stat-val-row">
+              <strong id="views-kpi-conversion" class="likes-stat-num" style="color: #10b981;">0.0%</strong>
+            </div>
+            <span class="likes-stat-desc">Views turned to Likes/Downloads</span>
+          </div>
+        </div>
+
+        <!-- Full-Width 1: Subject Traffic Breakdown Chart (Dashboard Style) -->
+        <div class="likes-fullwidth-card">
+          <div class="likes-section-header">
+            <div>
+              <h4 class="likes-section-title">Subject Traffic Exploration Breakdown</h4>
+              <p class="likes-section-sub">Where students spend their reading and revision time across academic subjects</p>
+            </div>
+            <span class="badge live-badge" id="views-subject-count-badge">8 Subjects Active</span>
+          </div>
+
+          <!-- Vertical Bar Graph with Dynamic Heights & Count Labels -->
+          <div class="category-chart-graph-wrap likes-chart-wrap">
+            <div class="category-bar-chart" id="views-category-bar-chart">
+              <!-- Dynamically populated vertical bars -->
+            </div>
+          </div>
+
+          <!-- Proportional Segmented Progress Strip -->
+          <div class="category-segmented-strip" id="views-segmented-strip" title="Subject Impressions Share Distribution">
+            <!-- Dynamically populated proportional segments -->
+          </div>
+
+          <!-- 8 Category Stat Cards Grid -->
+          <div class="category-stats-grid likes-category-stats-grid" id="views-category-stats-grid">
+            <!-- Dynamically populated category tiles -->
+          </div>
+        </div>
+
+        <!-- Full-Width 2: Most Explored Revision Notes Table with Search Bar & Sort -->
+        <div class="likes-fullwidth-card">
+          <div class="likes-section-header likes-table-header">
+            <div>
+              <h4 class="likes-section-title">Most Explored Revision Notes</h4>
+              <p class="likes-section-sub">Ranked list of study diagrams sorted by viewer impression count</p>
+            </div>
+            <span class="badge" id="views-notes-count-badge">Ranked by Impressions</span>
+          </div>
+
+          <!-- Live Search Bar for Table with Sort Selector -->
+          <div class="likes-search-bar-wrap">
+            <div class="likes-search-input-group">
+              <span class="likes-search-icon">🔍</span>
+              <input type="search" id="views-notes-search" class="likes-search-input" placeholder="Search viewed notes by title, subject, or tag..." autocomplete="off">
+            </div>
+            <div class="likes-sort-control">
+              <label for="views-notes-sort" class="likes-sort-label">Sort By:</label>
+              <select id="views-notes-sort" class="likes-sort-select">
+                <option value="views-desc">👁️ Most Views</option>
+                <option value="views-asc">🕶️ Least Views</option>
+                <option value="likes-desc">❤️ Most Likes</option>
+                <option value="title-asc">🔤 Title (A → Z)</option>
+                <option value="title-desc">🔤 Title (Z → A)</option>
+                <option value="subject-asc">📚 Subject (A → Z)</option>
+                <option value="rank-asc">🏆 Rank (#1 First)</option>
+              </select>
+            </div>
+            <span id="views-search-count-badge" class="likes-search-count">Showing all notes</span>
+          </div>
+
+          <!-- Responsive Leaderboard Table -->
+          <div class="likes-table-scroll-wrap">
+            <table class="likes-leaderboard-table">
+              <thead>
+                <tr>
+                  <th class="likes-th-sortable" data-sort-key="rank" style="width: 75px; text-align: center;" title="Sort by Rank">
+                    <div class="likes-th-inner">Rank <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th class="likes-th-sortable" data-sort-key="title" title="Sort by Title">
+                    <div class="likes-th-inner">Note Title <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th class="likes-th-sortable" data-sort-key="subject" style="width: 140px;" title="Sort by Subject">
+                    <div class="likes-th-inner">Subject <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th class="likes-th-sortable active" data-sort-key="views" style="width: 110px; text-align: center;" title="Sort by Views">
+                    <div class="likes-th-inner">Views 👁️ <span class="likes-th-arrow">↓</span></div>
+                  </th>
+                  <th class="likes-th-sortable" data-sort-key="likes" style="width: 110px; text-align: center;" title="Sort by Likes">
+                    <div class="likes-th-inner">Likes ❤️ <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th style="width: 90px; text-align: center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="views-table-body">
+                <!-- Dynamically populated ranked note rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Strategic Content Recommendation Banner -->
+        <div class="likes-insights-banner" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(59, 130, 246, 0.05) 100%); border-color: rgba(245, 158, 11, 0.25);">
+          <div class="likes-insight-icon">🔍</div>
+          <div class="likes-insight-content">
+            <strong>Actionable Audience Traffic Insight:</strong>
+            <p id="views-insight-text">Loading audience engagement recommendations…</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=25.0"></script>
+  <script src="admin.js?v=41.0"></script>
 </body>
 </html>
