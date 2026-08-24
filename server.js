@@ -315,7 +315,7 @@ async function handleApi(request, response, url) {
     return true;
   }
 
-  if (request.method === "POST" && url.pathname === "/api/interactions/track") {
+  if (request.method === "POST" && (url.pathname === "/api/interactions" || url.pathname === "/api/interactions/track")) {
     const body = await readBody(request).catch(() => ({}));
     let interactions = await readJson(INTERACTIONS_FILE).catch(() => ({
       totalLikes: 0,
@@ -796,14 +796,51 @@ async function handleApi(request, response, url) {
       instagramQrData
     };
 
+    // Calculate comprehensive Tag Analytics
+    const tagCounts = {};
+    for (const note of exportedNotes) {
+      if (Array.isArray(note.tags)) {
+        for (const t of note.tags) {
+          const clean = String(t || "").trim().replace(/^#/, "");
+          if (clean) tagCounts[clean] = (tagCounts[clean] || 0) + 1;
+        }
+      }
+    }
+    const tagAnalytics = {
+      totalUniqueTags: Object.keys(tagCounts).length,
+      tagFrequencies: tagCounts,
+      topTags: Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).map(([tag, count]) => ({ tag, count }))
+    };
+
+    // Calculate Subject / Category Analytics
+    const catCounts = { History: 0, Polity: 0, Economy: 0, Geography: 0, "Art and Culture": 0, Maths: 0, Science: 0, Others: 0 };
+    for (const note of exportedNotes) {
+      const s = note.subject || "Others";
+      catCounts[s] = (catCounts[s] || 0) + 1;
+    }
+    const categoryAnalytics = {
+      categories: catCounts,
+      totalNotes: exportedNotes.length
+    };
+
+    // Calculate Search Demands & Missing Searches
+    const missingSearches = interactions.missingSearches || {};
+    const searchDemands = {
+      unfulfilledDemands: Object.values(missingSearches).sort((a, b) => (b.count || 0) - (a.count || 0)),
+      allSearches: interactions.searches || {},
+      totalSearchVolume: interactions.totalSearches || 0
+    };
+
     const backupPayload = {
       version: "3.0",
       type: "ExamAlertIndiaMasterBackup",
       exportedAt: new Date().toISOString(),
       system: {
-        platform: "Exam Alert India",
-        generator: "Admin Studio Unified Backup Engine v3.0",
-        notesCount: exportedNotes.length
+        platform: "Free AI Govt Exam Notes",
+        generator: "Admin Studio Unified Master Backup Engine v3.0",
+        notesCount: exportedNotes.length,
+        tagsCount: tagAnalytics.totalUniqueTags,
+        searchDemandsCount: searchDemands.unfulfilledDemands.length
       },
       notes: exportedNotes,
       profile: {
@@ -814,6 +851,9 @@ async function handleApi(request, response, url) {
       },
       profileAssets,
       interactions,
+      searchDemands,
+      tagAnalytics,
+      categoryAnalytics,
       visits,
       images
     };
@@ -1025,11 +1065,14 @@ async function serveStatic(request, response, pathname) {
     "/favicon.ico",
     "/favicon.png",
     "/assets/ailogo.png",
-    "/assets/admin.jpg"
+    "/assets/admin.jpg",
+    "/data/notes.json",
+    "/data/profile.json"
   ]);
   const isPublicUpload = pathname.startsWith("/uploads/") && /\.(jpe?g|png|webp|svg)$/i.test(pathname);
   const isPublicAsset = pathname.startsWith("/assets/");
-  if (!allowedPublicFiles.has(pathname) && !isPublicUpload && !isPublicAsset) {
+  const isPublicData = pathname.startsWith("/data/") && pathname.endsWith(".json");
+  if (!allowedPublicFiles.has(pathname) && !isPublicUpload && !isPublicAsset && !isPublicData) {
     response.writeHead(404);
     response.end("Not found");
     return;

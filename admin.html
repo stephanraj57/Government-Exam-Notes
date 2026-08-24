@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=14.0">
+  <link rel="stylesheet" href="styles.css?v=16.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -1855,14 +1855,18 @@
           <div id="win-progress-fill" class="win-progress-fill" style="width: 0%;"></div>
         </div>
 
-        <!-- Current Item & Stats -->
-        <div class="win-transfer-status-text" id="win-transfer-item-name">Preparing data stream...</div>
+        <!-- Current File / Item Progressing -->
+        <div class="win-transfer-status-text">
+          <span class="status-file-icon">📄</span>
+          <span id="win-transfer-item-name">Preparing data stream...</span>
+        </div>
 
+        <!-- Windows-Style Live Transfer Stats Box -->
         <div class="win-transfer-stats">
-          <div id="win-transfer-speed">Speed: 18.2 MB/s</div>
-          <div id="win-transfer-eta" style="text-align: right;">Time remaining: ~2 seconds</div>
-          <div id="win-transfer-items-count">Items: 0 items</div>
-          <div id="win-transfer-source-file" style="text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Source: backup.json</div>
+          <div class="stat-col"><span class="stat-label">Speed:</span> <span id="win-transfer-speed" class="stat-val">Calculating…</span></div>
+          <div class="stat-col" style="text-align: right; justify-content: flex-end;"><span class="stat-label">Time remaining:</span> <span id="win-transfer-eta" class="stat-val">Calculating…</span></div>
+          <div class="stat-col"><span class="stat-label">Items remaining:</span> <span id="win-transfer-items-count" class="stat-val">Calculating…</span></div>
+          <div class="stat-col" style="text-align: right; justify-content: flex-end;"><span class="stat-label">Source:</span> <span id="win-transfer-source-file" class="stat-val" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; display: inline-block;">backup.json</span></div>
         </div>
 
         <!-- Action row upon finish -->
@@ -1878,6 +1882,6 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=15.0"></script>
+  <script src="admin.js?v=16.0"></script>
 </body>
 </html>

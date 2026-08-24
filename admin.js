@@ -3810,16 +3810,61 @@ function setupEventListeners() {
           return copy;
         });
 
+        // Calculate comprehensive Tag Analytics
+        const tagCounts = {};
+        for (const note of clientNotes) {
+          if (Array.isArray(note.tags)) {
+            for (const t of note.tags) {
+              const clean = String(t || "").trim().replace(/^#/, "");
+              if (clean) tagCounts[clean] = (tagCounts[clean] || 0) + 1;
+            }
+          }
+        }
+        const tagAnalytics = {
+          totalUniqueTags: Object.keys(tagCounts).length,
+          tagFrequencies: tagCounts,
+          topTags: Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).map(([tag, count]) => ({ tag, count }))
+        };
+
+        // Calculate Subject / Category Analytics
+        const catCounts = { History: 0, Polity: 0, Economy: 0, Geography: 0, "Art and Culture": 0, Maths: 0, Science: 0, Others: 0 };
+        for (const note of clientNotes) {
+          const s = note.subject || "Others";
+          catCounts[s] = (catCounts[s] || 0) + 1;
+        }
+        const categoryAnalytics = {
+          categories: catCounts,
+          totalNotes: clientNotes.length
+        };
+
+        // Calculate Search Demands & Missing Searches
+        const missingSearches = liveInteractions.missingSearches || {};
+        const searchDemands = {
+          unfulfilledDemands: Object.values(missingSearches).sort((a, b) => (b.count || 0) - (a.count || 0)),
+          allSearches: liveInteractions.searches || {},
+          totalSearchVolume: liveInteractions.totalSearches || 0
+        };
+
         backupData = {
-          version: "2.1",
-          type: "ExamAlertIndiaFullBackup",
+          version: "3.0",
+          type: "ExamAlertIndiaMasterBackup",
           exportedAt: new Date().toISOString(),
+          system: {
+            platform: "Free AI Govt Exam Notes",
+            generator: "Admin Studio Unified Master Backup Engine v3.0",
+            notesCount: clientNotes.length,
+            tagsCount: tagAnalytics.totalUniqueTags,
+            searchDemandsCount: searchDemands.unfulfilledDemands.length
+          },
           notes: clientNotes,
           visits: {
             count: Number(localStorage.getItem("exam_notes_local_visits") || "0"),
             today: Number(localStorage.getItem("exam_notes_local_visits_today") || "0")
           },
           interactions: liveInteractions,
+          searchDemands,
+          tagAnalytics,
+          categoryAnalytics,
           profile: adminProfileState,
           profileAssets: {
             avatarData: adminProfileState.avatarUrl || null,
@@ -3900,7 +3945,13 @@ function setupEventListeners() {
     const iconEl = $("#win-transfer-icon");
     const footerEl = $("#win-transfer-footer");
 
-    if (!dialog) return { animateTo: () => Promise.resolve(), sleep: () => {}, setItemsCount: () => {}, complete: () => {}, close: () => {} };
+    if (!dialog) return { updateLiveStats: () => {}, animateTo: () => Promise.resolve(), setItems: () => {}, complete: () => {}, close: () => {} };
+
+    const totalBytes = (file && file.size) || (1024 * 1024 * 3.5);
+    const startOverallTime = performance.now();
+    let currentPct = 0;
+    let totalItemsCount = 0;
+    let processedItemsCount = 0;
 
     // Reset initial visual state
     if (iconEl) iconEl.textContent = "📦";
@@ -3910,11 +3961,11 @@ function setupEventListeners() {
     if (stageLabel) stageLabel.textContent = "Reading backup package...";
     if (pctEl) pctEl.textContent = "0%";
     if (fillEl) fillEl.style.width = "0%";
-    if (itemNameEl) itemNameEl.textContent = `Analyzing ${file.name}...`;
-    if (speedEl) speedEl.textContent = "Speed: 18.2 MB/s";
-    if (etaEl) etaEl.textContent = "Time remaining: ~3 seconds";
-    if (itemsCountEl) itemsCountEl.textContent = "Items: Calculating…";
-    if (sourceFileEl) sourceFileEl.textContent = `Source: ${file.name}`;
+    if (itemNameEl) itemNameEl.textContent = `Reading ${file.name}...`;
+    if (speedEl) speedEl.textContent = "Calculating…";
+    if (etaEl) etaEl.textContent = "Calculating…";
+    if (itemsCountEl) itemsCountEl.textContent = "Calculating…";
+    if (sourceFileEl) sourceFileEl.textContent = file.name;
     if (footerEl) footerEl.style.display = "none";
 
     try {
@@ -3927,30 +3978,57 @@ function setupEventListeners() {
       dialog.setAttribute("open", "");
     }
 
-    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const updateLiveStats = (pct, currentItemText = null) => {
+      currentPct = Math.min(100, Math.max(0, pct));
+      if (pctEl) pctEl.textContent = `${Math.round(currentPct)}%`;
+      if (fillEl) fillEl.style.width = `${currentPct}%`;
+      if (itemNameEl && currentItemText) itemNameEl.textContent = currentItemText;
 
-    let currentPct = 0;
-    const animateTo = (targetPct, durationMs, stageText, currentItem, remainingText, speedText) => {
+      const elapsedSec = Math.max(0.1, (performance.now() - startOverallTime) / 1000);
+      const processedBytes = (currentPct / 100) * totalBytes;
+      // Realistic smooth transfer speed with slight natural variation
+      const baseMBps = (processedBytes / (1024 * 1024)) / elapsedSec;
+      const speedMBps = Math.max(16.2, Math.min(38.5, (baseMBps || 21.4) + (Math.sin(elapsedSec * 3) * 1.8)));
+
+      if (speedEl) {
+        speedEl.textContent = `${speedMBps.toFixed(1)} MB/s`;
+      }
+
+      const remainingBytes = Math.max(0, totalBytes - processedBytes);
+      const estSeconds = speedMBps > 0 ? (remainingBytes / (speedMBps * 1024 * 1024)) : 0;
+
+      if (etaEl) {
+        if (currentPct >= 99) {
+          etaEl.textContent = "Finalizing commit...";
+        } else if (estSeconds <= 1.2) {
+          etaEl.textContent = "About 1 second remaining";
+        } else if (estSeconds < 60) {
+          etaEl.textContent = `About ${Math.ceil(estSeconds)} seconds remaining`;
+        } else {
+          etaEl.textContent = `About ${Math.ceil(estSeconds / 60)} minutes remaining`;
+        }
+      }
+
+      if (itemsCountEl && totalItemsCount > 0) {
+        const remaining = Math.max(0, totalItemsCount - processedItemsCount);
+        itemsCountEl.textContent = `${remaining} of ${totalItemsCount} items`;
+      }
+    };
+
+    const animateTo = (targetPct, durationMs, stageText, currentItem) => {
       if (stageLabel && stageText) stageLabel.textContent = stageText;
-      if (itemNameEl && currentItem) itemNameEl.textContent = currentItem;
-      if (etaEl && remainingText) etaEl.textContent = remainingText;
-      if (speedEl && speedText) speedEl.textContent = speedText;
-
       return new Promise(resolve => {
         const start = currentPct;
         const startTime = performance.now();
         const frame = (now) => {
           const elapsed = now - startTime;
           const p = Math.min(elapsed / durationMs, 1);
-          currentPct = Math.round(start + (targetPct - start) * p);
-          if (pctEl) pctEl.textContent = `${currentPct}%`;
-          if (fillEl) fillEl.style.width = `${currentPct}%`;
+          const interpolated = start + (targetPct - start) * p;
+          updateLiveStats(interpolated, currentItem);
           if (p < 1) {
             requestAnimationFrame(frame);
           } else {
-            currentPct = targetPct;
-            if (pctEl) pctEl.textContent = `${targetPct}%`;
-            if (fillEl) fillEl.style.width = `${targetPct}%`;
+            updateLiveStats(targetPct, currentItem);
             resolve();
           }
         };
@@ -3959,17 +4037,29 @@ function setupEventListeners() {
     };
 
     return {
+      updateLiveStats,
       animateTo,
-      sleep,
-      setItemsCount: (text) => {
-        if (itemsCountEl) itemsCountEl.textContent = text;
+      setItems: (processed, total) => {
+        processedItemsCount = processed;
+        totalItemsCount = total;
+        if (itemsCountEl) {
+          const rem = Math.max(0, total - processed);
+          itemsCountEl.textContent = `${rem} of ${total} items`;
+        }
+      },
+      setItemName: (name) => {
+        if (itemNameEl) itemNameEl.textContent = name;
       },
       complete: async (notesCount) => {
+        updateLiveStats(100, `Successfully restored ${notesCount} notes and brand assets`);
         if (iconEl) iconEl.textContent = "✅";
         if (titleEl) titleEl.textContent = "System Restored Successfully!";
         if (subEl) subEl.textContent = `All ${notesCount} notes, brand logo, profile photo & QR barcode loaded`;
+        if (speedEl) speedEl.textContent = "Transfer complete";
+        if (etaEl) etaEl.textContent = "0 seconds remaining";
+        if (itemsCountEl) itemsCountEl.textContent = `0 of ${totalItemsCount || notesCount} items`;
         if (footerEl) footerEl.style.display = "flex";
-        await sleep(1500);
+        await new Promise(r => setTimeout(r, 1500));
         try { dialog.close(); } catch { dialog.removeAttribute("open"); }
       },
       close: () => {
@@ -3992,8 +4082,8 @@ function setupEventListeners() {
     try {
       progressModal = await showWindowsRestoreProgress(file);
 
-      // Stage 1: Read and verify file (0% -> 22%)
-      await progressModal.animateTo(22, 600, "Reading backup package & verifying JSON...", `Unpacking ${file.name} (${(file.size / 1024).toFixed(1)} KB)...`, "Time remaining: ~3 seconds", "Speed: 18.2 MB/s");
+      // Stage 1: Read and verify file (0% -> 15%)
+      await progressModal.animateTo(15, 450, "Reading backup package & verifying JSON...", `Verifying ${file.name} (${(file.size / 1024).toFixed(1)} KB)...`);
 
       const text = await file.text();
       const backupObj = JSON.parse(text);
@@ -4003,14 +4093,27 @@ function setupEventListeners() {
       }
 
       const notesCount = (backupObj.notes || []).length;
-      progressModal.setItemsCount(`Items: ${notesCount} notes`);
+      const totalEstimatedItems = notesCount + 3 + (backupObj.searchDemands?.unfulfilledDemands?.length || 0);
+      progressModal.setItems(0, totalEstimatedItems);
 
-      // Stage 2: Decode notes and diagram buffers (22% -> 55%)
-      await progressModal.animateTo(55, 700, "Decoding note records & diagram buffers...", `Validating ${notesCount} revision note cards...`, "Time remaining: ~2 seconds", "Speed: 27.5 MB/s");
+      // Stage 2: Decode notes and diagram buffers with dynamic individual file feedback (15% -> 50%)
+      const notesList = backupObj.notes || [];
+      for (let i = 0; i < notesList.length; i++) {
+        const note = notesList[i];
+        const stepTargetPct = 15 + Math.round(((i + 1) / Math.max(1, notesList.length)) * 35);
+        progressModal.setItems(i + 1, totalEstimatedItems);
+        await progressModal.animateTo(
+          stepTargetPct,
+          Math.max(60, Math.min(220, 800 / Math.max(1, notesList.length))),
+          "Decoding note records & diagram buffers...",
+          `Decoding note ${i + 1}/${notesCount}: "${note.title || note.id}.jpg"`
+        );
+      }
 
-      // Stage 3: Server synchronization (55% -> 80%)
+      // Stage 3: Server synchronization (50% -> 75%)
       let restoreRes = null;
       let serverSaved = false;
+      progressModal.setItemName("Sending database snapshot to server disk...");
       try {
         restoreRes = await api("/api/admin/backup/restore", {
           method: "POST",
@@ -4041,6 +4144,7 @@ function setupEventListeners() {
             if (backupObj.images && typeof backupObj.images === "object") {
               for (const [fn, dataUrl] of Object.entries(backupObj.images)) {
                 if (fn && dataUrl && typeof dataUrl === "string") {
+                  progressModal.setItemName(`Uploading image asset: "${fn}"`);
                   await api("/api/admin/backup/upload-asset", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -4055,6 +4159,7 @@ function setupEventListeners() {
                 if (raw && typeof raw === "string" && raw.startsWith("data:image/")) {
                   const ext = raw.includes("png") ? "png" : raw.includes("webp") ? "webp" : "jpg";
                   const filename = `${n.id || "note"}.${ext}`;
+                  progressModal.setItemName(`Uploading diagram image: "${filename}"`);
                   await api("/api/admin/backup/upload-asset", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -4069,16 +4174,15 @@ function setupEventListeners() {
         }
       }
 
-      await progressModal.animateTo(80, 650, "Uploading & committing database records...", "Writing database snapshot to server storage...", "Time remaining: ~1 second", "Speed: 36.0 MB/s");
+      await progressModal.animateTo(75, 400, "Uploading & committing database records...", "Writing database snapshot to server storage...");
 
       if (restoreRes && restoreRes.profile) {
         adminProfileState = { ...adminProfileState, ...restoreRes.profile };
       }
 
-      // Stage 4: Apply branding and search indices (80% -> 98%)
-      await progressModal.animateTo(98, 500, "Applying branding assets & search indexes...", "Syncing logo, avatar and Instagram QR...", "Time remaining: Almost done", "Speed: 45.0 MB/s");
+      // Stage 4: Apply branding, search demands & IndexedDB storage (75% -> 96%)
+      await progressModal.animateTo(82, 350, "Saving images into offline IndexedDB...", "Caching diagrams into local image repository...");
 
-      // Save all backup images into IndexedDB (persists locally across all hosts with zero server dependencies)
       if (backupObj.images && typeof backupObj.images === "object") {
         for (const [key, dataUrl] of Object.entries(backupObj.images)) {
           if (key && dataUrl && typeof dataUrl === "string") {
@@ -4115,6 +4219,9 @@ function setupEventListeners() {
         safeSetLocalStorage("exam_notes_custom_uploads", clientNotes);
         allNotes = clientNotes;
       }
+
+      await progressModal.animateTo(90, 300, "Applying branding assets & search indices...", 'Syncing creator avatar: "admin_avatar.jpg"...');
+
       if (backupObj.profile || backupObj.profileAssets) {
         const pObj = backupObj.profile || {};
         const pAssets = backupObj.profileAssets || backupObj.profile || {};
@@ -4127,14 +4234,17 @@ function setupEventListeners() {
         };
 
         if (pAssets.avatarData) {
+          progressModal.setItemName('Saving: "admin_avatar.jpg"');
           await ImageStore.set("admin_avatar", pAssets.avatarData);
           if (adminProfileState.avatarUrl) await ImageStore.set(adminProfileState.avatarUrl, pAssets.avatarData);
         }
         if (pAssets.logoData) {
+          progressModal.setItemName('Saving: "site_logo.png"');
           await ImageStore.set("site_logo", pAssets.logoData);
           if (adminProfileState.logoUrl) await ImageStore.set(adminProfileState.logoUrl, pAssets.logoData);
         }
         if (pAssets.instagramQrData) {
+          progressModal.setItemName('Saving: "instagram_qr.png"');
           await ImageStore.set("instagram_qr", pAssets.instagramQrData);
           if (adminProfileState.instagramQrUrl) await ImageStore.set(adminProfileState.instagramQrUrl, pAssets.instagramQrData);
         }
@@ -4142,13 +4252,36 @@ function setupEventListeners() {
         safeSetLocalStorage("exam_admin_profile_data", adminProfileState);
         applyAdminProfileUI(adminProfileState);
       }
+
+      await progressModal.animateTo(96, 250, "Restoring search demands & analytics...", "Syncing search demand logs and category analytics...");
+
       if (backupObj.interactions) {
         liveInteractions = backupObj.interactions;
         safeSetLocalStorage("exam_notes_interactions_data", liveInteractions);
+      } else if (backupObj.searchDemands) {
+        liveInteractions = {
+          totalLikes: 0,
+          totalDownloads: 0,
+          totalSearches: backupObj.searchDemands.totalSearchVolume || 0,
+          totalImpressions: 0,
+          notes: {},
+          searches: backupObj.searchDemands.allSearches || {},
+          missingSearches: (backupObj.searchDemands.unfulfilledDemands || []).reduce((acc, item) => {
+            if (item && item.query) acc[item.query] = item;
+            return acc;
+          }, {})
+        };
+        safeSetLocalStorage("exam_notes_interactions_data", liveInteractions);
+      }
+      if (backupObj.visits) {
+        safeSetLocalStorage("exam_notes_local_visits", backupObj.visits.count || 0);
+        safeSetLocalStorage("exam_notes_local_visits_today", backupObj.visits.today || 0);
       }
 
-      // Stage 5: Complete (98% -> 100%)
-      await progressModal.animateTo(100, 300, "Restore Complete!", `Successfully synchronized ${notesCount} notes & assets`, "Complete", "100% Synced");
+      progressModal.setItems(totalEstimatedItems, totalEstimatedItems);
+
+      // Stage 5: Complete (96% -> 100%)
+      await progressModal.animateTo(100, 300, "Restore Complete!", `Successfully synchronized ${notesCount} notes & assets`);
       await progressModal.complete(notesCount);
       await loadDashboardData();
       if (serverSaved) {
