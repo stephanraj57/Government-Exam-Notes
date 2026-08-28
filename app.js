@@ -2148,6 +2148,7 @@ function initStudentAuth() {
   // Initialize Google Identity Services One Tap if Google SDK is loaded
   const tryInitGsi = async () => {
     if (window.google && window.google.accounts && window.google.accounts.id) {
+      try {
         let clientId = window.__GOOGLE_CLIENT_ID;
         if (!clientId) {
           const cfg = await api("/api/auth/google/config").catch(() => ({}));
@@ -2181,7 +2182,9 @@ function initStudentAuth() {
         if (!currentStudentUser) {
           window.google.accounts.id.prompt();
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn("[Google Auth] Init error:", e);
+      }
     }
   };
 
