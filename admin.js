@@ -3502,17 +3502,15 @@ function setupFileDrop() {
         urlStatus.hidden = true;
         urlStatus.textContent = "";
       }
-      if (selectedImageUrl) {
-        clearPreview();
-      }
+      clearPreview();
       return;
     }
 
-    if (!rawUrl.startsWith("http://") && !rawUrl.startsWith("https://") && !rawUrl.startsWith("data:image/")) {
+    if (!rawUrl.startsWith("http://") && !rawUrl.startsWith("https://")) {
       if (urlStatus) {
         urlStatus.hidden = false;
         urlStatus.className = "url-status-msg error";
-        urlStatus.textContent = "⚠️ Please enter a valid URL starting with https://";
+        urlStatus.textContent = "⚠️ Please enter a valid Cloudinary image URL starting with https://";
       }
       return;
     }
@@ -3520,7 +3518,7 @@ function setupFileDrop() {
     if (urlStatus) {
       urlStatus.hidden = false;
       urlStatus.className = "url-status-msg info";
-      urlStatus.textContent = "⏳ Testing image link…";
+      urlStatus.textContent = "⏳ Verifying Cloudinary image link…";
     }
 
     clearTimeout(urlDebounceTimer);
@@ -3529,13 +3527,11 @@ function setupFileDrop() {
       testImg.onload = () => {
         selectedImageUrl = rawUrl;
         selectedImageData = null;
-        if (fileInput) fileInput.value = "";
-        
-        promptBox.hidden = true;
-        previewWrap.hidden = false;
-        imgPreview.src = selectedImageUrl;
-        nameLabel.textContent = rawUrl.includes("cloudinary.com") ? "Cloudinary Hosted Note Image" : "External Image URL";
-        sizeLabel.textContent = `${testImg.naturalWidth}×${testImg.naturalHeight} px (Ready)`;
+
+        if (previewWrap) previewWrap.hidden = false;
+        if (imgPreview) imgPreview.src = selectedImageUrl;
+        if (nameLabel) nameLabel.textContent = rawUrl.includes("cloudinary.com") ? "Cloudinary Hosted Note Image" : "Cloud Hosted Image";
+        if (sizeLabel) sizeLabel.textContent = `${testImg.naturalWidth}×${testImg.naturalHeight} px (Ready)`;
 
         if (urlStatus) {
           urlStatus.hidden = false;
@@ -3548,25 +3544,32 @@ function setupFileDrop() {
         if (urlStatus) {
           urlStatus.hidden = false;
           urlStatus.className = "url-status-msg error";
-          urlStatus.textContent = "⚠️ Unable to load image from this URL. Please verify the Cloudinary link.";
+          urlStatus.textContent = "⚠️ Unable to load image from this Cloudinary URL. Please verify the link.";
         }
       };
       testImg.src = rawUrl;
-    }, 350);
+    }, 300);
   }
 
   urlInput?.addEventListener("input", handleUrlInput);
   urlInput?.addEventListener("paste", () => setTimeout(handleUrlInput, 50));
 
-  urlClearBtn?.addEventListener("click", () => {
+  function clearPreview() {
+    selectedImageUrl = null;
+    selectedImageData = null;
     if (urlInput) urlInput.value = "";
     if (urlClearBtn) urlClearBtn.hidden = true;
     if (urlStatus) {
       urlStatus.hidden = true;
       urlStatus.textContent = "";
     }
-    clearPreview();
-  });
+    if (imgPreview) imgPreview.src = "";
+    if (previewWrap) previewWrap.hidden = true;
+    if (promptBox) promptBox.hidden = false;
+  }
+
+  urlClearBtn?.addEventListener("click", clearPreview);
+  removeBtn?.addEventListener("click", clearPreview);
 
   async function processFile(file) {
     if (msg) {
@@ -3617,21 +3620,6 @@ function setupFileDrop() {
       showToast("Failed to process image file.", "error");
       clearPreview();
     }
-  }
-
-  function clearPreview() {
-    selectedImageData = null;
-    selectedImageUrl = null;
-    if (fileInput) fileInput.value = "";
-    if (urlInput) urlInput.value = "";
-    if (urlClearBtn) urlClearBtn.hidden = true;
-    if (urlStatus) {
-      urlStatus.hidden = true;
-      urlStatus.textContent = "";
-    }
-    imgPreview.src = "";
-    promptBox.hidden = false;
-    previewWrap.hidden = true;
   }
 
   fileInput?.addEventListener("change", () => {
@@ -3887,13 +3875,13 @@ function openPublishVerificationModal() {
   const rawTags = tagsInput ? tagsInput.value : "";
   const parsedTags = rawTags.split(",").map(s => s.trim().replace(/^#/, "")).filter(Boolean);
 
-  const activeImage = selectedImageUrl || selectedImageData;
+  const activeImage = selectedImageUrl || ($("#studio-image-url")?.value || "").trim();
 
   // Strict Validation for all mandatory fields
   if (!activeImage) {
-    showToast("Please paste a Cloudinary Image URL or upload a Note Image diagram.", "error");
+    showToast("Please paste a Cloudinary Image URL.", "error");
     if (msg) {
-      msg.textContent = "Note Image is mandatory. Paste a Cloudinary URL or upload an image file.";
+      msg.textContent = "Cloudinary Image URL is mandatory. Please paste the image link.";
       msg.className = "form-message error";
     }
     $("#studio-image-url")?.focus();
@@ -3936,7 +3924,6 @@ function openPublishVerificationModal() {
   const modalTags = $("#verify-meta-tags");
   const modalFileName = $("#verify-file-name");
   const modalFileSize = $("#verify-file-size");
-  const fileInput = $("#studio-file-input");
 
   if (modalImg) modalImg.src = activeImage;
   if (modalTitle) modalTitle.textContent = title;
@@ -3965,8 +3952,8 @@ function openPublishVerificationModal() {
     }
   }
 
-  const fileName = selectedImageUrl ? (selectedImageUrl.includes("cloudinary.com") ? "Cloudinary Hosted Image" : "External Image URL") : (fileInput?.files?.[0]?.name || $("#preview-file-name")?.textContent || "revision-note.jpg");
-  const fileSize = selectedImageUrl ? "Cloudinary Link" : (fileInput?.files?.[0] ? `${(fileInput.files[0].size / 1024).toFixed(1)} KB` : $("#preview-file-size")?.textContent || "High-Res JPG");
+  const fileName = activeImage.includes("cloudinary.com") ? "Cloudinary Hosted Image" : "Cloud Hosted Image URL";
+  const fileSize = "Cloudinary CDN";
   if (modalFileName) modalFileName.textContent = fileName;
   if (modalFileSize) modalFileSize.textContent = fileSize;
 
@@ -3997,9 +3984,9 @@ async function executePublishNote() {
   const confirmBtn = $("#verify-confirm-btn");
   const verifyDialog = $("#admin-publish-verify-dialog");
 
-  const activeImage = selectedImageUrl || selectedImageData;
+  const activeImage = selectedImageUrl || ($("#studio-image-url")?.value || "").trim();
   if (!activeImage) {
-    showToast("Please paste a Cloudinary Image URL or upload a note image first.", "error");
+    showToast("Please paste a Cloudinary Image URL first.", "error");
     return;
   }
 
@@ -4019,14 +4006,9 @@ async function executePublishNote() {
       title: titleInput.value.trim(),
       subject: subjectInput.value,
       tags: parsedTags,
-      overview: overview
+      overview: overview,
+      imageUrl: activeImage
     };
-
-    if (selectedImageUrl) {
-      payload.imageUrl = selectedImageUrl;
-    } else if (selectedImageData) {
-      payload.imageData = selectedImageData;
-    }
 
     await api("/api/admin/notes", {
       method: "POST",
@@ -5805,11 +5787,14 @@ function setupEventListeners() {
           },
           images: clientImages
         };
-      } else {
-        // Enrich server backup with any client-stored IndexedDB images
+        // Enrich server backup ONLY with IndexedDB images that belong to active notes or branding
+        const activeNoteIds = new Set((allNotes || []).map(n => n.id));
+        const activeImageKeys = new Set((allNotes || []).map(n => (n.imageUrl || "").split("?")[0].replace(/^\/uploads\//, "")).filter(Boolean));
         if (!backupData.images) backupData.images = {};
         for (const [k, v] of Object.entries(idbImages)) {
-          if (!backupData.images[k]) backupData.images[k] = v;
+          if (activeNoteIds.has(k) || activeImageKeys.has(k) || k === "site_logo" || k === "admin_avatar" || k === "instagram_qr") {
+            if (!backupData.images[k]) backupData.images[k] = v;
+          }
         }
         if (Array.isArray(backupData.notes)) {
           backupData.notes = backupData.notes.map(n => {
@@ -6404,20 +6389,28 @@ function setupEventListeners() {
       localStorage.removeItem("exam_notes_favorites");
       localStorage.removeItem("exam_notes_offline_queue");
       localStorage.removeItem("exam_notes_interactions_data");
+      localStorage.removeItem("exam_users_data");
 
       liveInteractions = {
         totalLikes: 0,
         totalDownloads: 0,
+        totalShares: 0,
         totalSearches: 0,
         totalImpressions: 0,
         notes: {},
+        shares: {},
         searches: {},
         missingSearches: {}
       };
 
+      adminUsersData = [];
+      usersMetricsData = {};
+      registeredUsers = [];
+
       if (cleanDialog) cleanDialog.close();
-      showToast("✓ All website data & local caches have been securely wiped clean!", "success");
+      showToast("✓ All website notes, student users, analytics & local caches have been securely wiped clean!", "success");
       await loadDashboardData();
+      if (typeof renderUsersView === "function") renderUsersView();
     } catch (err) {
       if (cleanMsg) {
         cleanMsg.textContent = err.message || "Incorrect admin password. Data wipe was rejected.";

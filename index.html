@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=71.0">
+  <link rel="stylesheet" href="styles.css?v=81.0">
   <script>
     fetch("/api/auth/google/config")
       .then(r => r.json())
@@ -33,7 +33,7 @@
   <!-- Header -->
   <header class="site-header">
     <a class="brand" href="#top" id="brand-link">
-      <img class="brand-logo" src="assets/ailogo.png" alt="Govt Exam Notes logo" onerror="this.onerror=null; this.src='favicon.png';">
+      <img class="brand-logo" src="assets/ailogo.png" alt="Free AI Govt Exam Notes logo" onerror="this.onerror=null; this.src='favicon.png';">
       <span class="brand-text">
         <strong>Free AI</strong> Govt Exam Notes
         <small>Smart Notes · Clear Concepts · Better Revision</small>
@@ -48,30 +48,28 @@
         <span class="nav-icon">❤️</span> Saved <span id="bookmark-badge" class="badge">0</span>
       </button>
       <button type="button" class="nav-link" data-view="about" title="About Free AI Govt Exam Notes">
-        <span class="nav-icon">ⓘ</span> About Us
+        <span class="nav-icon">ⓘ</span> About
       </button>
     </nav>
 
     <div class="header-actions">
       <!-- Student Google Auth & Profile Pill -->
       <div id="student-auth-wrap" class="student-auth-wrap">
-        <!-- Logged-out state: Google Sign-in trigger button -->
-        <button id="student-signin-btn" class="student-signin-btn" type="button" title="Sign in with Google to sync liked and saved notes across devices">
-          <svg class="google-g-icon" viewBox="0 0 24 24" width="16" height="16">
+        <!-- Logged-out state: Google Sign-in trigger button (Google Logo Only) -->
+        <button id="student-signin-btn" class="student-signin-btn google-icon-only-btn" type="button" title="Sign in with Google to sync liked & saved notes" aria-label="Sign in with Google">
+          <svg class="google-g-icon" viewBox="0 0 24 24" width="20" height="20">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
           </svg>
-          <span class="student-signin-text">Sign in with Google</span>
         </button>
 
-        <!-- Logged-in state: Student Profile Pill & Dropdown -->
-        <div id="student-profile-pill" class="student-profile-pill" hidden>
-          <button id="student-profile-btn" class="student-profile-btn" type="button" aria-expanded="false" title="Student Profile & Sync">
-            <img id="student-avatar-img" class="student-avatar-img" src="" alt="Student">
-            <span id="student-name-text" class="student-name-text">Student</span>
-            <span class="student-status-dot" title="Cloud Sync Active">●</span>
+        <!-- Logged-in state: Student Profile Avatar Only -->
+        <div id="student-profile-pill" class="student-profile-pill avatar-only-pill" hidden>
+          <button id="student-profile-btn" class="student-profile-btn avatar-only-btn" type="button" aria-expanded="false" title="Student Profile & Sync">
+            <img id="student-avatar-img" class="student-avatar-img" src="" alt="Student Profile">
+            <span class="student-status-dot" title="Cloud Sync Active" aria-hidden="true"></span>
           </button>
           <div id="student-dropdown-menu" class="student-dropdown-menu" hidden>
             <div class="student-menu-header">
@@ -101,17 +99,6 @@
       <button id="theme-toggle" class="theme-button" type="button" title="Toggle Theme (Dark / Light)" aria-label="Toggle Dark Mode">
         <span class="theme-icon">🌙</span>
       </button>
-
-      <div id="admin-user-container">
-        <a id="admin-login-button" href="admin.html" class="profile-button" title="Admin Portal & Upload Studio">
-          <span class="avatar"><img src="assets/admin.jpg" alt="Stephanraj" class="avatar-img" onerror="this.parentElement.textContent='AS'"></span>
-          <div class="profile-info">
-            <strong id="admin-status-text">Admin Studio</strong>
-            <small id="admin-status-sub">Upload & Manage</small>
-          </div>
-          <i class="caret">↗</i>
-        </a>
-      </div>
     </div>
   </header>
 
@@ -576,14 +563,31 @@
       </button>
     </section>
 
-    <!-- 9. Footer -->
+    <!-- 9. Dedicated Administrator Portal Access Card -->
+    <section class="about-admin-entry-card" aria-label="Administrator Portal">
+      <div class="about-admin-entry-inner">
+        <div class="about-admin-badge-col">
+          <span class="about-admin-entry-icon">🔐</span>
+          <div>
+            <h3 class="about-admin-entry-title">Administrator Portal & Studio</h3>
+            <p class="about-admin-entry-sub">Authorized portal for content management, revision note uploads, and student intelligence telemetry.</p>
+          </div>
+        </div>
+        <a id="admin-login-button" href="admin.html" class="about-admin-entry-btn" title="Open Admin Studio Portal">
+          <span>Admin Studio Login</span>
+          <span class="entry-arrow">↗</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- 10. Footer -->
     <footer class="about-site-footer">
       <div class="about-footer-links">
         <button type="button" class="footer-nav-link-btn" onclick="switchView('notes')">Notes Library</button>
         <span>•</span>
         <button type="button" class="footer-nav-link-btn" onclick="switchView('bookmarks')">Saved Bookmarks</button>
         <span>•</span>
-        <button type="button" class="footer-nav-link-btn" onclick="switchView('about')">About Us</button>
+        <button type="button" class="footer-nav-link-btn" onclick="switchView('about')">About</button>
         <span>•</span>
         <a href="admin.html">Admin Studio</a>
       </div>
@@ -594,7 +598,7 @@
 
   </section>
 
-  <!-- Mobile Bottom Navigation -->
+  <!-- Mobile Bottom Navigation (3 Equal Tabs: Notes, Saved, About) -->
   <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
     <button type="button" class="mobile-nav-btn active" data-view="notes">
       <span class="mob-icon">▣</span>
@@ -604,9 +608,9 @@
       <span class="mob-icon">♡</span>
       <span>Saved</span>
     </button>
-    <button type="button" class="mobile-nav-btn" data-view="about" title="About Exam Notes">
+    <button type="button" class="mobile-nav-btn" data-view="about" title="About Free AI Govt Exam Notes">
       <span class="mob-icon">ⓘ</span>
-      <span>About Us</span>
+      <span>About</span>
     </button>
   </nav>
 
@@ -907,6 +911,6 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="app.js?v=50.0"></script>
+  <script src="app.js?v=56.0"></script>
 </body>
 </html>

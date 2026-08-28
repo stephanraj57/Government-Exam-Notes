@@ -685,6 +685,10 @@ function switchView(viewName, updateHash = true) {
   activeTag = null;
   currentPage = 1;
 
+  if (viewName !== "notes") {
+    closeLightbox();
+  }
+
   if (updateHash) {
     if (viewName === "notes") {
       history.replaceState(null, "", window.location.pathname + window.location.search);
@@ -871,10 +875,7 @@ function toggleBookmark(noteId, e) {
     if (!currentStudentUser) {
       pendingLikeNoteId = noteId;
       setTimeout(() => {
-        const authDialog = $("#student-auth-dialog");
-        if (authDialog && !authDialog.open) {
-          try { authDialog.showModal(); } catch { authDialog.setAttribute("open", ""); }
-        }
+        openStudentAuthModal();
       }, 500);
     }
   }
@@ -962,6 +963,26 @@ function resetZoom() {
   applyZoomTransform();
 }
 
+function updateNoteUrlParam(noteId) {
+  try {
+    const url = new URL(window.location.href);
+    if (noteId) {
+      url.searchParams.set("note", noteId);
+      url.searchParams.delete("id");
+    } else {
+      url.searchParams.delete("note");
+      url.searchParams.delete("id");
+    }
+    const searchStr = url.searchParams.toString();
+    const newRelativePath = url.pathname + (searchStr ? '?' + searchStr : '') + url.hash;
+    window.history.replaceState(null, "", newRelativePath);
+  } catch {}
+}
+
+function clearNoteUrlParam() {
+  updateNoteUrlParam(null);
+}
+
 function openLightbox(index) {
   if (index < 0 || index >= currentFilteredList.length) return;
   currentLightboxIndex = index;
@@ -970,8 +991,20 @@ function openLightbox(index) {
 
   updateLightboxContent(note);
   resetZoom();
+  updateNoteUrlParam(note.id);
+
   const dialog = $("#lightbox-dialog");
-  if (dialog) dialog.showModal();
+  if (dialog && !dialog.open) {
+    try { dialog.showModal(); } catch { dialog.setAttribute("open", ""); }
+  }
+}
+
+function closeLightbox() {
+  const dialog = $("#lightbox-dialog");
+  if (dialog && dialog.open) {
+    try { dialog.close(); } catch { dialog.removeAttribute("open"); }
+  }
+  clearNoteUrlParam();
 }
 
 function sanitizeRichHtml(html) {
@@ -1612,10 +1645,21 @@ function setupEventListeners() {
     resetZoom();
   });
 
+  const lightboxDialog = $("#lightbox-dialog");
   $("#lightbox-prev-btn")?.addEventListener("click", prevLightbox);
   $("#lightbox-next-btn")?.addEventListener("click", nextLightbox);
-  $("#lightbox-close-btn")?.addEventListener("click", () => {
-    $("#lightbox-dialog")?.close();
+  $("#lightbox-close-btn")?.addEventListener("click", closeLightbox);
+
+  lightboxDialog?.addEventListener("close", () => {
+    clearNoteUrlParam();
+  });
+  lightboxDialog?.addEventListener("cancel", () => {
+    clearNoteUrlParam();
+  });
+  lightboxDialog?.addEventListener("click", (e) => {
+    if (e.target === lightboxDialog) {
+      closeLightbox();
+    }
   });
 
   $("#lightbox-bookmark-btn")?.addEventListener("click", (e) => {
@@ -1868,7 +1912,6 @@ function updateStudentAuthUi(user, syncBookmarksFromUser = true) {
   const signinBtn = $("#student-signin-btn");
   const profilePill = $("#student-profile-pill");
   const avatarImg = $("#student-avatar-img");
-  const nameText = $("#student-name-text");
   const menuName = $("#student-menu-name");
   const menuEmail = $("#student-menu-email");
   const menuTargetExam = $("#student-menu-target-exam");
@@ -1877,10 +1920,16 @@ function updateStudentAuthUi(user, syncBookmarksFromUser = true) {
   const bookmarkBadge = $("#bookmark-badge");
 
   if (user) {
+    try {
+      localStorage.setItem("exam_student_user", JSON.stringify(user));
+    } catch {}
+
     if (signinBtn) signinBtn.hidden = true;
     if (profilePill) profilePill.hidden = false;
-    if (avatarImg) avatarImg.src = user.picture || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user.email)}`;
-    if (nameText) nameText.textContent = (user.name || "Student").split(" ")[0];
+    if (avatarImg) {
+      avatarImg.src = user.picture || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user.email)}`;
+      avatarImg.alt = user.name || "Student Profile";
+    }
     if (menuName) menuName.textContent = user.name || "Student User";
     if (menuEmail) menuEmail.textContent = user.email || "";
     if (menuTargetExam) {
@@ -1888,7 +1937,6 @@ function updateStudentAuthUi(user, syncBookmarksFromUser = true) {
     }
 
     if (syncBookmarksFromUser) {
-      // Extract ONLY this authenticated user's liked and saved notes
       const userLikedIds = new Set();
       (user.likes || []).forEach(l => {
         const id = typeof l === "object" ? l.noteId : l;
@@ -1898,7 +1946,6 @@ function updateStudentAuthUi(user, syncBookmarksFromUser = true) {
         if (bId) userLikedIds.add(bId);
       });
 
-      // Completely replace local bookmarks with this user's likes
       bookmarks = new Set(userLikedIds);
       localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
     }
@@ -1907,15 +1954,59 @@ function updateStudentAuthUi(user, syncBookmarksFromUser = true) {
     if (menuViewsCount) menuViewsCount.textContent = user.viewsCount || 0;
     if (bookmarkBadge) bookmarkBadge.textContent = bookmarks.size;
   } else {
+    try {
+      localStorage.removeItem("exam_student_user");
+    } catch {}
+
     if (signinBtn) signinBtn.hidden = false;
     if (profilePill) profilePill.hidden = true;
 
-    // Reset liked & saved notes state completely for logged out / guest session
     bookmarks.clear();
     localStorage.removeItem("exam_notes_bookmarks");
     if (bookmarkBadge) bookmarkBadge.textContent = "0";
     if (menuBookmarksCount) menuBookmarksCount.textContent = "0";
   }
+}
+
+function renderGoogleGsiButton() {
+  const btnContainer = $("#google-gsi-btn-container");
+  if (!btnContainer || !window.google?.accounts?.id) return;
+  btnContainer.innerHTML = "";
+  
+  const targetWidth = Math.min(Math.max(window.innerWidth - 64, 220), 280);
+  try {
+    window.google.accounts.id.renderButton(btnContainer, {
+      theme: "filled_blue",
+      size: "large",
+      shape: "pill",
+      text: "continue_with",
+      width: targetWidth,
+      logo_alignment: "left"
+    });
+  } catch (err) {
+    console.warn("[Google GSI] renderButton error:", err);
+  }
+}
+
+function openStudentAuthModal() {
+  const dialog = $("#student-auth-dialog");
+  if (!dialog) return;
+  try {
+    dialog.showModal();
+  } catch {
+    dialog.setAttribute("open", "");
+  }
+  
+  setTimeout(() => {
+    if (window.google?.accounts?.id) {
+      renderGoogleGsiButton();
+      if (!currentStudentUser) {
+        try { window.google.accounts.id.prompt(); } catch {}
+      }
+    } else {
+      tryInitGsi().then(() => renderGoogleGsiButton());
+    }
+  }, 60);
 }
 
 function openExamGoalModal(user = currentStudentUser) {
@@ -1928,20 +2019,15 @@ function openExamGoalModal(user = currentStudentUser) {
   const customWrap = $("#custom-exam-wrap");
   const customInput = $("#custom-exam-input");
 
-  if (form) {
-    const radio = form.querySelector(`input[name="target_exam_radio"][value="${currentGoal}"]`);
-    if (radio) {
-      radio.checked = true;
-      if (currentGoal === "Others" && customWrap) {
-        customWrap.hidden = false;
-        if (customInput) customInput.value = currentDetail;
-      } else if (customWrap) {
-        customWrap.hidden = true;
-      }
-    } else {
-      const firstRadio = form.querySelector(`input[name="target_exam_radio"]`);
-      if (firstRadio) firstRadio.checked = true;
-      if (customWrap) customWrap.hidden = true;
+  if (form) form.reset();
+  if (customWrap) customWrap.hidden = true;
+
+  if (currentGoal) {
+    const radio = form?.querySelector(`input[name="target_exam_radio"][value="${currentGoal}"]`);
+    if (radio) radio.checked = true;
+    if (currentGoal === "Others" && customWrap && customInput) {
+      customWrap.hidden = false;
+      customInput.value = currentDetail;
     }
   }
 
@@ -1952,85 +2038,132 @@ function openExamGoalModal(user = currentStudentUser) {
   }
 }
 
-async function handleStudentGoogleLogin(payload) {
+async function checkCurrentStudentSession() {
+  const token = localStorage.getItem("exam_student_token");
+  if (!token) {
+    updateStudentAuthUi(null);
+    return;
+  }
+
   try {
+    const res = await fetch("/api/auth/me", {
+      headers: {
+        "x-student-token": token,
+        "x-student-id": currentStudentUser?.id || ""
+      },
+      credentials: "same-origin"
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.authenticated && data.user) {
+        updateStudentAuthUi(data.user);
+      } else {
+        localStorage.removeItem("exam_student_token");
+        localStorage.removeItem("exam_student_user");
+        updateStudentAuthUi(null);
+      }
+    } else if (res.status === 401 || res.status === 403) {
+      localStorage.removeItem("exam_student_token");
+      localStorage.removeItem("exam_student_user");
+      updateStudentAuthUi(null);
+    }
+  } catch (err) {
+    console.warn("[Student Auth] Session check deferred:", err);
+  }
+}
+
+async function handleStudentGoogleLogin(responsePayload) {
+  try {
+    showToast("Authenticating with Google...", "info");
     const res = await fetch("/api/auth/google", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ credential: responsePayload.credential })
     });
+
     const data = await res.json();
     if (data && data.success && data.user) {
       if (data.token) {
         localStorage.setItem("exam_student_token", data.token);
       }
       updateStudentAuthUi(data.user);
+
       const authDialog = $("#student-auth-dialog");
       if (authDialog) authDialog.close();
 
-      // If user clicked Like on a note before signing in, apply the like now!
       if (pendingLikeNoteId) {
         const noteToLike = pendingLikeNoteId;
         pendingLikeNoteId = null;
-        if (!bookmarks.has(noteToLike)) {
-          bookmarks.add(noteToLike);
-          sendStudentTelemetry("like", { noteId: noteToLike });
-          trackInteraction("like", { noteId: noteToLike });
-          localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
-        }
+        bookmarks.add(noteToLike);
+        localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
+        sendStudentTelemetry("like", { noteId: noteToLike });
+        showToast("Note saved to your account! ❤️", "success");
       }
 
-      showToast(`Welcome, ${data.user.name.split(" ")[0]}! 🎓 Saved notes synced.`, "success");
-      render();
+      showToast(`Welcome, ${data.user.name || "Student"}! Cloud sync active.`, "success");
 
-      // If user has not set their target exam goal yet, open onboarding modal
       if (!data.user.targetExam) {
         setTimeout(() => {
           openExamGoalModal(data.user);
-        }, 400);
+        }, 600);
       }
+
+      render();
     } else {
       showToast(data?.error || "Google Sign-In failed.", "error");
     }
   } catch (err) {
-    showToast("Unable to connect to Google authentication service.", "error");
+    showToast("Network error during Google Sign-In.", "error");
   }
 }
 
-async function checkCurrentStudentSession() {
-  const token = localStorage.getItem("exam_student_token") || "";
-  try {
-    const res = await fetch("/api/user/me", {
-      headers: { "x-student-token": token }
-    });
-    const data = await res.json();
-    if (data && data.authenticated && data.user) {
-      updateStudentAuthUi(data.user);
-      render();
-    } else {
-      updateStudentAuthUi(null);
-      render();
+async function tryInitGsi() {
+  if (window.google?.accounts?.id) {
+    try {
+      let clientId = window.__GOOGLE_CLIENT_ID;
+      if (!clientId) {
+        const cfg = await api("/api/auth/google/config").catch(() => ({}));
+        clientId = cfg.clientId;
+      }
+      if (!clientId) return;
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleStudentGoogleLogin,
+        auto_select: false,
+        cancel_on_tap_outside: true
+      });
+      if (!currentStudentUser) {
+        try { window.google.accounts.id.prompt(); } catch {}
+      }
+    } catch (e) {
+      console.warn("[Google Auth] Init error:", e);
     }
-  } catch {
-    updateStudentAuthUi(null);
-    render();
   }
-}
+};
 
 function initStudentAuth() {
+  // Instant Session Hydration from localStorage Cache
+  try {
+    const cachedUserStr = localStorage.getItem("exam_student_user");
+    const cachedToken = localStorage.getItem("exam_student_token");
+    if (cachedUserStr && cachedToken) {
+      const cachedUser = JSON.parse(cachedUserStr);
+      if (cachedUser && cachedUser.id) {
+        updateStudentAuthUi(cachedUser, false);
+      }
+    }
+  } catch {}
+
   checkCurrentStudentSession();
 
-  // Open Sign-In Dialog
   $("#student-signin-btn")?.addEventListener("click", () => {
-    const dialog = $("#student-auth-dialog");
-    if (dialog) dialog.showModal();
+    openStudentAuthModal();
   });
 
   $("#student-auth-close-btn")?.addEventListener("click", () => {
     $("#student-auth-dialog")?.close();
   });
 
-  // Target Exam Goal Modal Listeners
   $("#student-change-goal-btn")?.addEventListener("click", () => {
     const dropdownMenu = $("#student-dropdown-menu");
     if (dropdownMenu) dropdownMenu.hidden = true;
@@ -2055,7 +2188,6 @@ function initStudentAuth() {
     });
   });
 
-  // Submit Target Exam Goal Form
   $("#student-exam-goal-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const selectedRadio = document.querySelector(`input[name="target_exam_radio"]:checked`);
@@ -2097,7 +2229,6 @@ function initStudentAuth() {
     }
   });
 
-  // Profile Dropdown Toggle
   const profileBtn = $("#student-profile-btn");
   const dropdownMenu = $("#student-dropdown-menu");
   profileBtn?.addEventListener("click", (e) => {
@@ -2115,7 +2246,6 @@ function initStudentAuth() {
     }
   });
 
-  // Menu Items Navigation
   $("#student-menu-bookmarks")?.addEventListener("click", () => {
     if (dropdownMenu) dropdownMenu.hidden = true;
     switchView("bookmarks");
@@ -2127,7 +2257,6 @@ function initStudentAuth() {
     showToast(`Viewing study history (${currentStudentUser?.viewsCount || 0} notes studied)`, "info");
   });
 
-  // Sign Out
   $("#student-signout-btn")?.addEventListener("click", async () => {
     const token = localStorage.getItem("exam_student_token") || "";
     try {
@@ -2144,49 +2273,6 @@ function initStudentAuth() {
     showToast("Signed out successfully. Saved notes reset for this device.", "info");
     render();
   });
-
-  // Initialize Google Identity Services One Tap if Google SDK is loaded
-  const tryInitGsi = async () => {
-    if (window.google && window.google.accounts && window.google.accounts.id) {
-      try {
-        let clientId = window.__GOOGLE_CLIENT_ID;
-        if (!clientId) {
-          const cfg = await api("/api/auth/google/config").catch(() => ({}));
-          clientId = cfg.clientId;
-        }
-        if (!clientId) return;
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: (response) => {
-            if (response.credential) {
-              handleStudentGoogleLogin({ credential: response.credential });
-            }
-          },
-          auto_select: false,
-          cancel_on_tap_outside: true
-        });
-
-        // Render official GIS button if container is present
-        const btnContainer = $("#google-gsi-btn-container");
-        if (btnContainer) {
-          window.google.accounts.id.renderButton(btnContainer, {
-            theme: "filled_blue",
-            size: "large",
-            shape: "pill",
-            text: "continue_with",
-            width: 280
-          });
-        }
-
-        // Trigger Google One Tap floating prompt if not logged in
-        if (!currentStudentUser) {
-          window.google.accounts.id.prompt();
-        }
-      } catch (e) {
-        console.warn("[Google Auth] Init error:", e);
-      }
-    }
-  };
 
   if (window.google) {
     tryInitGsi();

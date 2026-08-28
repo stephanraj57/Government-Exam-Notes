@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=72.0">
+  <link rel="stylesheet" href="styles.css?v=81.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -1030,46 +1030,29 @@
                   </div>
                 </div>
 
-                <!-- Cloudinary / Direct Image URL Input Box -->
-                <div class="publish-url-card">
+                <!-- Cloudinary Image URL Input Box & Live Preview -->
+                <div class="publish-url-card cloudinary-only-card">
                   <div class="publish-label-row">
                     <label for="studio-image-url" class="publish-field-label">
-                      <span class="label-icon">🔗</span> Cloudinary / Image URL <span class="req-star" title="Mandatory Field">*</span>
+                      <span class="label-icon">☁️</span> Cloudinary Image URL <span class="req-star" title="Mandatory Field">*</span>
                     </label>
-                    <span class="cloudinary-badge">⚡ Cloudinary Link</span>
+                    <span class="cloudinary-badge">⚡ Cloudinary Hosted</span>
                   </div>
                   <div class="publish-input-wrap url-input-wrap">
-                    <input id="studio-image-url" class="publish-input" type="url" placeholder="Paste Cloudinary URL (https://res.cloudinary.com/...)" autocomplete="off" spellcheck="false">
+                    <input id="studio-image-url" class="publish-input" type="url" placeholder="Paste Cloudinary URL (https://res.cloudinary.com/.../image.jpg)" autocomplete="off" spellcheck="false" required>
                     <button type="button" id="studio-url-clear-btn" class="url-clear-btn" title="Clear URL" hidden>×</button>
                   </div>
                   <div id="studio-url-status" class="url-status-msg" hidden></div>
-                </div>
 
-                <div class="publish-divider-row">
-                  <span class="divider-line"></span>
-                  <span class="divider-text">OR upload image file</span>
-                  <span class="divider-line"></span>
-                </div>
-
-                <!-- Enhanced Modern Image-Only Dropzone -->
-                <div id="studio-dropzone" class="studio-dropzone">
-                  <input id="studio-file-input" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.svg">
-                  
-                  <div id="dropzone-prompt" class="dropzone-prompt">
-                    <div class="dropzone-cloud-icon">☁️</div>
-                    <strong class="dropzone-headline">Drag & drop Image (JPG, PNG, WEBP, SVG) or click</strong>
-                    <p class="dropzone-subline">High-resolution image note / diagram (Max 10 MB)</p>
-                  </div>
-
-                  <!-- Live Preview File Overlay Bar -->
+                  <!-- Live Cloudinary Preview Overlay Bar -->
                   <div id="dropzone-preview-wrap" class="dropzone-preview-wrap" hidden>
-                    <img id="dropzone-img-preview" class="preview-img" alt="Upload preview">
+                    <img id="dropzone-img-preview" class="preview-img" alt="Cloudinary preview">
                     <div class="preview-details">
                       <div class="preview-details-left">
-                        <span id="preview-file-name" class="preview-name">image.jpg</span>
-                        <span id="preview-file-size" class="preview-size">0 KB</span>
+                        <span id="preview-file-name" class="preview-name">Cloudinary Note Image</span>
+                        <span id="preview-file-size" class="preview-size">Ready</span>
                       </div>
-                      <button id="remove-preview-btn" type="button" class="text-btn danger">Remove & Replace</button>
+                      <button id="remove-preview-btn" type="button" class="text-btn danger">Clear URL</button>
                     </div>
                   </div>
                 </div>
@@ -1489,51 +1472,6 @@
             </div>
           </div>
 
-        </div>
-
-        <!-- 1-Click Full Website Data Backup & Restore Card -->
-        <div class="profile-card backup-management-card" style="margin-top: 16px;">
-          <div class="profile-card-header" style="justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="p-card-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">💾</span>
-              <div>
-                <h3>1-Click Full Website Data Backup & Restore</h3>
-                <p class="p-card-sub">Export and reload all revision notes, diagram images, visitor counts, and admin profile across Render redeployments</p>
-              </div>
-            </div>
-            <span class="p-stat-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">Safe Snapshot</span>
-          </div>
-
-          <div class="backup-actions-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 10px;">
-            <!-- Export Card -->
-            <div class="backup-action-box" style="padding: 14px 16px; background: var(--surface-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
-              <div>
-                <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--ink); font-size: 0.9rem;">
-                  <span>📥</span> Download Full Data Backup
-                </div>
-                <p style="font-size: 0.76rem; color: var(--ink-muted); margin: 4px 0 0; line-height: 1.45;">Downloads a portable JSON snapshot package containing all notes, diagram images, administrator profile picture, custom website logo, Instagram QR code, live analytics, and platform settings.</p>
-              </div>
-              <button type="button" id="backup-export-btn" class="profile-act-btn primary" style="width: 100%; font-size: 0.82rem; padding: 9px 16px;">
-                <span>💾</span> Export Backup File (.json)
-              </button>
-            </div>
-
-            <!-- Restore Card -->
-            <div class="backup-action-box" style="padding: 14px 16px; background: var(--surface-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
-              <div>
-                <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--ink); font-size: 0.9rem;">
-                  <span>📤</span> Restore Website from Backup
-                </div>
-                <p style="font-size: 0.76rem; color: var(--ink-muted); margin: 4px 0 0; line-height: 1.45;">Select any backup JSON file to immediately restore all notes, profile pictures, website logo, Instagram QR barcode, and telemetry data.</p>
-              </div>
-              <div>
-                <input type="file" id="backup-restore-file-input" accept=".json,application/json" style="display:none;">
-                <button type="button" id="backup-restore-trigger-btn" class="profile-act-btn secondary" style="width: 100%; font-size: 0.82rem; padding: 9px 16px; border-color: var(--primary); color: var(--primary); font-weight: 700; cursor: pointer;">
-                  <span>🔄</span> Select Backup File to Restore
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
 
       </div>
@@ -3098,8 +3036,8 @@
 
   <!-- In-Depth Student User Telemetry & Learning Profile Dialog -->
   <!-- In-Depth Student User Telemetry & Learning Profile Dialog -->
-  <dialog id="user-details-dialog" class="dialog user-details-dialog" aria-labelledby="user-detail-name">
-    <div class="user-details-modal-card">
+  <dialog id="user-details-dialog" class="dialog user-details-dialog student-details-glass-dialog" aria-labelledby="user-detail-name">
+    <div class="user-details-modal-card student-details-glass-content">
       <div class="user-details-header">
         <div class="user-header-left">
           <img id="user-detail-avatar" class="user-detail-avatar" src="" alt="Student Avatar">
@@ -3197,6 +3135,6 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=59.0"></script>
+  <script src="admin.js?v=61.0"></script>
 </body>
 </html>

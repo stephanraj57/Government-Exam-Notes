@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=11.0">
+  <link rel="stylesheet" href="styles.css?v=81.0">
 </head>
 <body class="about-body">
   <!-- Ambient Radial Mesh Glow Backdrop & Floating Orbs (Obsidian Studio Aesthetic) -->
@@ -29,7 +29,7 @@
   <!-- Main Site Header -->
   <header class="site-header">
     <a class="brand" href="index.html" id="brand-link" title="Home - Free AI Govt Exam Notes">
-      <img class="brand-logo" src="assets/ailogo.png" alt="Govt Exam Notes logo" onerror="this.onerror=null; this.src='favicon.png';">
+      <img class="brand-logo" src="assets/ailogo.png" alt="Free AI Govt Exam Notes logo" onerror="this.onerror=null; this.src='favicon.png';">
       <span class="brand-text">
         <strong>Free AI</strong> Govt Exam Notes
         <small>Smart Notes · Clear Concepts · Better Revision</small>
@@ -41,13 +41,10 @@
         <span class="nav-icon">▣</span> Notes
       </a>
       <a href="index.html#bookmarks" class="nav-link">
-        <span class="nav-icon">♡</span> Bookmarks
-      </a>
-      <a href="index.html#recent" class="nav-link">
-        <span class="nav-icon">◷</span> Recently Viewed
+        <span class="nav-icon">❤️</span> Saved
       </a>
       <a href="about.html" class="nav-link active">
-        <span class="nav-icon">ⓘ</span> About Us
+        <span class="nav-icon">ⓘ</span> About
       </a>
     </nav>
 
@@ -55,17 +52,6 @@
       <button id="theme-toggle" class="theme-button" type="button" title="Toggle Theme (Light / Dark / Eye Care)" aria-label="Toggle Dark Mode">
         <span class="theme-icon">🌙</span>
       </button>
-
-      <div id="admin-user-container">
-        <a id="admin-login-button" href="admin.html" class="profile-button" title="Admin Portal & Upload Studio">
-          <span class="avatar"><img src="assets/admin.jpg" alt="Stephanraj" class="avatar-img" onerror="this.parentElement.textContent='AS'"></span>
-          <div class="profile-info">
-            <strong id="admin-status-text">Admin Studio</strong>
-            <small id="admin-status-sub">Upload & Manage</small>
-          </div>
-          <i class="caret">↗</i>
-        </a>
-      </div>
     </div>
   </header>
 
@@ -402,16 +388,31 @@
       </a>
     </section>
 
-    <!-- 8. Footer -->
+    <!-- 8. Dedicated Administrator Portal Access Card -->
+    <section class="about-admin-entry-card" aria-label="Administrator Portal">
+      <div class="about-admin-entry-inner">
+        <div class="about-admin-badge-col">
+          <span class="about-admin-entry-icon">🔐</span>
+          <div>
+            <h3 class="about-admin-entry-title">Administrator Portal & Studio</h3>
+            <p class="about-admin-entry-sub">Authorized portal for content management, revision note uploads, and student intelligence telemetry.</p>
+          </div>
+        </div>
+        <a id="admin-login-button" href="admin.html" class="about-admin-entry-btn" title="Open Admin Studio Portal">
+          <span>Admin Studio Login</span>
+          <span class="entry-arrow">↗</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- 9. Footer -->
     <footer class="about-site-footer">
       <div class="about-footer-links">
         <a href="index.html">Notes Library</a>
         <span>•</span>
         <a href="index.html#bookmarks">Saved Bookmarks</a>
         <span>•</span>
-        <a href="index.html#recent">Recently Viewed</a>
-        <span>•</span>
-        <a href="about.html">About Us</a>
+        <a href="about.html">About</a>
         <span>•</span>
         <a href="admin.html">Admin Studio</a>
       </div>
@@ -422,7 +423,7 @@
 
   </main>
 
-  <!-- Mobile Bottom Navigation -->
+  <!-- Mobile Bottom Navigation (3 Equal Tabs: Notes, Saved, About) -->
   <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
     <a href="index.html" class="mobile-nav-btn">
       <span class="mob-icon">▣</span>
@@ -432,13 +433,9 @@
       <span class="mob-icon">♡</span>
       <span>Saved</span>
     </a>
-    <a href="index.html#recent" class="mobile-nav-btn">
-      <span class="mob-icon">◷</span>
-      <span>Recent</span>
-    </a>
     <a href="about.html" class="mobile-nav-btn active">
       <span class="mob-icon">ⓘ</span>
-      <span>About Us</span>
+      <span>About</span>
     </a>
   </nav>
 

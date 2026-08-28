@@ -52,6 +52,7 @@ let isMongoConnected = false;
 
 const sessions = new Map();
 const studentSessions = new Map();
+const invalidatedStudentTokens = new Set();
 
 const DEFAULT_PROFILE = {
   name: "Stephanraj",
@@ -361,11 +362,13 @@ async function getStudentUser(request) {
   const users = await readJson(USERS_FILE).catch(() => []);
 
   if (token) {
+    if (invalidatedStudentTokens.has(token)) return null;
     let userId = studentSessions.get(token);
     if (!userId && typeof token === "string" && token.startsWith("st_")) {
       const parts = token.split("_");
       if (parts.length >= 2) {
         userId = "usr_" + parts[1];
+        studentSessions.set(token, userId);
       }
     }
     if (userId) {
@@ -374,7 +377,7 @@ async function getStudentUser(request) {
     }
   }
 
-  if (headerUserId) {
+  if (headerUserId && !token) {
     const found = users.find(u => u.id === headerUserId);
     if (found) return found;
   }
@@ -811,39 +814,15 @@ async function handleApi(request, response, url) {
       : String(body.tags || "").split(",").map(t => t.trim().replace(/^#/, "")).filter(Boolean).slice(0, 10);
     const overview = String(body.overview !== undefined ? body.overview : (body.description || "")).trim().slice(0, 3000);
     const directUrl = String(body.imageUrl || "").trim();
-    const rawImage = String(body.imageData || "").trim();
-    const imageMatch = rawImage.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=\r\n\s]+)$/);
 
-    if (!title || !subject || (!directUrl && !imageMatch)) {
-      sendJson(response, 400, { error: "A title, subject, and a valid Note Image (Cloudinary URL or file upload) are required." });
+    if (!title || !subject || !directUrl) {
+      sendJson(response, 400, { error: "A title, subject, and a valid Cloudinary Note Image URL are required." });
       return true;
     }
 
     const id = crypto.randomUUID();
-    let finalImageUrl = "";
-
-    if (directUrl && (directUrl.startsWith("http://") || directUrl.startsWith("https://") || directUrl.startsWith("/uploads/") || directUrl.startsWith("data:image/"))) {
-      finalImageUrl = directUrl;
-    } else if (imageMatch) {
-      const rawType = imageMatch[1].toLowerCase();
-      const ext = rawType.includes("png") ? "png" : rawType.includes("webp") ? "webp" : rawType.includes("svg") ? "svg" : "jpg";
-      const imageBuffer = Buffer.from(imageMatch[2].replace(/[\r\n\s]/g, ""), "base64");
-
-      if (imageBuffer.length < 4 || imageBuffer.length > 12 * 1024 * 1024) {
-        sendJson(response, 400, { error: "Image file is too large or corrupted. Please upload an image under 10 MB." });
-        return true;
-      }
-
-      const fileName = `${id}.${ext}`;
-      await fs.writeFile(path.join(UPLOAD_DIR, fileName), imageBuffer);
-      finalImageUrl = `/uploads/${fileName}`;
-    } else {
-      sendJson(response, 400, { error: "Please provide a valid image URL or image file." });
-      return true;
-    }
-
     const notes = await readJson(NOTES_FILE);
-    const note = { id, title, subject, tags, overview, imageUrl: finalImageUrl, createdAt: new Date().toISOString() };
+    const note = { id, title, subject, tags, overview, imageUrl: directUrl, createdAt: new Date().toISOString() };
     notes.unshift(note);
     await writeJson(NOTES_FILE, notes);
     sendJson(response, 201, { note });
@@ -1077,22 +1056,32 @@ async function handleApi(request, response, url) {
     }
 
     let users = await readJson(USERS_FILE).catch(() => []);
-    let user = users.find(u => (u.email && u.email.toLowerCase() === email) || (googleId && u.googleId === googleId));
+    const cleanEmail = email.toLowerCase().trim();
+    let userIndex = users.findIndex(u => 
+      (cleanEmail && u.email && u.email.toLowerCase().trim() === cleanEmail) || 
+      (googleId && u.googleId && u.googleId === googleId)
+    );
     const nowIso = new Date().toISOString();
+    let user = null;
 
-    if (user) {
+    if (userIndex !== -1) {
+      user = users[userIndex];
       user.lastActiveAt = nowIso;
       user.loginCount = (user.loginCount || 1) + 1;
       if (name && name !== "Student User") user.name = name;
       if (picture) user.picture = picture;
       if (googleId && !user.googleId) user.googleId = googleId;
+      if (cleanEmail) user.email = cleanEmail;
+      users[userIndex] = user;
+      // Strip any duplicate records that might have existed previously
+      users = users.filter((u, idx) => idx === userIndex || (u.email && u.email.toLowerCase().trim() !== cleanEmail && (!googleId || u.googleId !== googleId)));
     } else {
       user = {
         id: "usr_" + crypto.randomBytes(8).toString("hex"),
         googleId: googleId || `gid_${crypto.randomBytes(6).toString("hex")}`,
-        email,
-        name,
-        picture: picture || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(email)}`,
+        email: cleanEmail,
+        name: name || "Student",
+        picture: picture || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(cleanEmail)}`,
         targetExam: "",
         targetExamDetail: "",
         joinedAt: nowIso,
@@ -1140,7 +1129,7 @@ async function handleApi(request, response, url) {
     return true;
   }
 
-  if (request.method === "GET" && url.pathname === "/api/user/me") {
+  if (request.method === "GET" && (url.pathname === "/api/auth/me" || url.pathname === "/api/user/me")) {
     const user = await getStudentUser(request);
     if (!user) {
       sendJson(response, 200, { authenticated: false, user: null });
@@ -1206,14 +1195,16 @@ async function handleApi(request, response, url) {
     return true;
   }
 
-  if (request.method === "POST" && url.pathname === "/api/auth/logout") {
+  if (request.method === "POST" && (url.pathname === "/api/auth/logout" || url.pathname === "/api/auth/signout" || url.pathname === "/api/user/signout" || url.pathname === "/api/user/logout")) {
     const cookies = parseCookies(request);
     const headerToken = request.headers["x-student-token"];
     if (cookies.studentToken) {
       studentSessions.delete(cookies.studentToken);
+      invalidatedStudentTokens.add(cookies.studentToken);
     }
     if (headerToken) {
       studentSessions.delete(headerToken);
+      invalidatedStudentTokens.add(headerToken);
     }
     sendJson(response, 200, { success: true, loggedOut: true }, {
       "Set-Cookie": `studentToken=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`
@@ -1292,7 +1283,32 @@ async function handleApi(request, response, url) {
   if (request.method === "GET" && url.pathname === "/api/admin/users") {
     if (!isAdmin(request)) return sendUnauthorized(response), true;
 
-    const users = await readJson(USERS_FILE).catch(() => []);
+    let rawUsers = await readJson(USERS_FILE).catch(() => []);
+    // Deduplicate by email so duplicate rows never appear in admin table
+    const uniqueMap = new Map();
+    for (const u of rawUsers) {
+      const em = (u.email || "").toLowerCase().trim();
+      const key = em || u.googleId || u.id;
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, { ...u });
+      } else {
+        const existing = uniqueMap.get(key);
+        existing.loginCount = Math.max(existing.loginCount || 1, u.loginCount || 1);
+        if (new Date(u.lastActiveAt || 0).getTime() > new Date(existing.lastActiveAt || 0).getTime()) {
+          existing.lastActiveAt = u.lastActiveAt;
+        }
+        if (u.targetExam && !existing.targetExam) existing.targetExam = u.targetExam;
+        if (u.targetExamDetail && !existing.targetExamDetail) existing.targetExamDetail = u.targetExamDetail;
+        // Merge likes/views
+        const existingLikes = new Set(existing.likes || []);
+        (u.likes || []).forEach(l => existingLikes.add(l));
+        existing.likes = Array.from(existingLikes);
+      }
+    }
+    const users = Array.from(uniqueMap.values());
+    if (users.length !== rawUsers.length) {
+      await writeJson(USERS_FILE, users).catch(() => {});
+    }
     const notes = await readJson(NOTES_FILE).catch(() => []);
     const notesMap = new Map(notes.map(n => [n.id, n]));
 
@@ -1528,12 +1544,19 @@ async function handleApi(request, response, url) {
     let profile = await readJson(PROFILE_FILE).catch(() => ({ ...DEFAULT_PROFILE }));
     if (!profile) profile = { ...DEFAULT_PROFILE };
 
-    // Read all uploaded images into a base64 dictionary for complete portable backup
+    // Read only active note diagram images into base64 dictionary (ignoring orphan/historical files)
     const images = {};
-    try {
-      const files = await fs.readdir(UPLOAD_DIR);
-      for (const file of files) {
-        if (/\.(jpe?g|png|webp|svg)$/i.test(file)) {
+    const referencedFiles = new Set();
+    for (const n of notes) {
+      if (n.imageUrl && typeof n.imageUrl === "string" && !n.imageUrl.startsWith("http")) {
+        const cleanName = path.basename(n.imageUrl.split("?")[0]);
+        if (cleanName) referencedFiles.add(cleanName);
+      }
+    }
+
+    for (const file of referencedFiles) {
+      if (/\.(jpe?g|png|webp|svg)$/i.test(file)) {
+        try {
           const filePath = path.join(UPLOAD_DIR, file);
           const buf = await fs.readFile(filePath);
           const ext = path.extname(file).toLowerCase();
@@ -1541,9 +1564,9 @@ async function handleApi(request, response, url) {
           const dataUrl = `data:${mime};base64,${buf.toString("base64")}`;
           images[file] = dataUrl;
           images[`/uploads/${file}`] = dataUrl;
-        }
+        } catch {}
       }
-    } catch {}
+    }
 
     // Embed image data directly into notes array for bulletproof portability
     const exportedNotes = notes.map(n => {
@@ -1849,16 +1872,21 @@ async function handleApi(request, response, url) {
     sessions.set(token, Date.now());
 
     await writeJson(NOTES_FILE, []);
+    await writeJson(USERS_FILE, []);
     await writeJson(VISITS_FILE, { count: 0, daily: {} });
     await writeJson(INTERACTIONS_FILE, {
       totalLikes: 0,
       totalDownloads: 0,
+      totalShares: 0,
       totalSearches: 0,
       totalImpressions: 0,
       notes: {},
+      shares: {},
       searches: {},
       missingSearches: {}
     });
+    await writeJson(SESSIONS_FILE, []);
+    studentSessions.clear();
 
     // Clean up uploaded images
     try {
@@ -1868,7 +1896,7 @@ async function handleApi(request, response, url) {
       }
     } catch {}
 
-    sendJson(response, 200, { reset: true, message: "All server notes, visits, interactions and uploads cleared." }, {
+    sendJson(response, 200, { reset: true, message: "All server notes, students, visits, interactions and uploads have been completely reset to 0." }, {
       "Set-Cookie": `examAdminSession=${token}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax`
     });
     return true;
