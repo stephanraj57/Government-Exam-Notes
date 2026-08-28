@@ -12,7 +12,14 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=55.0">
+  <link rel="stylesheet" href="styles.css?v=71.0">
+  <script>
+    fetch("/api/auth/google/config")
+      .then(r => r.json())
+      .then(d => { if (d && d.clientId) window.__GOOGLE_CLIENT_ID = d.clientId; })
+      .catch(() => {});
+  </script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
   <!-- Ambient Radial Mesh Glow Backdrop & Floating Orbs (Obsidian Studio Aesthetic) -->
@@ -37,8 +44,8 @@
       <button type="button" class="nav-link active" data-view="notes">
         <span class="nav-icon">▣</span> Notes
       </button>
-      <button type="button" class="nav-link" data-view="bookmarks">
-        <span class="nav-icon">♡</span> Bookmarks <span id="bookmark-badge" class="badge">0</span>
+      <button type="button" class="nav-link" data-view="bookmarks" title="View your liked and saved revision notes">
+        <span class="nav-icon">❤️</span> Saved <span id="bookmark-badge" class="badge">0</span>
       </button>
       <button type="button" class="nav-link" data-view="about" title="About Free AI Govt Exam Notes">
         <span class="nav-icon">ⓘ</span> About Us
@@ -46,6 +53,51 @@
     </nav>
 
     <div class="header-actions">
+      <!-- Student Google Auth & Profile Pill -->
+      <div id="student-auth-wrap" class="student-auth-wrap">
+        <!-- Logged-out state: Google Sign-in trigger button -->
+        <button id="student-signin-btn" class="student-signin-btn" type="button" title="Sign in with Google to sync liked and saved notes across devices">
+          <svg class="google-g-icon" viewBox="0 0 24 24" width="16" height="16">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          <span class="student-signin-text">Sign in with Google</span>
+        </button>
+
+        <!-- Logged-in state: Student Profile Pill & Dropdown -->
+        <div id="student-profile-pill" class="student-profile-pill" hidden>
+          <button id="student-profile-btn" class="student-profile-btn" type="button" aria-expanded="false" title="Student Profile & Sync">
+            <img id="student-avatar-img" class="student-avatar-img" src="" alt="Student">
+            <span id="student-name-text" class="student-name-text">Student</span>
+            <span class="student-status-dot" title="Cloud Sync Active">●</span>
+          </button>
+          <div id="student-dropdown-menu" class="student-dropdown-menu" hidden>
+            <div class="student-menu-header">
+              <strong id="student-menu-name">Student Name</strong>
+              <small id="student-menu-email">student@gmail.com</small>
+              <div class="student-target-goal-badge">
+                <span class="goal-label">🎯 Target:</span>
+                <strong id="student-menu-target-exam">Not Set</strong>
+                <button type="button" id="student-change-goal-btn" class="change-goal-link-btn" title="Change target exam">Change</button>
+              </div>
+            </div>
+            <div class="student-menu-divider"></div>
+            <button type="button" id="student-menu-bookmarks" class="student-menu-item">
+              <span>❤️</span> Saved Notes (<span id="student-menu-bookmarks-count">0</span>)
+            </button>
+            <button type="button" id="student-menu-history" class="student-menu-item">
+              <span>📖</span> Study History (<span id="student-menu-views-count">0</span>)
+            </button>
+            <div class="student-menu-divider"></div>
+            <button type="button" id="student-signout-btn" class="student-menu-item student-signout-btn">
+              <span>🚪</span> Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+
       <button id="theme-toggle" class="theme-button" type="button" title="Toggle Theme (Dark / Light)" aria-label="Toggle Dark Mode">
         <span class="theme-icon">🌙</span>
       </button>
@@ -558,47 +610,93 @@
     </button>
   </nav>
 
-  <!-- Lightbox / Fullscreen Image Viewer Dialog -->
-  <dialog id="lightbox-dialog" class="lightbox-dialog">
-    <div class="lightbox-content">
-      <div class="lightbox-header">
+  <!-- Lightbox / Blog-Style Revision Note Popup Viewer Dialog -->
+  <dialog id="lightbox-dialog" class="lightbox-dialog blog-lightbox-dialog" aria-labelledby="lightbox-title">
+    <div class="lightbox-content blog-lightbox-content">
+      
+      <!-- Top Blog Header: Category & Title Left, Close Right -->
+      <div class="lightbox-header blog-lightbox-header">
         <div class="lightbox-title-wrap">
           <span id="lightbox-badge" class="subject-chip">Subject</span>
-          <h2 id="lightbox-title">Note Title</h2>
+          <h2 id="lightbox-title" class="lightbox-blog-title">Note Title</h2>
         </div>
         <button id="lightbox-close-btn" class="icon-action-btn close-btn" type="button" title="Close (Esc)" aria-label="Close Note Popup">×</button>
       </div>
 
-      <div class="lightbox-body">
-        <button id="lightbox-prev-btn" class="lightbox-nav-btn prev" type="button" aria-label="Previous Note">‹</button>
+      <!-- Main 2-Column Split: Image Left, Overview Right -->
+      <div class="lightbox-blog-body">
         
-        <div id="lightbox-media-container" class="lightbox-media">
-          <!-- Dynamic high-res image or rich rendered card -->
-        </div>
+        <!-- Left Side: Interactive Image Diagram & Controls -->
+        <div class="lightbox-media-col">
+          <div class="lightbox-media-viewport">
+            <button id="lightbox-prev-btn" class="lightbox-nav-btn prev" type="button" aria-label="Previous Note" title="Previous Note">‹</button>
+            
+            <div id="lightbox-media-container" class="lightbox-media">
+              <!-- Dynamic high-res image or rich rendered card -->
+            </div>
 
-        <button id="lightbox-next-btn" class="lightbox-nav-btn next" type="button" aria-label="Next Note">›</button>
-      </div>
-
-      <div class="lightbox-footer">
-        <div class="lightbox-footer-left">
-          <div class="zoom-controls" role="group" aria-label="Image Zoom">
-            <button id="lightbox-zoom-out" class="icon-action-btn" type="button" title="Zoom Out (-)">−</button>
-            <span id="lightbox-zoom-level" class="zoom-level-text">100%</span>
-            <button id="lightbox-zoom-in" class="icon-action-btn" type="button" title="Zoom In (+)">+</button>
-            <button id="lightbox-zoom-reset" class="icon-action-btn" type="button" title="Reset Zoom (0)">↺</button>
+            <button id="lightbox-next-btn" class="lightbox-nav-btn next" type="button" aria-label="Next Note" title="Next Note">›</button>
           </div>
-          <a id="lightbox-download-btn" class="icon-action-btn" download="exam-note.jpg" title="Download High-Res Note" target="_blank" rel="noopener" aria-label="Download Note">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-          </a>
+
+          <!-- Bottom Image Toolbar (Zoom Controls & Quick Download) -->
+          <div class="lightbox-media-toolbar">
+            <div class="zoom-controls" role="group" aria-label="Image Zoom">
+              <button id="lightbox-zoom-out" class="icon-action-btn" type="button" title="Zoom Out (-)">−</button>
+              <span id="lightbox-zoom-level" class="zoom-level-text">100%</span>
+              <button id="lightbox-zoom-in" class="icon-action-btn" type="button" title="Zoom In (+)">+</button>
+              <button id="lightbox-zoom-reset" class="icon-action-btn" type="button" title="Reset Zoom (0)">↺</button>
+            </div>
+            <a id="lightbox-download-btn" class="lightbox-dl-action-btn" download="exam-note.jpg" title="Download High-Res Diagram" target="_blank" rel="noopener" aria-label="Download High-Res Note">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Download Diagram</span>
+            </a>
+          </div>
         </div>
-        <div class="lightbox-footer-right">
-          <div id="lightbox-tags" class="lightbox-tags"></div>
+
+        <!-- Right Side: Blog Overview & Study Notes Information -->
+        <div class="lightbox-overview-col">
+          
+          <div class="lightbox-overview-card">
+            
+            <!-- Overview Header with Meta -->
+            <div class="lightbox-overview-head">
+              <div class="overview-head-left">
+                <span class="overview-head-icon">📖</span>
+                <div>
+                  <h3 class="overview-head-title">Study Notes & Overview</h3>
+                  <span class="overview-head-sub">High-yield revision summary & key exam concepts</span>
+                </div>
+              </div>
+              <span id="lightbox-meta" class="lightbox-meta-date">📅 Recent</span>
+            </div>
+
+            <!-- Scrollable Overview Text Body -->
+            <div class="lightbox-overview-scroll">
+              <div id="lightbox-overview-text" class="lightbox-overview-text">
+                <!-- Dynamically populated rich overview / bullet points -->
+              </div>
+            </div>
+
+            <!-- Student Action Bar (Like/Save, Share) -->
+            <div class="lightbox-overview-actions">
+              <button id="lightbox-bookmark-btn" class="overview-action-btn like-btn" type="button" title="Like / Save Note">
+                <span class="btn-icon">❤️</span> <span id="lightbox-bookmark-label">Like Note</span>
+              </button>
+              <button id="lightbox-share-btn" class="overview-action-btn share-btn" type="button" title="Share with Study Groups">
+                <span class="btn-icon">📤</span> <span>Share Note</span>
+              </button>
+            </div>
+
+          </div>
+
         </div>
+
       </div>
+
     </div>
   </dialog>
 
@@ -680,10 +778,135 @@
       </div>
     </div>
   </dialog>
+  <!-- Student Google Authentication & Sync Dialog -->
+  <dialog id="student-auth-dialog" class="dialog student-auth-dialog" aria-labelledby="student-auth-modal-title">
+    <div class="student-auth-card">
+      <button type="button" id="student-auth-close-btn" class="modal-close-btn" aria-label="Close dialog">✕</button>
+      
+      <div class="student-auth-header">
+        <div class="auth-brand-icon">🎓</div>
+        <h3 id="student-auth-modal-title" class="student-auth-title">Sign In to Like & Save Notes</h3>
+        <p class="student-auth-sub">Sign in with your Google account so your liked revision notes stay saved in your personal library and sync across all your devices.</p>
+      </div>
+
+      <div class="student-auth-body">
+        <!-- Official Google GIS Button Target -->
+        <div id="google-gsi-btn-container" class="google-gsi-btn-container"></div>
+
+        <!-- Privacy Assurance -->
+        <div class="auth-privacy-notice" style="margin-top: 1.5rem;">
+          <span>🔒 100% Free & Privacy-Protected · Powered by Google Identity</span>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Student Target Exam Goal Onboarding & Selection Dialog -->
+  <dialog id="student-exam-goal-dialog" class="dialog student-exam-goal-dialog" aria-labelledby="exam-goal-title">
+    <div class="exam-goal-card">
+      <button type="button" id="exam-goal-close-btn" class="modal-close-btn" aria-label="Close dialog">✕</button>
+      
+      <div class="exam-goal-header">
+        <div class="exam-goal-icon">🎯</div>
+        <h3 id="exam-goal-title" class="exam-goal-title">Which Exam Are You Preparing For?</h3>
+        <p class="exam-goal-sub">Select your target competitive examination so we can tailor and highlight high-retention visual revision notes for your syllabus.</p>
+      </div>
+
+      <form id="student-exam-goal-form" class="exam-goal-form">
+        <div class="exam-options-grid">
+          
+          <label class="exam-option-card">
+            <input type="radio" name="target_exam_radio" value="UPSC" required>
+            <div class="exam-card-inner">
+              <span class="exam-card-emoji">🏛️</span>
+              <div class="exam-card-meta">
+                <strong class="exam-card-name">UPSC</strong>
+                <small class="exam-card-desc">Civil Services · IAS / IPS / IFS</small>
+              </div>
+              <span class="exam-card-check">✓</span>
+            </div>
+          </label>
+
+          <label class="exam-option-card">
+            <input type="radio" name="target_exam_radio" value="SSC">
+            <div class="exam-card-inner">
+              <span class="exam-card-emoji">🏢</span>
+              <div class="exam-card-meta">
+                <strong class="exam-card-name">SSC</strong>
+                <small class="exam-card-desc">CGL · CHSL · CPO · MTS</small>
+              </div>
+              <span class="exam-card-check">✓</span>
+            </div>
+          </label>
+
+          <label class="exam-option-card">
+            <input type="radio" name="target_exam_radio" value="RRB">
+            <div class="exam-card-inner">
+              <span class="exam-card-emoji">🚆</span>
+              <div class="exam-card-meta">
+                <strong class="exam-card-name">RRB</strong>
+                <small class="exam-card-desc">Railways · NTPC · Group D · JE</small>
+              </div>
+              <span class="exam-card-check">✓</span>
+            </div>
+          </label>
+
+          <label class="exam-option-card">
+            <input type="radio" name="target_exam_radio" value="IBPS">
+            <div class="exam-card-inner">
+              <span class="exam-card-emoji">🏦</span>
+              <div class="exam-card-meta">
+                <strong class="exam-card-name">IBPS / Banking</strong>
+                <small class="exam-card-desc">SBI · IBPS · RBI PO / Clerk</small>
+              </div>
+              <span class="exam-card-check">✓</span>
+            </div>
+          </label>
+
+          <label class="exam-option-card">
+            <input type="radio" name="target_exam_radio" value="State PSC">
+            <div class="exam-card-inner">
+              <span class="exam-card-emoji">🗺️</span>
+              <div class="exam-card-meta">
+                <strong class="exam-card-name">State PSC</strong>
+                <small class="exam-card-desc">TNPSC · UPPSC · BPSC · KPSC</small>
+              </div>
+              <span class="exam-card-check">✓</span>
+            </div>
+          </label>
+
+          <label class="exam-option-card">
+            <input type="radio" name="target_exam_radio" value="Others">
+            <div class="exam-card-inner">
+              <span class="exam-card-emoji">📚</span>
+              <div class="exam-card-meta">
+                <strong class="exam-card-name">Others</strong>
+                <small class="exam-card-desc">Defence · Teaching · UGC NET</small>
+              </div>
+              <span class="exam-card-check">✓</span>
+            </div>
+          </label>
+
+        </div>
+
+        <!-- Optional Custom Exam Specification -->
+        <div id="custom-exam-wrap" class="custom-exam-wrap" hidden>
+          <label for="custom-exam-input" class="custom-exam-label">Specify Exam Name (Optional):</label>
+          <input type="text" id="custom-exam-input" class="custom-exam-input" placeholder="e.g. CDS, NDA, CTET, TNPSC Group 2, GATE..." autocomplete="off">
+        </div>
+
+        <div class="exam-goal-actions">
+          <button type="submit" id="save-exam-goal-btn" class="primary-button save-goal-btn">
+            <span>🎯</span> Save Preparation Goal
+          </button>
+        </div>
+      </form>
+    </div>
+  </dialog>
 
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="app.js?v=36.0"></script>
+  <script src="app.js?v=49.0"></script>
 </body>
 </html>

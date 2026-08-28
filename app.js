@@ -24,6 +24,7 @@ let viewMode = localStorage.getItem("exam_notes_view") || "grid";
 let isAdmin = false;
 let currentLightboxIndex = -1;
 let currentFilteredList = [];
+let noteInteractions = { notes: {}, totalImpressions: 0 };
 
 // 6 Notes Per Page Pagination State
 const PAGE_SIZE = 6;
@@ -129,6 +130,27 @@ function getSubjectKey(subject = "") {
   return "others";
 }
 
+function getNoteViews(noteId) {
+  if (!noteId) return 0;
+  let localViews = 0;
+  try {
+    const raw = localStorage.getItem("exam_notes_interactions_data");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      localViews = Number(parsed?.notes?.[noteId]?.impressions) || 0;
+    }
+  } catch {}
+  const serverViews = Number(noteInteractions?.notes?.[noteId]?.impressions) || Number(noteInteractions?.notes?.[noteId]?.views) || 0;
+  return Math.max(localViews, serverViews);
+}
+
+function formatViewsCount(count) {
+  const num = Number(count) || 0;
+  if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
+  if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+  return num.toLocaleString("en-IN");
+}
+
 function showToast(message, type = "info") {
   const container = $("#toast-container");
   if (!container) return;
@@ -220,6 +242,13 @@ async function loadNotes() {
     try {
       const meRes = await fetch(`/api/admin/me?_t=${Date.now()}`, { cache: "no-store" }).then(r => r.ok ? r.json() : { admin: false });
       isAdmin = Boolean(meRes.admin);
+    } catch {}
+
+    try {
+      const interRes = await fetch(`/api/interactions?_t=${Date.now()}`, { cache: "no-store" });
+      if (interRes.ok) {
+        noteInteractions = await interRes.json();
+      }
     } catch {}
   } catch {
     serverNotes = [];
@@ -441,7 +470,9 @@ function render() {
         const fullIndex = startIndex + pIndex;
         const isBookmarked = bookmarks.has(n.id);
         const subjKey = getSubjectKey(n.subject);
-        const dateFormatted = n.date || (n.createdAt ? new Date(n.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Recent");
+        const viewsCount = getNoteViews(n.id);
+        const viewsFormatted = formatViewsCount(viewsCount);
+        const viewsLabel = `${viewsFormatted} ${viewsCount === 1 ? 'view' : 'views'}`;
 
         const tagsList = (n.tags || []).map(t =>
           `<span class="note-tag-chip ${activeTag === t ? 'active' : ''}" data-tag="${escapeHtml(t)}" title="Filter by #${escapeHtml(t)}">#${escapeHtml(t)}</span>`
@@ -451,8 +482,8 @@ function render() {
 
         return `
           <article class="note-card" data-note-id="${n.id}" data-index="${fullIndex}" tabindex="0" role="button" aria-label="${escapeHtml(n.title)}">
-            <button class="card-bookmark-btn ${isBookmarked ? "bookmarked" : ""}" data-bookmark="${n.id}" type="button" title="${isBookmarked ? "Remove Bookmark" : "Save Bookmark"}" aria-label="Bookmark Note">
-              ${isBookmarked ? "♥" : "♡"}
+            <button class="card-bookmark-btn ${isBookmarked ? "bookmarked" : ""}" data-bookmark="${n.id}" type="button" title="${isBookmarked ? "Remove from Saved" : "Like & Save Note"}" aria-label="Like Note">
+              ${isBookmarked ? "❤️" : "🤍"}
             </button>
             ${renderCardMedia(n, pIndex)}
             <div class="note-content">
@@ -460,7 +491,13 @@ function render() {
               <h3 class="note-title">${escapeHtml(n.title)}</h3>
               ${tagsHtml}
               <div class="note-meta">
-                <span>${dateFormatted} · 1 Image</span>
+                <span class="note-views-badge" title="${viewsCount} student views">
+                  <svg class="views-eye-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <span class="views-badge-text">${viewsLabel}</span>
+                </span>
                 <button class="card-share-btn" data-share="${n.id}" type="button" title="Share Note (WhatsApp, Telegram, Link)" aria-label="Share Note">
                   <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="18" cy="5" r="3"></circle>
@@ -735,6 +772,9 @@ async function trackInteraction(type, payload = {}) {
     }).catch(() => {});
   } catch (e) {}
 
+  // Sync with student user telemetry
+  sendStudentTelemetry(type, payload);
+
   // Local storage fallback sync
   try {
     const raw = localStorage.getItem("exam_notes_interactions_data");
@@ -803,18 +843,48 @@ async function trackInteraction(type, payload = {}) {
   } catch (e) {}
 }
 
+let pendingLikeNoteId = null;
+
 function toggleBookmark(noteId, e) {
-  if (e) e.stopPropagation();
-  if (bookmarks.has(noteId)) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+
+  const isCurrentlyLiked = bookmarks.has(noteId);
+  if (isCurrentlyLiked) {
     bookmarks.delete(noteId);
     trackInteraction("unlike", { noteId });
-    showToast("Removed from bookmarks.", "info");
+    if (currentStudentUser) {
+      sendStudentTelemetry("unlike", { noteId });
+    }
+    showToast("Removed from Saved notes.", "info");
   } else {
     bookmarks.add(noteId);
     trackInteraction("like", { noteId });
-    showToast("Saved to your Bookmarks! ♡", "success");
+    if (currentStudentUser) {
+      sendStudentTelemetry("like", { noteId });
+    }
+    showToast("Saved to your Liked Notes! ❤️", "success");
+
+    // If user is not authenticated yet, prompt sign-in so they know they can sync to cloud
+    if (!currentStudentUser) {
+      pendingLikeNoteId = noteId;
+      setTimeout(() => {
+        const authDialog = $("#student-auth-dialog");
+        if (authDialog && !authDialog.open) {
+          try { authDialog.showModal(); } catch { authDialog.setAttribute("open", ""); }
+        }
+      }, 500);
+    }
   }
+
   localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
+  const menuBookmarksCount = $("#student-menu-bookmarks-count");
+  if (menuBookmarksCount) menuBookmarksCount.textContent = bookmarks.size;
+  const bookmarkBadge = $("#bookmark-badge");
+  if (bookmarkBadge) bookmarkBadge.textContent = bookmarks.size;
+
   render();
 }
 
@@ -822,6 +892,17 @@ function recordRecentView(noteId) {
   recentViewed = [noteId, ...recentViewed.filter(id => id !== noteId)].slice(0, 25);
   localStorage.setItem("exam_notes_recent", JSON.stringify(recentViewed));
   trackInteraction("view", { noteId });
+
+  // Update in-memory count & immediately update card badge on screen
+  if (!noteInteractions.notes) noteInteractions.notes = {};
+  if (!noteInteractions.notes[noteId]) noteInteractions.notes[noteId] = { impressions: 0 };
+  noteInteractions.notes[noteId].impressions = (Number(noteInteractions.notes[noteId].impressions) || 0) + 1;
+
+  const cardBadge = document.querySelector(`[data-note-id="${noteId}"] .views-badge-text`);
+  if (cardBadge) {
+    const updatedCount = getNoteViews(noteId);
+    cardBadge.textContent = `${formatViewsCount(updatedCount)} ${updatedCount === 1 ? 'view' : 'views'}`;
+  }
 }
 
 // ==========================================
@@ -893,6 +974,88 @@ function openLightbox(index) {
   if (dialog) dialog.showModal();
 }
 
+function sanitizeRichHtml(html) {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    const badTags = ["script", "iframe", "object", "embed", "link", "style", "form", "input", "button"];
+    badTags.forEach(tag => {
+      doc.querySelectorAll(tag).forEach(el => el.remove());
+    });
+
+    doc.querySelectorAll("*").forEach(el => {
+      for (let i = el.attributes.length - 1; i >= 0; i--) {
+        const attr = el.attributes[i];
+        const attrName = attr.name.toLowerCase();
+        if (attrName.startsWith("on") || (attr.value && attr.value.toLowerCase().includes("javascript:"))) {
+          el.removeAttribute(attr.name);
+        }
+      }
+    });
+
+    return doc.body.innerHTML;
+  } catch {
+    return escapeHtml(html);
+  }
+}
+
+function formatOverviewHtml(rawText) {
+  if (!rawText || !rawText.trim()) {
+    return `<div class="overview-empty-box"><p class="overview-empty-prompt">💡 <em>High-yield revision diagram. Focus on core exam keywords, flowchart connections, and visual mnemonics for rapid recall.</em></p></div>`;
+  }
+
+  const trimmed = rawText.trim();
+  // Detect if rawText already contains rich HTML tags
+  const hasHtml = /<[a-z][\s\S]*>/i.test(trimmed);
+
+  if (hasHtml) {
+    return sanitizeRichHtml(trimmed);
+  }
+
+  // Fallback markdown / bullet points parser for legacy plain text notes
+  const lines = trimmed.split("\n");
+  let html = "";
+  let inList = false;
+
+  for (let line of lines) {
+    const l = line.trim();
+    if (!l) {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      continue;
+    }
+
+    if (l.startsWith("•") || l.startsWith("- ") || l.startsWith("* ")) {
+      if (!inList) {
+        html += '<ul class="overview-bullet-list">';
+        inList = true;
+      }
+      const itemContent = l.replace(/^[•\-\*]\s*/, "");
+      html += `<li>${formatInlineText(itemContent)}</li>`;
+    } else {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      html += `<p class="overview-para">${formatInlineText(l)}</p>`;
+    }
+  }
+
+  if (inList) {
+    html += "</ul>";
+  }
+
+  return html;
+}
+
+function formatInlineText(text) {
+  let escaped = escapeHtml(text);
+  escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  return escaped;
+}
+
 function updateLightboxContent(note) {
   if (!note) return;
   const title = $("#lightbox-title");
@@ -900,8 +1063,11 @@ function updateLightboxContent(note) {
   const mediaContainer = $("#lightbox-media-container");
   const meta = $("#lightbox-meta");
   const bookmarkBtn = $("#lightbox-bookmark-btn");
+  const bookmarkLabel = $("#lightbox-bookmark-label");
+  const shareBtn = $("#lightbox-share-btn");
   const downloadBtn = $("#lightbox-download-btn");
   const tagsContainer = $("#lightbox-tags");
+  const overviewEl = $("#lightbox-overview-text");
 
   if (title) title.textContent = note.title;
   if (badge) {
@@ -926,6 +1092,10 @@ function updateLightboxContent(note) {
     }
   }
 
+  if (overviewEl) {
+    overviewEl.innerHTML = formatOverviewHtml(note.overview || note.description || "");
+  }
+
   if (meta) {
     let dateFormatted = "Recent";
     if (note.createdAt) {
@@ -946,8 +1116,18 @@ function updateLightboxContent(note) {
 
   if (bookmarkBtn) {
     const isBookmarked = bookmarks.has(note.id);
-    bookmarkBtn.textContent = isBookmarked ? "♥" : "♡";
     bookmarkBtn.classList.toggle("active", isBookmarked);
+    if (bookmarkLabel) {
+      bookmarkLabel.textContent = isBookmarked ? "Liked / Saved" : "Bookmark Note";
+    }
+    const iconSpan = bookmarkBtn.querySelector(".btn-icon");
+    if (iconSpan) iconSpan.textContent = isBookmarked ? "❤️" : "🤍";
+  }
+
+  if (shareBtn) {
+    shareBtn.onclick = () => {
+      openShareModal(note.id);
+    };
   }
 
   if (downloadBtn) {
@@ -961,7 +1141,7 @@ function updateLightboxContent(note) {
         `<button type="button" class="note-tag-chip" data-filter-tag="${escapeHtml(t)}" title="Filter by #${escapeHtml(t)}">#${escapeHtml(t)}</button>`
       ).join("");
     } else {
-      tagsContainer.innerHTML = "";
+      tagsContainer.innerHTML = `<span class="no-tags-hint">#RevisionNotes</span>`;
     }
   }
 }
@@ -1390,6 +1570,8 @@ function setupEventListeners() {
 
     const bookmarkBtn = e.target.closest("[data-bookmark]");
     if (bookmarkBtn) {
+      e.stopPropagation();
+      e.preventDefault();
       toggleBookmark(bookmarkBtn.dataset.bookmark, e);
       return;
     }
@@ -1434,6 +1616,16 @@ function setupEventListeners() {
   $("#lightbox-next-btn")?.addEventListener("click", nextLightbox);
   $("#lightbox-close-btn")?.addEventListener("click", () => {
     $("#lightbox-dialog")?.close();
+  });
+
+  $("#lightbox-bookmark-btn")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (currentLightboxIndex >= 0 && currentLightboxIndex < currentFilteredList.length) {
+      const note = currentFilteredList[currentLightboxIndex];
+      toggleBookmark(note.id, e);
+      updateLightboxContent(note);
+    }
   });
 
   $("#share-dialog-close")?.addEventListener("click", () => {
@@ -1620,9 +1812,390 @@ function initBranding() {
     .catch(() => {});
 }
 
+// ==========================================
+// Student Google Auto-Authentication & Sync Engine
+// ==========================================
+let currentStudentUser = null;
+
+async function sendStudentTelemetry(type, meta = {}) {
+  const token = localStorage.getItem("exam_student_token") || "";
+  const studentId = currentStudentUser?.id || "";
+
+  // Locally update student metrics instantly
+  if (currentStudentUser) {
+    if (type === "view") currentStudentUser.viewsCount = (currentStudentUser.viewsCount || 0) + 1;
+    else if (type === "like" && meta.noteId) {
+      if (!Array.isArray(currentStudentUser.likes)) currentStudentUser.likes = [];
+      const hasNote = currentStudentUser.likes.some(l => (typeof l === "object" ? l.noteId : l) === meta.noteId);
+      if (!hasNote) currentStudentUser.likes.push({ noteId: meta.noteId, timestamp: new Date().toISOString() });
+      currentStudentUser.likesCount = currentStudentUser.likes.length;
+    }
+    else if (type === "unlike" && meta.noteId) {
+      if (Array.isArray(currentStudentUser.likes)) {
+        currentStudentUser.likes = currentStudentUser.likes.filter(l => (typeof l === "object" ? l.noteId : l) !== meta.noteId);
+      }
+      currentStudentUser.likesCount = (currentStudentUser.likes || []).length;
+    }
+    else if (type === "download") currentStudentUser.downloadsCount = (currentStudentUser.downloadsCount || 0) + 1;
+    else if (type === "share") currentStudentUser.sharesCount = (currentStudentUser.sharesCount || 0) + 1;
+
+    updateStudentAuthUi(currentStudentUser, false);
+  }
+
+  try {
+    const res = await fetch("/api/user/telemetry", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-student-token": token,
+        "x-student-id": studentId
+      },
+      body: JSON.stringify({ type, ...meta })
+    });
+    const data = await res.json();
+    if (data && data.success && currentStudentUser) {
+      if (typeof data.likesCount === "number") currentStudentUser.likesCount = data.likesCount;
+      if (typeof data.viewsCount === "number") currentStudentUser.viewsCount = data.viewsCount;
+      if (typeof data.downloadsCount === "number") currentStudentUser.downloadsCount = data.downloadsCount;
+      if (typeof data.sharesCount === "number") currentStudentUser.sharesCount = data.sharesCount;
+      updateStudentAuthUi(currentStudentUser, false);
+    }
+  } catch {}
+}
+
+function updateStudentAuthUi(user, syncBookmarksFromUser = true) {
+  currentStudentUser = user;
+  const signinBtn = $("#student-signin-btn");
+  const profilePill = $("#student-profile-pill");
+  const avatarImg = $("#student-avatar-img");
+  const nameText = $("#student-name-text");
+  const menuName = $("#student-menu-name");
+  const menuEmail = $("#student-menu-email");
+  const menuTargetExam = $("#student-menu-target-exam");
+  const menuBookmarksCount = $("#student-menu-bookmarks-count");
+  const menuViewsCount = $("#student-menu-views-count");
+  const bookmarkBadge = $("#bookmark-badge");
+
+  if (user) {
+    if (signinBtn) signinBtn.hidden = true;
+    if (profilePill) profilePill.hidden = false;
+    if (avatarImg) avatarImg.src = user.picture || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user.email)}`;
+    if (nameText) nameText.textContent = (user.name || "Student").split(" ")[0];
+    if (menuName) menuName.textContent = user.name || "Student User";
+    if (menuEmail) menuEmail.textContent = user.email || "";
+    if (menuTargetExam) {
+      menuTargetExam.textContent = user.targetExam ? (user.targetExam + (user.targetExamDetail ? ` (${user.targetExamDetail})` : "")) : "Not Set";
+    }
+
+    if (syncBookmarksFromUser) {
+      // Extract ONLY this authenticated user's liked and saved notes
+      const userLikedIds = new Set();
+      (user.likes || []).forEach(l => {
+        const id = typeof l === "object" ? l.noteId : l;
+        if (id) userLikedIds.add(id);
+      });
+      (user.bookmarks || []).forEach(bId => {
+        if (bId) userLikedIds.add(bId);
+      });
+
+      // Completely replace local bookmarks with this user's likes
+      bookmarks = new Set(userLikedIds);
+      localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
+    }
+
+    if (menuBookmarksCount) menuBookmarksCount.textContent = bookmarks.size;
+    if (menuViewsCount) menuViewsCount.textContent = user.viewsCount || 0;
+    if (bookmarkBadge) bookmarkBadge.textContent = bookmarks.size;
+  } else {
+    if (signinBtn) signinBtn.hidden = false;
+    if (profilePill) profilePill.hidden = true;
+
+    // Reset liked & saved notes state completely for logged out / guest session
+    bookmarks.clear();
+    localStorage.removeItem("exam_notes_bookmarks");
+    if (bookmarkBadge) bookmarkBadge.textContent = "0";
+    if (menuBookmarksCount) menuBookmarksCount.textContent = "0";
+  }
+}
+
+function openExamGoalModal(user = currentStudentUser) {
+  const dialog = $("#student-exam-goal-dialog");
+  if (!dialog) return;
+
+  const currentGoal = user?.targetExam || "";
+  const currentDetail = user?.targetExamDetail || "";
+  const form = $("#student-exam-goal-form");
+  const customWrap = $("#custom-exam-wrap");
+  const customInput = $("#custom-exam-input");
+
+  if (form) {
+    const radio = form.querySelector(`input[name="target_exam_radio"][value="${currentGoal}"]`);
+    if (radio) {
+      radio.checked = true;
+      if (currentGoal === "Others" && customWrap) {
+        customWrap.hidden = false;
+        if (customInput) customInput.value = currentDetail;
+      } else if (customWrap) {
+        customWrap.hidden = true;
+      }
+    } else {
+      const firstRadio = form.querySelector(`input[name="target_exam_radio"]`);
+      if (firstRadio) firstRadio.checked = true;
+      if (customWrap) customWrap.hidden = true;
+    }
+  }
+
+  try {
+    dialog.showModal();
+  } catch {
+    dialog.setAttribute("open", "");
+  }
+}
+
+async function handleStudentGoogleLogin(payload) {
+  try {
+    const res = await fetch("/api/auth/google", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data && data.success && data.user) {
+      if (data.token) {
+        localStorage.setItem("exam_student_token", data.token);
+      }
+      updateStudentAuthUi(data.user);
+      const authDialog = $("#student-auth-dialog");
+      if (authDialog) authDialog.close();
+
+      // If user clicked Like on a note before signing in, apply the like now!
+      if (pendingLikeNoteId) {
+        const noteToLike = pendingLikeNoteId;
+        pendingLikeNoteId = null;
+        if (!bookmarks.has(noteToLike)) {
+          bookmarks.add(noteToLike);
+          sendStudentTelemetry("like", { noteId: noteToLike });
+          trackInteraction("like", { noteId: noteToLike });
+          localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
+        }
+      }
+
+      showToast(`Welcome, ${data.user.name.split(" ")[0]}! 🎓 Saved notes synced.`, "success");
+      render();
+
+      // If user has not set their target exam goal yet, open onboarding modal
+      if (!data.user.targetExam) {
+        setTimeout(() => {
+          openExamGoalModal(data.user);
+        }, 400);
+      }
+    } else {
+      showToast(data?.error || "Google Sign-In failed.", "error");
+    }
+  } catch (err) {
+    showToast("Unable to connect to Google authentication service.", "error");
+  }
+}
+
+async function checkCurrentStudentSession() {
+  const token = localStorage.getItem("exam_student_token") || "";
+  try {
+    const res = await fetch("/api/user/me", {
+      headers: { "x-student-token": token }
+    });
+    const data = await res.json();
+    if (data && data.authenticated && data.user) {
+      updateStudentAuthUi(data.user);
+      render();
+    } else {
+      updateStudentAuthUi(null);
+      render();
+    }
+  } catch {
+    updateStudentAuthUi(null);
+    render();
+  }
+}
+
+function initStudentAuth() {
+  checkCurrentStudentSession();
+
+  // Open Sign-In Dialog
+  $("#student-signin-btn")?.addEventListener("click", () => {
+    const dialog = $("#student-auth-dialog");
+    if (dialog) dialog.showModal();
+  });
+
+  $("#student-auth-close-btn")?.addEventListener("click", () => {
+    $("#student-auth-dialog")?.close();
+  });
+
+  // Target Exam Goal Modal Listeners
+  $("#student-change-goal-btn")?.addEventListener("click", () => {
+    const dropdownMenu = $("#student-dropdown-menu");
+    if (dropdownMenu) dropdownMenu.hidden = true;
+    openExamGoalModal(currentStudentUser);
+  });
+
+  $("#exam-goal-close-btn")?.addEventListener("click", () => {
+    $("#student-exam-goal-dialog")?.close();
+  });
+
+  const examRadios = $$(`input[name="target_exam_radio"]`);
+  examRadios.forEach(radio => {
+    radio.addEventListener("change", () => {
+      const customWrap = $("#custom-exam-wrap");
+      const customInput = $("#custom-exam-input");
+      if (radio.value === "Others") {
+        if (customWrap) customWrap.hidden = false;
+        if (customInput) customInput.focus();
+      } else {
+        if (customWrap) customWrap.hidden = true;
+      }
+    });
+  });
+
+  // Submit Target Exam Goal Form
+  $("#student-exam-goal-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const selectedRadio = document.querySelector(`input[name="target_exam_radio"]:checked`);
+    if (!selectedRadio) {
+      showToast("Please select your target examination.", "warning");
+      return;
+    }
+
+    const targetExam = selectedRadio.value;
+    const customInput = $("#custom-exam-input");
+    const targetExamDetail = targetExam === "Others" && customInput ? customInput.value.trim() : "";
+    const token = localStorage.getItem("exam_student_token") || "";
+    const studentId = currentStudentUser?.id || "";
+
+    try {
+      const res = await fetch("/api/user/exam-goal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-student-token": token,
+          "x-student-id": studentId
+        },
+        body: JSON.stringify({ targetExam, targetExamDetail })
+      });
+      const data = await res.json();
+      if (data && data.success && data.user) {
+        if (currentStudentUser) {
+          currentStudentUser.targetExam = data.user.targetExam;
+          currentStudentUser.targetExamDetail = data.user.targetExamDetail;
+          updateStudentAuthUi(currentStudentUser);
+        }
+        $("#student-exam-goal-dialog")?.close();
+        showToast(`🎯 Preparation Goal set to ${targetExam}!`, "success");
+      } else {
+        showToast(data?.error || "Could not save exam goal.", "error");
+      }
+    } catch {
+      showToast("Unable to save exam goal right now.", "error");
+    }
+  });
+
+  // Profile Dropdown Toggle
+  const profileBtn = $("#student-profile-btn");
+  const dropdownMenu = $("#student-dropdown-menu");
+  profileBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (dropdownMenu) {
+      dropdownMenu.hidden = !dropdownMenu.hidden;
+      profileBtn.setAttribute("aria-expanded", String(!dropdownMenu.hidden));
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (dropdownMenu && !dropdownMenu.hidden && !e.target.closest("#student-auth-wrap")) {
+      dropdownMenu.hidden = true;
+      profileBtn?.setAttribute("aria-expanded", "false");
+    }
+  });
+
+  // Menu Items Navigation
+  $("#student-menu-bookmarks")?.addEventListener("click", () => {
+    if (dropdownMenu) dropdownMenu.hidden = true;
+    switchView("bookmarks");
+  });
+
+  $("#student-menu-history")?.addEventListener("click", () => {
+    if (dropdownMenu) dropdownMenu.hidden = true;
+    switchView("notes");
+    showToast(`Viewing study history (${currentStudentUser?.viewsCount || 0} notes studied)`, "info");
+  });
+
+  // Sign Out
+  $("#student-signout-btn")?.addEventListener("click", async () => {
+    const token = localStorage.getItem("exam_student_token") || "";
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { "x-student-token": token }
+      });
+    } catch {}
+    localStorage.removeItem("exam_student_token");
+    localStorage.removeItem("exam_notes_bookmarks");
+    bookmarks.clear();
+    updateStudentAuthUi(null);
+    if (dropdownMenu) dropdownMenu.hidden = true;
+    showToast("Signed out successfully. Saved notes reset for this device.", "info");
+    render();
+  });
+
+  // Initialize Google Identity Services One Tap if Google SDK is loaded
+  const tryInitGsi = async () => {
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+        let clientId = window.__GOOGLE_CLIENT_ID;
+        if (!clientId) {
+          const cfg = await api("/api/auth/google/config").catch(() => ({}));
+          clientId = cfg.clientId;
+        }
+        if (!clientId) return;
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: (response) => {
+            if (response.credential) {
+              handleStudentGoogleLogin({ credential: response.credential });
+            }
+          },
+          auto_select: false,
+          cancel_on_tap_outside: true
+        });
+
+        // Render official GIS button if container is present
+        const btnContainer = $("#google-gsi-btn-container");
+        if (btnContainer) {
+          window.google.accounts.id.renderButton(btnContainer, {
+            theme: "filled_blue",
+            size: "large",
+            shape: "pill",
+            text: "continue_with",
+            width: 280
+          });
+        }
+
+        // Trigger Google One Tap floating prompt if not logged in
+        if (!currentStudentUser) {
+          window.google.accounts.id.prompt();
+        }
+      } catch (e) {}
+    }
+  };
+
+  if (window.google) {
+    tryInitGsi();
+  } else {
+    window.addEventListener("load", tryInitGsi);
+  }
+}
+
 // Start Application
 initBranding();
 setupEventListeners();
+initStudentAuth();
 loadNotes();
 
 // ==========================================

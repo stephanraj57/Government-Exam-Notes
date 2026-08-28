@@ -12,6 +12,7 @@ let sampleNotes = [];
 let allNotes = [];
 
 let selectedImageData = null;
+let selectedImageUrl = null;
 let editImageData = null;
 let isLocalClientMode = false;
 
@@ -397,6 +398,15 @@ function executeLogout(notifyServer = true) {
 }
 
 function showLogin() {
+  // Close ALL open dialogs first (edit modal, etc.)
+  document.querySelectorAll("dialog[open]").forEach(d => {
+    try { d.close(); } catch(e) {}
+  });
+
+  // Hide sidebar backdrop if open
+  const backdrop = $("#admin-sidebar-backdrop");
+  if (backdrop) backdrop.classList.remove("active");
+
   const authContainer = $("#admin-auth-container");
   const authSec = $("#admin-auth-section");
   const dashSec = $("#admin-dashboard-section");
@@ -443,6 +453,7 @@ function showLogin() {
   }
 }
 
+
 function showDashboard() {
   const pwdInput = $("#admin-page-password");
   if (pwdInput) pwdInput.value = "";
@@ -461,6 +472,7 @@ function showDashboard() {
     brandText.innerHTML = `<strong>Admin</strong> Studio<small>Portal · Dashboard & Publishing</small>`;
   }
 
+  // Fully hide login section
   if (authContainer) {
     authContainer.hidden = true;
     authContainer.setAttribute("hidden", "");
@@ -471,10 +483,15 @@ function showDashboard() {
     authSec.setAttribute("hidden", "");
     authSec.style.setProperty("display", "none", "important");
   }
+
+  // Show dashboard — remove inline style so CSS media queries control layout
+  // (desktop: display:grid, mobile: display:flex — both defined in styles.css)
   if (dashSec) {
-    dashSec.hidden = false;
     dashSec.removeAttribute("hidden");
+    dashSec.hidden = false;
     dashSec.style.removeProperty("display");
+    // Force a reflow so the browser recalculates layout
+    void dashSec.offsetHeight;
   }
   if (logoutBtn) {
     logoutBtn.hidden = false;
@@ -483,7 +500,7 @@ function showDashboard() {
   }
 
   // Restore user's current view from URL hash, sessionStorage or localStorage
-  const validViews = ["dashboard", "analysis", "interactions", "tags", "missing-searches", "publish", "modify", "profile"];
+  const validViews = ["dashboard", "analysis", "interactions", "users", "tags", "missing-searches", "publish", "modify", "profile"];
   const hash = window.location.hash.replace(/^#/, "");
   const savedView = sessionStorage.getItem("exam_admin_active_view") || localStorage.getItem("exam_admin_active_view") || "dashboard";
   const targetView = validViews.includes(hash) ? hash : (validViews.includes(savedView) ? savedView : "dashboard");
@@ -653,6 +670,11 @@ async function loadDashboardData() {
 
   const modBadge = $("#modify-notes-badge");
   if (modBadge) modBadge.textContent = allNotes.length;
+
+  fetchAdminUsersData().then(() => {
+    const uBadge = $("#users-nav-badge");
+    if (uBadge) uBadge.textContent = (adminUsersData.length || 0).toString();
+  });
 
   // Calculate Top Category
   const catCountMap = {};
@@ -1335,15 +1357,10 @@ function bindModalTableSortingAndSearch({
   metricBadgeLabel = "Notes",
   renderRowHtml
 }) {
-  const searchInput = $(`#${searchInputId}`);
-  const sortSelect = $(`#${sortSelectId}`);
-  const countBadge = $(`#${countBadgeId}`);
-  const tableBody = $(`#${tableBodyId}`);
-  const notesCountBadge = $(`#${notesCountBadgeId}`);
-
   let currentSortKey = defaultSortKey;
   let currentSortDir = defaultSortDir;
 
+  const notesCountBadge = dialog.querySelector(`#${notesCountBadgeId}`);
   if (notesCountBadge) {
     notesCountBadge.textContent = `${items.length} ${metricBadgeLabel}`;
   }
@@ -1356,10 +1373,16 @@ function bindModalTableSortingAndSearch({
     return valB - valA;
   });
   naturalSorted.forEach((item, idx) => {
-    naturalRankingMap.set(item.note.id, idx + 1);
+    naturalRankingMap.set(item.note?.id || item.id, idx + 1);
   });
 
+  const getLiveSearchInput = () => dialog.querySelector(`#${searchInputId}`);
+  const getLiveSortSelect = () => sortSelectId ? dialog.querySelector(`#${sortSelectId}`) : null;
+  const getLiveCountBadge = () => dialog.querySelector(`#${countBadgeId}`);
+  const getLiveTableBody = () => dialog.querySelector(`#${tableBodyId}`);
+
   const renderTableRows = (list) => {
+    const tableBody = getLiveTableBody();
     if (!tableBody) return;
     if (list.length === 0) {
       tableBody.innerHTML = `
@@ -1389,6 +1412,7 @@ function bindModalTableSortingAndSearch({
   };
 
   const applySortAndFilter = () => {
+    const searchInput = getLiveSearchInput();
     const q = (searchInput?.value || "").trim().toLowerCase();
     let filtered = items;
     if (q) {
@@ -1420,6 +1444,7 @@ function bindModalTableSortingAndSearch({
 
     renderTableRows(sorted);
 
+    const countBadge = getLiveCountBadge();
     if (countBadge) {
       if (q) {
         countBadge.textContent = `Showing ${sorted.length} of ${items.length} notes`;
@@ -1442,6 +1467,7 @@ function bindModalTableSortingAndSearch({
     });
 
     // Sync Dropdown Select value
+    const sortSelect = getLiveSortSelect();
     if (sortSelect) {
       const compositeVal = `${currentSortKey}-${currentSortDir}`;
       if (sortSelect.querySelector(`option[value="${compositeVal}"]`)) {
@@ -1451,6 +1477,7 @@ function bindModalTableSortingAndSearch({
   };
 
   // Wire search input with clone replacement
+  const searchInput = getLiveSearchInput();
   if (searchInput) {
     searchInput.value = "";
     const newSearchInput = searchInput.cloneNode(true);
@@ -1459,6 +1486,7 @@ function bindModalTableSortingAndSearch({
   }
 
   // Wire sort dropdown
+  const sortSelect = getLiveSortSelect();
   if (sortSelect) {
     const compositeVal = `${defaultSortKey}-${defaultSortDir}`;
     if (sortSelect.querySelector(`option[value="${compositeVal}"]`)) {
@@ -1668,7 +1696,7 @@ function openLikesAnalysisModal() {
   bindModalTableSortingAndSearch({
     dialog,
     searchInputId: "likes-notes-search",
-    sortSelectId: null,
+    sortSelectId: "likes-notes-sort",
     countBadgeId: "likes-search-count-badge",
     tableBodyId: "likes-table-body",
     notesCountBadgeId: "likes-notes-count-badge",
@@ -1900,9 +1928,6 @@ function openDownloadsAnalysisModal() {
             <strong class="downloads-val-tag" style="color: #2563eb; font-weight: 800; font-size: 0.84rem;">⬇️ ${item.downloads.toLocaleString()}</strong>
           </td>
           <td style="text-align: center;">
-            <span class="likes-val-tag">❤️ ${item.likes.toLocaleString()}</span>
-          </td>
-          <td style="text-align: center;">
             <button type="button" class="likes-table-view-btn" data-view-note-id="${n.id}" title="Inspect Note in Viewer">
               👁️ View
             </button>
@@ -2076,9 +2101,6 @@ function openSharesAnalysisModal() {
           </td>
           <td style="text-align: center;">
             <strong class="likes-val-tag" style="color: #8b5cf6; font-weight: 800; font-size: 0.84rem;">📤 ${item.shares.toLocaleString()}</strong>
-          </td>
-          <td style="text-align: center;">
-            <span class="likes-val-tag">❤️ ${item.likes.toLocaleString()}</span>
           </td>
           <td style="text-align: center;">
             <button type="button" class="likes-table-view-btn" data-view-note-id="${n.id}" title="Inspect Note in Viewer">
@@ -2260,7 +2282,7 @@ function openViewsAnalysisModal() {
     items: notesWithViews,
     defaultSortKey: "views",
     defaultSortDir: "desc",
-    metricBadgeLabel: "Notes Ranked by Impressions",
+    metricBadgeLabel: "Notes Ranked by Views",
     renderRowHtml: (item, originalRank) => {
       const rankClass = originalRank === 1 ? "top-1" : (originalRank === 2 ? "top-2" : (originalRank === 3 ? "top-3" : ""));
       const n = item.note;
@@ -2283,9 +2305,6 @@ function openViewsAnalysisModal() {
             <strong style="color: #f59e0b; font-weight: 800; font-size: 0.84rem;">👁️ ${item.views.toLocaleString()}</strong>
           </td>
           <td style="text-align: center;">
-            <span class="likes-val-tag">❤️ ${item.likes.toLocaleString()}</span>
-          </td>
-          <td style="text-align: center;">
             <button type="button" class="likes-table-view-btn" data-view-note-id="${n.id}" title="Inspect Note in Viewer">
               👁️ View
             </button>
@@ -2301,7 +2320,7 @@ function openViewsAnalysisModal() {
     if (totalViews > 0 && sortedCategories[0]?.count > 0) {
       insightText.innerHTML = `<strong>${escapeHtml(topSubject)}</strong> commands the highest student viewing attention (${topSubjectShare}% of total viewer traffic). Notes in this category have high click-through engagement!`;
     } else {
-      insightText.innerHTML = `Impressions measure every time a student opens a diagram in full resolution to study.`;
+      insightText.innerHTML = `Total Views measure every time a student opens a diagram in full resolution to study.`;
     }
   }
 
@@ -2447,6 +2466,380 @@ function renderTagsView() {
       });
     });
   }
+}
+
+// ==========================================
+// 4.029 Student Users & Google Auth Intelligence Engine
+// ==========================================
+let adminUsersData = [];
+let usersMetricsData = {};
+let userSortKey = "active";
+let userSortDir = "desc";
+let currentUserDetailId = null;
+
+async function fetchAdminUsersData() {
+  try {
+    const res = await api("/api/admin/users");
+    if (res && res.success) {
+      adminUsersData = res.users || [];
+      usersMetricsData = res.metrics || {};
+    }
+  } catch (err) {
+    adminUsersData = [];
+    usersMetricsData = {};
+  }
+}
+
+function renderUsersView() {
+  fetchAdminUsersData().then(() => {
+    // 1. Update Top KPI Cards
+    const totalEl = $("#user-kpi-total");
+    const newSignupsEl = $("#user-kpi-new-signups");
+    const activeTodayEl = $("#user-kpi-active-today");
+    const active7dEl = $("#user-kpi-active-7d");
+    const avgSavedEl = $("#user-kpi-avg-saved");
+    const topSubEl = $("#user-kpi-top-subject");
+    const navBadge = $("#users-nav-badge");
+
+    if (totalEl) totalEl.textContent = (usersMetricsData.totalUsers || 0).toLocaleString("en-IN");
+    if (newSignupsEl) newSignupsEl.textContent = `↑ ${usersMetricsData.newSignups7Days || 0} New This Week`;
+    if (activeTodayEl) activeTodayEl.textContent = (usersMetricsData.activeToday || 0).toLocaleString("en-IN");
+    if (active7dEl) active7dEl.textContent = `${usersMetricsData.active7Days || 0} Active Past 7 Days`;
+    if (avgSavedEl) avgSavedEl.textContent = usersMetricsData.avgBookmarksPerUser || "0.0";
+    if (topSubEl) topSubEl.textContent = usersMetricsData.topSubject || "General";
+    if (navBadge) navBadge.textContent = (adminUsersData.length || 0).toString();
+
+    // 2. Render Users Table
+    renderUsersTable();
+  });
+}
+
+function renderUsersTable() {
+  const tableBody = $("#users-table-body");
+  const searchInput = $("#users-search-input");
+  const activityFilter = $("#users-filter-activity")?.value || "all";
+  const examFilter = $("#users-filter-exam")?.value || "all";
+  const countBadge = $("#users-table-count-badge");
+  const query = (searchInput?.value || "").trim().toLowerCase();
+
+  let filtered = adminUsersData.filter(user => {
+    // Search query matching
+    if (query) {
+      const nameMatch = (user.name || "").toLowerCase().includes(query);
+      const emailMatch = (user.email || "").toLowerCase().includes(query);
+      const examMatch = (user.targetExam || "").toLowerCase().includes(query) || (user.targetExamDetail || "").toLowerCase().includes(query);
+      const subMatch = (user.topSubject || "").toLowerCase().includes(query);
+      if (!nameMatch && !emailMatch && !examMatch && !subMatch) return false;
+    }
+
+    // Activity filtering
+    if (activityFilter === "today" && !user.isActiveToday) return false;
+    if (activityFilter === "week" && !user.isActiveThisWeek) return false;
+
+    // Exam Goal filtering
+    if (examFilter !== "all") {
+      const uExam = (user.targetExam || "").toLowerCase();
+      if (examFilter === "Others") {
+        if (uExam === "upsc" || uExam === "ssc" || uExam === "rrb" || uExam === "ibps" || uExam === "state psc") return false;
+      } else if (uExam !== examFilter.toLowerCase()) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  // Sorting
+  filtered.sort((a, b) => {
+    let diff = 0;
+    if (userSortKey === "name") {
+      diff = (a.name || "").localeCompare(b.name || "");
+    } else if (userSortKey === "exam") {
+      diff = (a.targetExam || "").localeCompare(b.targetExam || "");
+    } else if (userSortKey === "joined") {
+      diff = new Date(a.joinedAt || 0).getTime() - new Date(b.joinedAt || 0).getTime();
+    } else if (userSortKey === "active") {
+      diff = new Date(a.lastActiveAt || 0).getTime() - new Date(b.lastActiveAt || 0).getTime();
+    } else if (userSortKey === "views") {
+      diff = (a.viewsCount || 0) - (b.viewsCount || 0);
+    } else if (userSortKey === "likes") {
+      diff = (a.likesCount || 0) - (b.likesCount || 0);
+    } else if (userSortKey === "downloads") {
+      diff = (a.downloadsCount || 0) - (b.downloadsCount || 0);
+    } else if (userSortKey === "shares") {
+      diff = (a.sharesCount || 0) - (b.sharesCount || 0);
+    }
+    return userSortDir === "asc" ? diff : -diff;
+  });
+
+  if (countBadge) {
+    countBadge.textContent = query || activityFilter !== "all" || examFilter !== "all"
+      ? `Showing ${filtered.length} of ${adminUsersData.length} students`
+      : `Showing all ${adminUsersData.length} registered students`;
+  }
+
+  // Update Header Sort Arrows
+  document.querySelectorAll("[data-user-sort]").forEach(th => {
+    const key = th.dataset.userSort;
+    const arrow = th.querySelector(".likes-th-arrow");
+    if (key === userSortKey) {
+      th.classList.add("active");
+      if (arrow) arrow.textContent = userSortDir === "asc" ? "↑" : "↓";
+    } else {
+      th.classList.remove("active");
+      if (arrow) arrow.textContent = "↕";
+    }
+  });
+
+  if (!tableBody) return;
+
+  if (filtered.length === 0) {
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="8" class="likes-table-empty-row">
+          <div class="likes-table-empty">
+            <span>👥</span>
+            <p>No registered students found matching your filters.</p>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tableBody.innerHTML = filtered.map(user => {
+    const activeStr = formatRelativeOrExactTime(user.lastActiveAt);
+    const statusDotClass = user.isActiveToday ? "active-today" : (user.isActiveThisWeek ? "active-week" : "active-idle");
+    const targetExamLabel = user.targetExam ? escapeHtml(user.targetExam) : "Not Set";
+    const examClass = (user.targetExam || "none").toLowerCase().replace(/\s+/g, "-");
+
+    return `
+      <tr class="likes-table-row user-table-row">
+        <td>
+          <div class="user-cell-wrap">
+            <img class="user-table-avatar" src="${escapeHtml(user.picture)}" alt="${escapeHtml(user.name)}" onerror="this.src='https://api.dicebear.com/7.x/bottts/svg?seed=student'">
+            <div class="user-cell-meta">
+              <strong class="user-table-name">${escapeHtml(user.name)}</strong>
+              <small class="user-table-email">${escapeHtml(user.email)}</small>
+            </div>
+          </div>
+        </td>
+        <td>
+          <span class="user-exam-badge exam-badge-${examClass}">
+            🎯 <strong>${targetExamLabel}</strong>
+            ${user.targetExamDetail ? `<small class="exam-detail-sub">(${escapeHtml(user.targetExamDetail)})</small>` : ''}
+          </span>
+        </td>
+        <td>
+          <div class="user-status-cell">
+            <span class="user-status-indicator ${statusDotClass}">●</span>
+            <span class="user-time-text">${activeStr}</span>
+          </div>
+        </td>
+        <td style="text-align: center;">
+          <strong class="user-metric-val views-val">👁️ ${(user.viewsCount || 0).toLocaleString()}</strong>
+        </td>
+        <td style="text-align: center;">
+          <strong class="user-metric-val likes-val" style="color: #ec4899;">❤️ ${(user.likesCount || 0).toLocaleString()}</strong>
+        </td>
+        <td style="text-align: center;">
+          <strong class="user-metric-val downloads-val">⬇️ ${(user.downloadsCount || 0).toLocaleString()}</strong>
+        </td>
+        <td style="text-align: center;">
+          <strong class="user-metric-val shares-val" style="color: #8b5cf6;">📤 ${(user.sharesCount || 0).toLocaleString()}</strong>
+        </td>
+        <td style="text-align: center;">
+          <button type="button" class="likes-table-view-btn inspect-user-btn" data-inspect-user-id="${user.id}" title="Inspect Student Learning Profile & Likes">
+            📊 Profile
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  tableBody.querySelectorAll("[data-inspect-user-id]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      openUserDetailsModal(btn.dataset.inspectUserId);
+    });
+  });
+}
+
+function formatRelativeOrExactTime(isoStr) {
+  if (!isoStr) return "Never";
+  try {
+    const ts = new Date(isoStr).getTime();
+    if (isNaN(ts)) return "Recently";
+    const diffSec = Math.floor((Date.now() - ts) / 1000);
+    if (diffSec < 60) return "Just now";
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+    if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}d ago`;
+    return new Date(ts).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  } catch {
+    return "Recently";
+  }
+}
+
+async function openUserDetailsModal(userId) {
+  const dialog = $("#user-details-dialog");
+  if (!dialog) return;
+  currentUserDetailId = userId;
+
+  try {
+    const res = await api(`/api/admin/users/${userId}`);
+    if (!res || !res.success || !res.user) {
+      showToast("Unable to fetch user details.", "error");
+      return;
+    }
+    const u = res.user;
+
+    const avatarEl = $("#user-detail-avatar");
+    const nameEl = $("#user-detail-name") || document.querySelector(".user-detail-name") || $("#user-details-modal-title");
+    const emailEl = $("#user-detail-email");
+    const targetExamEl = $("#user-detail-target-exam");
+    const joinedEl = $("#user-detail-joined");
+    const activeEl = $("#user-detail-last-active");
+    const sessionEl = $("#user-detail-login-count");
+    const viewsStat = $("#user-detail-views-stat");
+    const likesStat = $("#user-detail-likes-stat");
+    const downloadsStat = $("#user-detail-downloads-stat");
+    const sharesStat = $("#user-detail-shares-stat");
+    const bookmarksPill = $("#user-bookmarks-count-pill");
+    const bookmarksList = $("#user-bookmarks-list");
+    const subjectBars = $("#user-subject-bars-container");
+    const activityTimeline = $("#user-activity-timeline");
+
+    if (avatarEl) avatarEl.src = u.picture || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(u.email)}`;
+    if (nameEl) nameEl.textContent = u.name || "Student";
+    if (emailEl) emailEl.textContent = u.email || "No Email";
+    if (targetExamEl) {
+      targetExamEl.textContent = u.targetExam
+        ? `${u.targetExam}${u.targetExamDetail ? ` (${u.targetExamDetail})` : ''}`
+        : "Not Selected Yet";
+    }
+    if (joinedEl) joinedEl.textContent = `Joined: ${new Date(u.joinedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`;
+    if (activeEl) activeEl.textContent = `Last Active: ${formatRelativeOrExactTime(u.lastActiveAt)}`;
+    if (sessionEl) sessionEl.textContent = `${u.loginCount || 1} Session${u.loginCount === 1 ? '' : 's'}`;
+
+    const likedNotesList = u.likedNotes || u.bookmarkedNotes || [];
+    if (viewsStat) viewsStat.textContent = (u.viewsCount || (u.views || []).length).toLocaleString();
+    if (likesStat) likesStat.textContent = (u.likesCount || likedNotesList.length).toLocaleString();
+    if (downloadsStat) downloadsStat.textContent = (u.downloadsCount || (u.downloads || []).length).toLocaleString();
+    if (sharesStat) sharesStat.textContent = (u.sharesCount || (u.shares || []).length).toLocaleString();
+    if (bookmarksPill) bookmarksPill.textContent = `${likedNotesList.length} Note${likedNotesList.length === 1 ? '' : 's'}`;
+
+    // Render Subject Distribution Bars
+    if (subjectBars) {
+      const dist = u.subjectDistribution || [];
+      if (dist.length === 0) {
+        subjectBars.innerHTML = `<p class="user-empty-subtext">No subject activity recorded yet.</p>`;
+      } else {
+        subjectBars.innerHTML = dist.map(item => {
+          const subKey = getSubjectKey(item.subject);
+          return `
+            <div class="user-subject-bar-row">
+              <div class="user-bar-label-col">
+                <span class="subject-chip ${subKey}">${escapeHtml(item.subject)}</span>
+                <span class="user-bar-count-text">${item.count} interactions</span>
+              </div>
+              <div class="user-bar-track">
+                <div class="user-bar-fill" style="width: ${Math.max(item.percent, 8)}%;"></div>
+              </div>
+              <span class="user-bar-pct-text">${item.percent}%</span>
+            </div>
+          `;
+        }).join("");
+      }
+    }
+
+    // Render Liked Notes
+    if (bookmarksList) {
+      if (likedNotesList.length === 0) {
+        bookmarksList.innerHTML = `<p class="user-empty-subtext">Student has not liked any notes yet.</p>`;
+      } else {
+        bookmarksList.innerHTML = likedNotesList.map(n => `
+          <div class="user-note-item">
+            <div class="user-note-info">
+              <strong class="user-note-title">${escapeHtml(n.title)}</strong>
+              <span class="subject-chip ${getSubjectKey(n.subject)}">${escapeHtml(n.subject || "General")}</span>
+            </div>
+            <button type="button" class="likes-table-view-btn" data-view-note-id="${n.id}">
+              👁️ View
+            </button>
+          </div>
+        `).join("");
+
+        bookmarksList.querySelectorAll("[data-view-note-id]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            dialog.close();
+            openLightbox(btn.dataset.viewNoteId);
+          });
+        });
+      }
+    }
+
+    // Render Activity History Timeline
+    if (activityTimeline) {
+      const history = u.recentViews || [];
+      if (history.length === 0) {
+        activityTimeline.innerHTML = `<p class="user-empty-subtext">No recent study history available.</p>`;
+      } else {
+        activityTimeline.innerHTML = history.slice(0, 10).map(item => `
+          <div class="user-timeline-item">
+            <div class="user-timeline-dot"></div>
+            <div class="user-timeline-content">
+              <span class="user-timeline-action">Studied <strong>${escapeHtml(item.title)}</strong> (${escapeHtml(item.subject)})</span>
+              <span class="user-timeline-time">${formatRelativeOrExactTime(item.timestamp)}</span>
+            </div>
+          </div>
+        `).join("");
+      }
+    }
+
+    try {
+      dialog.showModal();
+    } catch {
+      dialog.setAttribute("open", "");
+    }
+  } catch (e) {
+    showToast("Failed to open user profile.", "error");
+  }
+}
+
+function exportUsersCsv() {
+  if (!adminUsersData || adminUsersData.length === 0) {
+    showToast("No student user data available to export.", "info");
+    return;
+  }
+
+  const headers = ["User ID", "Google ID", "Name", "Email", "Target Exam", "Target Exam Detail", "Joined Date", "Last Active", "Login Count", "Views", "Likes", "Downloads", "Shares"];
+  const rows = adminUsersData.map(u => [
+    `"${u.id}"`,
+    `"${u.googleId || ''}"`,
+    `"${(u.name || '').replace(/"/g, '""')}"`,
+    `"${(u.email || '').replace(/"/g, '""')}"`,
+    `"${(u.targetExam || '').replace(/"/g, '""')}"`,
+    `"${(u.targetExamDetail || '').replace(/"/g, '""')}"`,
+    `"${u.joinedAt || ''}"`,
+    `"${u.lastActiveAt || ''}"`,
+    u.loginCount || 1,
+    u.viewsCount || 0,
+    u.likesCount || 0,
+    u.downloadsCount || 0,
+    u.sharesCount || 0
+  ]);
+
+  const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `exam_alert_students_telemetry_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast("Student telemetry CSV exported successfully! 📥", "success");
 }
 
 // ==========================================
@@ -2959,6 +3352,131 @@ function optimizeImageFile(file, maxDimension = 2400, quality = 0.90) {
   });
 }
 
+// ==========================================
+// 5.9 Rich Text WYSIWYG Formatting Engine
+// ==========================================
+function setupRichTextEditor(wrapperId, editorId, hiddenTextareaId, charCountId, maxChars = 2000) {
+  const wrapper = $(wrapperId);
+  const editor = $(editorId);
+  const textarea = $(hiddenTextareaId);
+  const charCount = $(charCountId);
+  if (!wrapper || !editor) return;
+
+  function updateCharCount() {
+    const textLen = (editor.innerText || "").replace(/\n$/, "").length;
+    if (charCount) {
+      charCount.textContent = `${textLen}/${maxChars}`;
+      if (textLen > maxChars) {
+        charCount.style.color = "#dc2626";
+        charCount.style.fontWeight = "800";
+      } else {
+        charCount.style.color = "";
+        charCount.style.fontWeight = "";
+      }
+    }
+    if (textarea) {
+      textarea.value = editor.innerHTML;
+    }
+  }
+
+  editor.addEventListener("input", updateCharCount);
+  editor.addEventListener("keyup", updateCharCount);
+  editor.addEventListener("paste", () => {
+    setTimeout(updateCharCount, 10);
+  });
+
+  // Handle standard toolbar formatting buttons (Bold, Italic, Lists, Clear)
+  wrapper.querySelectorAll(".rte-btn[data-command]").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.preventDefault();
+      editor.focus();
+      const cmd = btn.dataset.command;
+      if (cmd === "red-underline") {
+        applyCustomRedUnderline(editor);
+      } else if (cmd === "removeFormat") {
+        document.execCommand("removeFormat", false, null);
+        document.execCommand("unlink", false, null);
+      } else {
+        document.execCommand(cmd, false, null);
+      }
+      updateCharCount();
+    });
+  });
+
+  // Handle Text Color Palettes
+  wrapper.querySelectorAll(".rte-color-btn").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.preventDefault();
+      editor.focus();
+      const color = btn.dataset.color;
+      wrapper.querySelectorAll(".rte-color-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      if (color === "default") {
+        document.execCommand("foreColor", false, "inherit");
+      } else {
+        document.execCommand("foreColor", false, color);
+      }
+      updateCharCount();
+    });
+  });
+
+  // Handle Marker Highlighter Buttons
+  wrapper.querySelectorAll(".rte-highlight-btn").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.preventDefault();
+      editor.focus();
+      const hl = btn.dataset.highlight;
+      if (hl === "clear") {
+        document.execCommand("removeFormat", false, null);
+      } else {
+        applyCustomHighlight(editor, hl);
+      }
+      updateCharCount();
+    });
+  });
+}
+
+function applyCustomRedUnderline(editor) {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+    document.execCommand("underline", false, null);
+    return;
+  }
+  const range = selection.getRangeAt(0);
+  const uEl = document.createElement("u");
+  uEl.className = "red-underline";
+  uEl.style.textDecoration = "underline wavy #ef4444 2px";
+  uEl.style.textUnderlineOffset = "3px";
+  try {
+    uEl.appendChild(range.extractContents());
+    range.insertNode(uEl);
+    selection.removeAllRanges();
+    const newRange = document.createRange();
+    newRange.selectNodeContents(uEl);
+    selection.addRange(newRange);
+  } catch {
+    document.execCommand("underline", false, null);
+  }
+}
+
+function applyCustomHighlight(editor, hlType) {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+  const range = selection.getRangeAt(0);
+  const mark = document.createElement("mark");
+  mark.className = `highlight-${hlType}`;
+  try {
+    mark.appendChild(range.extractContents());
+    range.insertNode(mark);
+    selection.removeAllRanges();
+    const newRange = document.createRange();
+    newRange.selectNodeContents(mark);
+    selection.addRange(newRange);
+  } catch {
+    document.execCommand("hiliteColor", false, hlType === "yellow" ? "#fef08a" : hlType === "green" ? "#bbf7d0" : "#bfdbfe");
+  }
+}
+
 function setupFileDrop() {
   const fileInput = $("#studio-file-input");
   const dropzone = $("#studio-dropzone");
@@ -2969,6 +3487,86 @@ function setupFileDrop() {
   const sizeLabel = $("#preview-file-size");
   const removeBtn = $("#remove-preview-btn");
   const msg = $("#studio-upload-msg");
+  const urlInput = $("#studio-image-url");
+  const urlClearBtn = $("#studio-url-clear-btn");
+  const urlStatus = $("#studio-url-status");
+
+  let urlDebounceTimer = null;
+
+  function handleUrlInput() {
+    const rawUrl = (urlInput?.value || "").trim();
+    if (urlClearBtn) urlClearBtn.hidden = !rawUrl;
+
+    if (!rawUrl) {
+      if (urlStatus) {
+        urlStatus.hidden = true;
+        urlStatus.textContent = "";
+      }
+      if (selectedImageUrl) {
+        clearPreview();
+      }
+      return;
+    }
+
+    if (!rawUrl.startsWith("http://") && !rawUrl.startsWith("https://") && !rawUrl.startsWith("data:image/")) {
+      if (urlStatus) {
+        urlStatus.hidden = false;
+        urlStatus.className = "url-status-msg error";
+        urlStatus.textContent = "⚠️ Please enter a valid URL starting with https://";
+      }
+      return;
+    }
+
+    if (urlStatus) {
+      urlStatus.hidden = false;
+      urlStatus.className = "url-status-msg info";
+      urlStatus.textContent = "⏳ Testing image link…";
+    }
+
+    clearTimeout(urlDebounceTimer);
+    urlDebounceTimer = setTimeout(() => {
+      const testImg = new Image();
+      testImg.onload = () => {
+        selectedImageUrl = rawUrl;
+        selectedImageData = null;
+        if (fileInput) fileInput.value = "";
+        
+        promptBox.hidden = true;
+        previewWrap.hidden = false;
+        imgPreview.src = selectedImageUrl;
+        nameLabel.textContent = rawUrl.includes("cloudinary.com") ? "Cloudinary Hosted Note Image" : "External Image URL";
+        sizeLabel.textContent = `${testImg.naturalWidth}×${testImg.naturalHeight} px (Ready)`;
+
+        if (urlStatus) {
+          urlStatus.hidden = false;
+          urlStatus.className = "url-status-msg success";
+          urlStatus.textContent = "✓ Image loaded successfully from Cloudinary!";
+        }
+        if (msg) msg.textContent = "";
+      };
+      testImg.onerror = () => {
+        if (urlStatus) {
+          urlStatus.hidden = false;
+          urlStatus.className = "url-status-msg error";
+          urlStatus.textContent = "⚠️ Unable to load image from this URL. Please verify the Cloudinary link.";
+        }
+      };
+      testImg.src = rawUrl;
+    }, 350);
+  }
+
+  urlInput?.addEventListener("input", handleUrlInput);
+  urlInput?.addEventListener("paste", () => setTimeout(handleUrlInput, 50));
+
+  urlClearBtn?.addEventListener("click", () => {
+    if (urlInput) urlInput.value = "";
+    if (urlClearBtn) urlClearBtn.hidden = true;
+    if (urlStatus) {
+      urlStatus.hidden = true;
+      urlStatus.textContent = "";
+    }
+    clearPreview();
+  });
 
   async function processFile(file) {
     if (msg) {
@@ -2997,6 +3595,14 @@ function setupFileDrop() {
     }
 
     try {
+      if (urlInput) urlInput.value = "";
+      if (urlClearBtn) urlClearBtn.hidden = true;
+      if (urlStatus) {
+        urlStatus.hidden = true;
+        urlStatus.textContent = "";
+      }
+      selectedImageUrl = null;
+
       nameLabel.textContent = file.name;
       sizeLabel.textContent = "Optimizing note image…";
       promptBox.hidden = true;
@@ -3015,7 +3621,14 @@ function setupFileDrop() {
 
   function clearPreview() {
     selectedImageData = null;
-    fileInput.value = "";
+    selectedImageUrl = null;
+    if (fileInput) fileInput.value = "";
+    if (urlInput) urlInput.value = "";
+    if (urlClearBtn) urlClearBtn.hidden = true;
+    if (urlStatus) {
+      urlStatus.hidden = true;
+      urlStatus.textContent = "";
+    }
     imgPreview.src = "";
     promptBox.hidden = false;
     previewWrap.hidden = true;
@@ -3175,6 +3788,13 @@ function setupPublishStudio() {
     }
   });
 
+  // 1.5 Live Overview character counter
+  const overviewInput = $("#studio-note-overview");
+  const overviewCharCount = $("#studio-overview-char-count");
+  overviewInput?.addEventListener("input", () => {
+    if (overviewCharCount) overviewCharCount.textContent = `${overviewInput.value.length}/2000`;
+  });
+
   // 2. Category Pill click handler
   categoryPills.forEach(pill => {
     pill.addEventListener("click", () => {
@@ -3267,14 +3887,16 @@ function openPublishVerificationModal() {
   const rawTags = tagsInput ? tagsInput.value : "";
   const parsedTags = rawTags.split(",").map(s => s.trim().replace(/^#/, "")).filter(Boolean);
 
+  const activeImage = selectedImageUrl || selectedImageData;
+
   // Strict Validation for all mandatory fields
-  if (!selectedImageData) {
-    showToast("Please upload a Note Image diagram.", "error");
+  if (!activeImage) {
+    showToast("Please paste a Cloudinary Image URL or upload a Note Image diagram.", "error");
     if (msg) {
-      msg.textContent = "Note Image diagram is mandatory. Please upload an image file.";
+      msg.textContent = "Note Image is mandatory. Paste a Cloudinary URL or upload an image file.";
       msg.className = "form-message error";
     }
-    $("#studio-dropzone")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    $("#studio-image-url")?.focus();
     return;
   }
 
@@ -3316,7 +3938,7 @@ function openPublishVerificationModal() {
   const modalFileSize = $("#verify-file-size");
   const fileInput = $("#studio-file-input");
 
-  if (modalImg) modalImg.src = selectedImageData;
+  if (modalImg) modalImg.src = activeImage;
   if (modalTitle) modalTitle.textContent = title;
   
   const catEmojiMap = {
@@ -3343,8 +3965,8 @@ function openPublishVerificationModal() {
     }
   }
 
-  const fileName = fileInput?.files?.[0]?.name || $("#preview-file-name")?.textContent || "revision-note.jpg";
-  const fileSize = fileInput?.files?.[0] ? `${(fileInput.files[0].size / 1024).toFixed(1)} KB` : $("#preview-file-size")?.textContent || "High-Res JPG";
+  const fileName = selectedImageUrl ? (selectedImageUrl.includes("cloudinary.com") ? "Cloudinary Hosted Image" : "External Image URL") : (fileInput?.files?.[0]?.name || $("#preview-file-name")?.textContent || "revision-note.jpg");
+  const fileSize = selectedImageUrl ? "Cloudinary Link" : (fileInput?.files?.[0] ? `${(fileInput.files[0].size / 1024).toFixed(1)} KB` : $("#preview-file-size")?.textContent || "High-Res JPG");
   if (modalFileName) modalFileName.textContent = fileName;
   if (modalFileSize) modalFileSize.textContent = fileSize;
 
@@ -3375,13 +3997,16 @@ async function executePublishNote() {
   const confirmBtn = $("#verify-confirm-btn");
   const verifyDialog = $("#admin-publish-verify-dialog");
 
-  if (!selectedImageData) {
-    showToast("Please upload a note image diagram first.", "error");
+  const activeImage = selectedImageUrl || selectedImageData;
+  if (!activeImage) {
+    showToast("Please paste a Cloudinary Image URL or upload a note image first.", "error");
     return;
   }
 
   const rawTags = tagsInput ? tagsInput.value : "";
   const parsedTags = rawTags.split(",").map(s => s.trim().replace(/^#/, "")).filter(Boolean);
+  const overviewEditor = $("#studio-note-overview-editor");
+  const overview = overviewEditor ? overviewEditor.innerHTML.trim() : ($("#studio-note-overview")?.value || "").trim();
 
   if (confirmBtn) {
     confirmBtn.disabled = true;
@@ -3390,15 +4015,23 @@ async function executePublishNote() {
   if (submitBtn) submitBtn.disabled = true;
 
   try {
+    const payload = {
+      title: titleInput.value.trim(),
+      subject: subjectInput.value,
+      tags: parsedTags,
+      overview: overview
+    };
+
+    if (selectedImageUrl) {
+      payload.imageUrl = selectedImageUrl;
+    } else if (selectedImageData) {
+      payload.imageData = selectedImageData;
+    }
+
     await api("/api/admin/notes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: titleInput.value.trim(),
-        subject: subjectInput.value,
-        tags: parsedTags,
-        imageData: selectedImageData
-      })
+      body: JSON.stringify(payload)
     });
 
     showToast("✓ Revision note published! Live on Home Page.", "success");
@@ -3411,11 +4044,25 @@ async function executePublishNote() {
 
     // Reset Form & Preview on successful publish
     $("#admin-upload-form").reset();
+    if (overviewEditor) overviewEditor.innerHTML = "";
     selectedImageData = null;
+    selectedImageUrl = null;
+    const urlInput = $("#studio-image-url");
+    if (urlInput) urlInput.value = "";
+    const urlClearBtn = $("#studio-url-clear-btn");
+    if (urlClearBtn) urlClearBtn.hidden = true;
+    const urlStatus = $("#studio-url-status");
+    if (urlStatus) {
+      urlStatus.hidden = true;
+      urlStatus.textContent = "";
+    }
+
     $("#dropzone-prompt").hidden = false;
     $("#dropzone-preview-wrap").hidden = true;
     const charCount = $("#studio-title-char-count");
     if (charCount) charCount.textContent = "0/80";
+    const ovCount = $("#studio-overview-char-count");
+    if (ovCount) ovCount.textContent = "0/2000";
     const simTitle = $("#sim-title-text");
     if (simTitle) simTitle.textContent = "Indian Constitution – Fundamental Rights & Preamble";
     const simTagsRow = $("#sim-tags-row");
@@ -3462,6 +4109,35 @@ function openEditModal(noteId) {
     tagsInput.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
+  const imgUrlInput = $("#edit-note-image-url");
+  const imgPreview = $("#edit-img-preview");
+  const previewBox = $("#edit-image-preview-box");
+  if (imgUrlInput) {
+    imgUrlInput.value = note.imageUrl || "";
+    if (note.imageUrl) {
+      if (imgPreview) imgPreview.src = note.imageUrl;
+      if (previewBox) previewBox.hidden = false;
+    } else {
+      if (previewBox) previewBox.hidden = true;
+    }
+  }
+
+  const rawOverview = note.overview || note.description || "";
+  const overviewInput = $("#edit-note-overview");
+  const overviewEditor = $("#edit-note-overview-editor");
+  const overviewCharCount = $("#edit-overview-char-count");
+
+  if (overviewEditor) {
+    overviewEditor.innerHTML = rawOverview;
+  }
+  if (overviewInput) {
+    overviewInput.value = rawOverview;
+  }
+  if (overviewCharCount) {
+    const textLen = overviewEditor ? (overviewEditor.innerText || "").replace(/\n$/, "").length : rawOverview.length;
+    overviewCharCount.textContent = `${textLen}/2000`;
+  }
+
   const msg = $("#edit-form-msg");
   if (msg) {
     msg.textContent = "";
@@ -3469,7 +4145,14 @@ function openEditModal(noteId) {
   }
 
   const dialog = $("#admin-edit-dialog");
-  if (dialog) dialog.showModal();
+  if (dialog && !dialog.open) {
+    if (typeof dialog.showModal === "function") {
+      dialog.showModal();
+    } else {
+      // Fallback for browsers/webviews without the native <dialog> API.
+      dialog.setAttribute("open", "");
+    }
+  }
 }
 
 // ==========================================
@@ -3925,7 +4608,7 @@ function attachSpellChecker(inputEl, alertContainerEl, onFixedCallback = null) {
 let currentAdminView = "dashboard";
 
 function switchAdminView(viewName, updateHash = true) {
-  const validViews = ["dashboard", "analysis", "interactions", "tags", "missing-searches", "publish", "modify", "profile"];
+  const validViews = ["dashboard", "analysis", "interactions", "users", "tags", "missing-searches", "publish", "modify", "profile", "backup"];
   if (!validViews.includes(viewName)) {
     viewName = "dashboard";
   }
@@ -3968,15 +4651,19 @@ function switchAdminView(viewName, updateHash = true) {
         ? "Category Analysis" 
         : (viewName === "interactions"
             ? "User Interactions"
-            : (viewName === "tags"
-                ? "Tag Analysis"
-                : (viewName === "missing-searches"
-                    ? "Search Demands"
-                    : (viewName === "publish" 
-                        ? "Publish Studio" 
-                        : (viewName === "modify"
-                            ? "Content Library"
-                            : "Admin Profile"))))));
+            : (viewName === "users"
+                ? "Users & Students"
+                : (viewName === "tags"
+                    ? "Tag Analysis"
+                    : (viewName === "missing-searches"
+                        ? "Search Demands"
+                        : (viewName === "publish" 
+                            ? "Publish Studio" 
+                            : (viewName === "modify"
+                                ? "Content Library"
+                                : (viewName === "backup"
+                                    ? "Backup & Restore"
+                                    : "Admin Profile"))))))));
             
   const secEl = $("#portal-current-section");
   if (secEl) secEl.textContent = secName;
@@ -3988,15 +4675,19 @@ function switchAdminView(viewName, updateHash = true) {
           ? "Categories & Subject Analytics 🥧" 
           : (viewName === "interactions"
               ? "Student Engagement & Interaction Telemetry ⚡"
-              : (viewName === "tags"
-                  ? "Tag Cloud & Keyword Distribution 🏷️"
-                  : (viewName === "missing-searches"
-                      ? "Student Search Demands & Content Gaps 🔎"
-                      : (viewName === "publish" 
-                          ? "Publish Revision Note ☁" 
-                          : (viewName === "modify"
-                              ? "Content Library Management ✏️"
-                              : "Administrator Profile & Platform Settings 👤"))))));
+              : (viewName === "users"
+                  ? "Google Authenticated Students & Telemetry 👥"
+                  : (viewName === "tags"
+                      ? "Tag Cloud & Keyword Distribution 🏷️"
+                      : (viewName === "missing-searches"
+                          ? "Student Search Demands & Content Gaps 🔎"
+                          : (viewName === "publish" 
+                              ? "Publish Revision Note ☁" 
+                              : (viewName === "modify"
+                                  ? "Content Library Management ✏️"
+                                  : (viewName === "backup"
+                                      ? "1-Click Master Backup & Restore Center 💾"
+                                      : "Administrator Profile & Platform Settings 👤"))))))));
   }
 
   if (viewName === "dashboard") {
@@ -4006,6 +4697,8 @@ function switchAdminView(viewName, updateHash = true) {
     renderAnalysisView();
   } else if (viewName === "interactions") {
     renderInteractionsView();
+  } else if (viewName === "users") {
+    renderUsersView();
   } else if (viewName === "tags") {
     renderTagsView();
   } else if (viewName === "missing-searches") {
@@ -4014,7 +4707,28 @@ function switchAdminView(viewName, updateHash = true) {
     renderTable();
   } else if (viewName === "profile") {
     renderProfileView();
+  } else if (viewName === "backup") {
+    refreshBackupCenterKpis();
   }
+}
+
+async function refreshBackupCenterKpis() {
+  const notesCount = (allNotes || []).length;
+  const usersCount = (registeredUsers || []).length;
+  const interactionsCount = (liveInteractions?.totalLikes || 0) + (liveInteractions?.totalDownloads || 0) + (liveInteractions?.totalViews || 0) + (liveInteractions?.totalShares || 0);
+
+  const notesEl = $("#backup-kpi-notes");
+  const usersEl = $("#backup-kpi-users");
+  const interEl = $("#backup-kpi-interactions");
+  const assetsEl = $("#backup-kpi-assets");
+
+  if (notesEl) notesEl.textContent = `${notesCount} Notes`;
+  if (usersEl) usersEl.textContent = `${usersCount} Profiles`;
+  if (interEl) interEl.textContent = `${interactionsCount.toLocaleString("en-IN")} Events`;
+  if (assetsEl) assetsEl.textContent = "Photo, Logo & QR";
+
+  const badge = $("#backup-status-badge");
+  if (badge) badge.textContent = "Safe";
 }
 
 function renderProfileView() {
@@ -4226,6 +4940,8 @@ function setupEventListeners() {
   setupCalendarEvents();
   setupFileDrop();
   setupPublishStudio();
+  setupRichTextEditor("#studio-rte-wrapper", "#studio-note-overview-editor", "#studio-note-overview", "#studio-overview-char-count");
+  setupRichTextEditor("#edit-rte-wrapper", "#edit-note-overview-editor", "#edit-note-overview", "#edit-overview-char-count");
 
   // Permanent & Delegated Interaction Analysis Modal Click Triggers
   document.addEventListener("click", e => {
@@ -4260,19 +4976,133 @@ function setupEventListeners() {
     { id: "likes-analysis-dialog", btn: "likes-modal-close-btn" },
     { id: "downloads-analysis-dialog", btn: "downloads-modal-close-btn" },
     { id: "shares-analysis-dialog", btn: "shares-modal-close-btn" },
-    { id: "views-analysis-dialog", btn: "views-modal-close-btn" }
+    { id: "views-analysis-dialog", btn: "views-modal-close-btn" },
+    { id: "admin-edit-dialog", btn: "admin-edit-modal-close-btn" }
   ].forEach(({ id, btn }) => {
     const dialog = document.getElementById(id);
     const closeBtn = document.getElementById(btn);
     if (closeBtn && dialog) {
-      closeBtn.onclick = () => dialog.close();
+      closeBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dialog.close();
+      };
     }
     if (dialog) {
-      dialog.onclick = (e) => {
-        const rect = dialog.getBoundingClientRect();
-        const isInDialog = (rect.top <= e.clientY && e.clientY <= rect.top + rect.height && rect.left <= e.clientX && e.clientX <= rect.left + rect.width);
-        if (!isInDialog) dialog.close();
-      };
+      // Only close when clicking the actual backdrop (e.target is the <dialog> element itself)
+      dialog.addEventListener("click", (e) => {
+        if (e.target === dialog) {
+          dialog.close();
+        }
+      });
+    }
+  });
+
+  // Dedicated Cancel button for Edit Note Dialog
+  $("#admin-edit-cancel-btn")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    $("#admin-edit-dialog")?.close();
+  });
+
+  // Global [data-close] delegation for all modal dialogs
+  document.addEventListener("click", (e) => {
+    const closeTarget = e.target.closest("[data-close], .edit-modal-close");
+    if (closeTarget) {
+      e.preventDefault();
+      const parentDialog = closeTarget.closest("dialog") || document.querySelector("dialog[open]");
+      if (parentDialog) {
+        parentDialog.close();
+      }
+    }
+  });
+
+  // Users & Students View Event Listeners
+  $("#users-search-input")?.addEventListener("input", () => {
+    renderUsersTable();
+  });
+
+  $("#users-filter-activity")?.addEventListener("change", () => {
+    renderUsersTable();
+  });
+
+  $("#users-filter-exam")?.addEventListener("change", () => {
+    renderUsersTable();
+  });
+
+  $("#users-sort-select")?.addEventListener("change", (e) => {
+    const val = e.target.value;
+    if (val === "active-desc") { userSortKey = "active"; userSortDir = "desc"; }
+    else if (val === "views-desc") { userSortKey = "views"; userSortDir = "desc"; }
+    else if (val === "likes-desc") { userSortKey = "likes"; userSortDir = "desc"; }
+    else if (val === "bookmarks-desc") { userSortKey = "bookmarks"; userSortDir = "desc"; }
+    else if (val === "downloads-desc") { userSortKey = "downloads"; userSortDir = "desc"; }
+    else if (val === "name-asc") { userSortKey = "name"; userSortDir = "asc"; }
+    else if (val === "joined-desc") { userSortKey = "joined"; userSortDir = "desc"; }
+    renderUsersTable();
+  });
+
+  document.querySelectorAll("[data-user-sort]").forEach(th => {
+    th.addEventListener("click", () => {
+      const key = th.dataset.userSort;
+      if (userSortKey === key) {
+        userSortDir = userSortDir === "asc" ? "desc" : "asc";
+      } else {
+        userSortKey = key;
+        userSortDir = (key === "name") ? "asc" : "desc";
+      }
+      renderUsersTable();
+    });
+  });
+
+  $("#users-export-csv-btn")?.addEventListener("click", () => {
+    exportUsersCsv();
+  });
+
+  // Delegated click handler for Inspect User Profile Button
+  document.addEventListener("click", (e) => {
+    const inspectBtn = e.target.closest("[data-inspect-user-id], .inspect-user-btn");
+    if (inspectBtn) {
+      e.preventDefault();
+      const userId = inspectBtn.dataset.inspectUserId || inspectBtn.getAttribute("data-inspect-user-id");
+      if (userId) {
+        openUserDetailsModal(userId);
+      }
+    }
+  });
+
+  // User Details Modal Close Buttons & Backdrop
+  $("#user-details-close-btn")?.addEventListener("click", () => {
+    $("#user-details-dialog")?.close();
+  });
+
+  $("#user-modal-done-btn")?.addEventListener("click", () => {
+    $("#user-details-dialog")?.close();
+  });
+
+  const userDetailsDialog = document.getElementById("user-details-dialog");
+  if (userDetailsDialog) {
+    userDetailsDialog.addEventListener("click", (e) => {
+      if (e.target === userDetailsDialog) {
+        userDetailsDialog.close();
+      }
+    });
+  }
+
+  // Delete User Action
+  $("#delete-user-btn")?.addEventListener("click", async () => {
+    if (!currentUserDetailId) return;
+    if (!confirm("Are you sure you want to permanently delete this student's telemetry record?")) return;
+    try {
+      const res = await api(`/api/admin/users/${currentUserDetailId}`, { method: "DELETE" });
+      if (res && res.success) {
+        showToast("Student user deleted successfully.", "success");
+        $("#user-details-dialog")?.close();
+        renderUsersView();
+      } else {
+        showToast(res?.error || "Failed to delete user.", "error");
+      }
+    } catch {
+      showToast("Error communicating with server.", "error");
     }
   });
 
@@ -4992,6 +5822,10 @@ function setupEventListeners() {
             return copy;
           });
         }
+        // Ensure registeredUsers are bundled
+        if (!backupData.users && Array.isArray(registeredUsers)) {
+          backupData.users = registeredUsers;
+        }
       }
 
       const jsonStr = JSON.stringify(backupData, null, 2);
@@ -5000,13 +5834,13 @@ function setupEventListeners() {
       const dlLink = document.createElement("a");
       const dateTag = new Date().toISOString().slice(0, 10);
       dlLink.href = dlUrl;
-      dlLink.download = `exam_alert_india_backup_${dateTag}.json`;
+      dlLink.download = `exam_alert_india_master_backup_${dateTag}.json`;
       document.body.appendChild(dlLink);
       dlLink.click();
       document.body.removeChild(dlLink);
       URL.revokeObjectURL(dlUrl);
 
-      showToast(`✓ Full Backup exported! Saved ${backupData.notes?.length || 0} notes, profile photo, website logo & QR barcode!`, "success");
+      showToast(`✓ Master Backup exported! Saved ${backupData.notes?.length || 0} notes, ${(backupData.users || []).length} students, profile & branding!`, "success");
     } catch (err) {
       showToast("Failed to create backup file: " + err.message, "error");
     } finally {
@@ -5020,14 +5854,27 @@ function setupEventListeners() {
   const backupExportBtn = $("#backup-export-btn");
   backupExportBtn?.addEventListener("click", () => performBackupExport(backupExportBtn));
 
+  const backupPageExportBtn = $("#backup-page-export-btn");
+  backupPageExportBtn?.addEventListener("click", () => performBackupExport(backupPageExportBtn));
+
   const modalQuickBackupBtn = $("#modal-quick-backup-btn");
   modalQuickBackupBtn?.addEventListener("click", () => performBackupExport(modalQuickBackupBtn));
 
   const backupRestoreFileInput = $("#backup-restore-file-input");
   const backupRestoreTriggerBtn = $("#backup-restore-trigger-btn");
-
   backupRestoreTriggerBtn?.addEventListener("click", () => {
     backupRestoreFileInput?.click();
+  });
+
+  const backupPageRestoreFileInput = $("#backup-page-restore-file-input");
+  const backupPageRestoreTriggerBtn = $("#backup-page-restore-trigger-btn");
+  backupPageRestoreTriggerBtn?.addEventListener("click", () => {
+    backupPageRestoreFileInput?.click();
+  });
+
+  $("#backup-center-refresh-btn")?.addEventListener("click", () => {
+    refreshBackupCenterKpis();
+    showToast("Backup Center metrics refreshed! 🔄", "info");
   });
 
   // Windows-Style Backup Restore Progress Popup Window Controller
@@ -5170,13 +6017,16 @@ function setupEventListeners() {
     };
   }
 
-  backupRestoreFileInput?.addEventListener("change", async (e) => {
-    const file = e.target.files?.[0];
+  async function handleBackupRestoreWorkflow(file) {
     if (!file) return;
 
     if (backupRestoreTriggerBtn) {
       backupRestoreTriggerBtn.disabled = true;
       backupRestoreTriggerBtn.innerHTML = `<span>⏳</span> Restoring data…`;
+    }
+    if (backupPageRestoreTriggerBtn) {
+      backupPageRestoreTriggerBtn.disabled = true;
+      backupPageRestoreTriggerBtn.innerHTML = `<span>⏳</span> Restoring data…`;
     }
 
     let progressModal = null;
@@ -5195,7 +6045,8 @@ function setupEventListeners() {
       }
 
       const notesCount = (backupObj.notes || []).length;
-      const totalEstimatedItems = notesCount + 3 + (backupObj.searchDemands?.unfulfilledDemands?.length || 0);
+      const usersCount = (backupObj.users || []).length;
+      const totalEstimatedItems = notesCount + usersCount + 3 + (backupObj.searchDemands?.unfulfilledDemands?.length || 0);
       progressModal.setItems(0, totalEstimatedItems);
 
       // Stage 2: Decode notes and diagram buffers with dynamic individual file feedback (15% -> 50%)
@@ -5282,7 +6133,7 @@ function setupEventListeners() {
         adminProfileState = { ...adminProfileState, ...restoreRes.profile };
       }
 
-      // Stage 4: Apply branding, search demands & IndexedDB storage (75% -> 96%)
+      // Stage 4: Apply branding, student user accounts & IndexedDB storage (75% -> 96%)
       await progressModal.animateTo(82, 350, "Saving images into offline IndexedDB...", "Caching diagrams into local image repository...");
 
       if (backupObj.images && typeof backupObj.images === "object") {
@@ -5322,7 +6173,14 @@ function setupEventListeners() {
         allNotes = clientNotes;
       }
 
-      await progressModal.animateTo(90, 300, "Applying branding assets & search indices...", 'Syncing creator avatar: "admin_avatar.jpg"...');
+      // Restore Student Accounts
+      if (Array.isArray(backupObj.users)) {
+        registeredUsers = backupObj.users;
+        safeSetLocalStorage("exam_users_data", registeredUsers);
+        renderUsersView();
+      }
+
+      await progressModal.animateTo(90, 300, "Applying branding assets & student accounts...", 'Syncing creator avatar: "admin_avatar.jpg"...');
 
       if (backupObj.profile || backupObj.profileAssets) {
         const pObj = backupObj.profile || {};
@@ -5385,13 +6243,14 @@ function setupEventListeners() {
       progressModal.setItems(totalEstimatedItems, totalEstimatedItems);
 
       // Stage 5: Complete (96% -> 100%)
-      await progressModal.animateTo(100, 300, "Restore Complete!", `Successfully synchronized ${notesCount} notes & assets`);
+      await progressModal.animateTo(100, 300, "Restore Complete!", `Successfully synchronized ${notesCount} notes, ${usersCount} students & assets`);
       await progressModal.complete(notesCount);
       await loadDashboardData();
+      await refreshBackupCenterKpis();
       if (serverSaved) {
-        showToast(`✓ Website data published to server! All users on this domain will see ${notesCount} notes.`, "success");
+        showToast(`✓ Master data restored to server! ${notesCount} notes and ${usersCount} student profiles active.`, "success");
       } else {
-        showToast(`✓ Website data restored! (${notesCount} notes loaded)`, "success");
+        showToast(`✓ Master data restored! (${notesCount} notes loaded)`, "success");
       }
     } catch (err) {
       if (progressModal) progressModal.close();
@@ -5401,8 +6260,21 @@ function setupEventListeners() {
         backupRestoreTriggerBtn.disabled = false;
         backupRestoreTriggerBtn.innerHTML = `<span>🔄</span> Select Backup File to Restore`;
       }
-      backupRestoreFileInput.value = "";
+      if (backupPageRestoreTriggerBtn) {
+        backupPageRestoreTriggerBtn.disabled = false;
+        backupPageRestoreTriggerBtn.innerHTML = `<span>🔄</span> Select Backup File to Restore`;
+      }
+      if (backupRestoreFileInput) backupRestoreFileInput.value = "";
+      if (backupPageRestoreFileInput) backupPageRestoreFileInput.value = "";
     }
+  }
+
+  backupRestoreFileInput?.addEventListener("change", (e) => {
+    handleBackupRestoreWorkflow(e.target.files?.[0]);
+  });
+
+  backupPageRestoreFileInput?.addEventListener("change", (e) => {
+    handleBackupRestoreWorkflow(e.target.files?.[0]);
   });
 
   // Missing Demands Filter & Sort listeners
@@ -5758,7 +6630,24 @@ function setupEventListeners() {
     openPublishVerificationModal();
   });
 
-  // Edit Note Form Submit
+  // Edit Note Form Submit & Image URL Preview Listener
+  $("#edit-note-image-url")?.addEventListener("input", e => {
+    const val = (e.target.value || "").trim();
+    const previewBox = $("#edit-image-preview-box");
+    const imgPreview = $("#edit-img-preview");
+    if (val && (val.startsWith("http://") || val.startsWith("https://") || val.startsWith("/uploads/") || val.startsWith("data:image/"))) {
+      if (imgPreview) imgPreview.src = val;
+      if (previewBox) previewBox.hidden = false;
+    } else {
+      if (previewBox) previewBox.hidden = true;
+    }
+  });
+
+  $("#edit-note-overview")?.addEventListener("input", e => {
+    const charCount = $("#edit-overview-char-count");
+    if (charCount) charCount.textContent = `${e.target.value.length}/2000`;
+  });
+
   $("#admin-edit-form")?.addEventListener("submit", async e => {
     e.preventDefault();
     const id = $("#edit-note-id").value;
@@ -5767,6 +6656,9 @@ function setupEventListeners() {
     const tagsInput = $("#edit-note-tags");
     const rawTags = tagsInput ? tagsInput.value : "";
     const parsedTags = rawTags.split(",").map(s => s.trim().replace(/^#/, "")).filter(Boolean);
+    const overviewEditor = $("#edit-note-overview-editor");
+    const overview = overviewEditor ? overviewEditor.innerHTML.trim() : ($("#edit-note-overview")?.value || "").trim();
+    const imageUrl = ($("#edit-note-image-url")?.value || "").trim();
 
     const msg = $("#edit-form-msg");
     const submitBtn = $("#edit-submit-btn");
@@ -5778,7 +6670,8 @@ function setupEventListeners() {
     submitBtn.disabled = true;
 
     try {
-      const payload = { title, subject, tags: parsedTags };
+      const payload = { title, subject, tags: parsedTags, overview };
+      if (imageUrl) payload.imageUrl = imageUrl;
       if (editImageData) payload.imageData = editImageData;
 
       await api(`/api/admin/notes/${id}`, {
@@ -6143,6 +7036,54 @@ function openLightbox(noteIdOrIdx) {
   if (dialog) dialog.showModal();
 }
 
+function formatOverviewHtml(rawText) {
+  if (!rawText || !rawText.trim()) {
+    return `<div class="overview-empty-box"><p class="overview-empty-prompt">💡 <em>High-yield revision diagram. Focus on core exam keywords, flowchart connections, and visual mnemonics for rapid recall.</em></p></div>`;
+  }
+
+  const lines = rawText.trim().split("\n");
+  let html = "";
+  let inList = false;
+
+  for (let line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      continue;
+    }
+
+    if (trimmed.startsWith("•") || trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+      if (!inList) {
+        html += '<ul class="overview-bullet-list">';
+        inList = true;
+      }
+      const itemContent = trimmed.replace(/^[•\-\*]\s*/, "");
+      html += `<li>${formatInlineText(itemContent)}</li>`;
+    } else {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      html += `<p class="overview-para">${formatInlineText(trimmed)}</p>`;
+    }
+  }
+
+  if (inList) {
+    html += "</ul>";
+  }
+
+  return html;
+}
+
+function formatInlineText(text) {
+  let escaped = escapeHtml(text);
+  escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  return escaped;
+}
+
 function updateLightboxContent(note) {
   if (!note) return;
   const title = $("#lightbox-title");
@@ -6151,6 +7092,7 @@ function updateLightboxContent(note) {
   const meta = $("#lightbox-meta");
   const downloadBtn = $("#lightbox-download-btn");
   const tagsContainer = $("#lightbox-tags");
+  const overviewEl = $("#lightbox-overview-text");
 
   if (title) title.textContent = note.title;
   if (badge) {
@@ -6173,6 +7115,10 @@ function updateLightboxContent(note) {
         </div>
       `;
     }
+  }
+
+  if (overviewEl) {
+    overviewEl.innerHTML = formatOverviewHtml(note.overview || note.description || "");
   }
 
   if (meta) {

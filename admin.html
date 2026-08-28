@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=55.0">
+  <link rel="stylesheet" href="styles.css?v=72.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -210,6 +210,14 @@
             </div>
             <b id="interactions-badge" class="cat-count">Live</b>
           </button>
+          <button class="category admin-nav-card" data-admin-view="users">
+            <span class="nav-icon-box users-box">👥</span>
+            <div class="nav-text-col">
+              <span class="cat-name">Users & Students</span>
+              <small class="nav-sub-desc">Google Auth & Analytics</small>
+            </div>
+            <b id="users-nav-badge" class="cat-count badge-live">0</b>
+          </button>
           <button class="category admin-nav-card" data-admin-view="analysis">
             <span class="nav-icon-box analysis-box">🥧</span>
             <div class="nav-text-col">
@@ -249,6 +257,14 @@
               <small class="nav-sub-desc">Library & Batch Ops</small>
             </div>
             <b id="modify-notes-badge" class="cat-count">0</b>
+          </button>
+          <button class="category admin-nav-card" data-admin-view="backup">
+            <span class="nav-icon-box backup-box" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">💾</span>
+            <div class="nav-text-col">
+              <span class="cat-name">Backup & Restore</span>
+              <small class="nav-sub-desc">1-Click Full Snapshot</small>
+            </div>
+            <b id="backup-status-badge" class="cat-count badge-live">Safe</b>
           </button>
         </nav>
       </div>
@@ -491,10 +507,10 @@
             </div>
           </div>
 
-          <div class="metric-card interaction-kpi-card kpi-views clickable-kpi-card" id="kpi-card-views" role="button" tabindex="0" title="Click to view Note Impressions & viewer traffic breakdown">
+          <div class="metric-card interaction-kpi-card kpi-views clickable-kpi-card" id="kpi-card-views" role="button" tabindex="0" title="Click to view Total Views & viewer traffic breakdown">
             <div class="metric-icon-wrap icon-views">👁️</div>
             <div class="metric-info">
-              <p class="metric-label">Note Impressions</p>
+              <p class="metric-label">Total Views</p>
               <h3 id="interaction-total-views" class="metric-value">0</h3>
               <small class="metric-subtext"><span class="kpi-trend-up">↑ Live</span> Popup Window Opens</small>
             </div>
@@ -518,10 +534,10 @@
             <div class="interaction-bars-container">
               
               <!-- Bar 1: Views -->
-              <div class="interaction-bar-row clickable-interaction-row" id="interaction-row-views" role="button" tabindex="0" title="Click to view Note Impressions">
+              <div class="interaction-bar-row clickable-interaction-row" id="interaction-row-views" role="button" tabindex="0" title="Click to view Total Views">
                 <div class="interaction-row-label">
                   <span class="interaction-icon">👁️</span>
-                  <strong>Lightbox Views</strong>
+                  <strong>Total Views</strong>
                 </div>
                 <div class="interaction-bar-track">
                   <div id="bar-fill-views" class="interaction-bar-fill fill-views" style="width: 100%;"></div>
@@ -637,6 +653,134 @@
 
         </div>
 
+      </div>
+
+      <!-- View: Users & Student Intelligence (Google Auto Auth & Learner Analytics) -->
+      <div id="admin-view-users" class="admin-view-pane" hidden>
+        <div class="admin-card user-analytics-card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Student Intelligence & Telemetry</p>
+              <h2>Google Authenticated Users & Analytics</h2>
+            </div>
+            <div class="users-header-actions">
+              <button type="button" id="users-export-csv-btn" class="export-users-btn" title="Download Student Telemetry Data as CSV">
+                <span>📥</span> Export CSV
+              </button>
+            </div>
+          </div>
+
+          <!-- 4 User KPI Cards -->
+          <div class="admin-metrics-grid four-col users-metrics-grid">
+            <div class="metric-card user-kpi-card">
+              <div class="metric-icon users-total-icon">👥</div>
+              <div class="metric-info">
+                <span class="metric-label">Total Registered Students</span>
+                <strong id="user-kpi-total" class="metric-value">0</strong>
+                <small id="user-kpi-new-signups" class="metric-sub-trend positive">↑ 0 New This Week</small>
+              </div>
+            </div>
+
+            <div class="metric-card user-kpi-card">
+              <div class="metric-icon users-active-icon">🟢</div>
+              <div class="metric-info">
+                <span class="metric-label">Active Students (24h)</span>
+                <strong id="user-kpi-active-today" class="metric-value">0</strong>
+                <small id="user-kpi-active-7d" class="metric-sub-trend">0 Active Past 7 Days</small>
+              </div>
+            </div>
+
+            <div class="metric-card user-kpi-card">
+              <div class="metric-icon users-saved-icon">📑</div>
+              <div class="metric-info">
+                <span class="metric-label">Avg Saved Notes / Student</span>
+                <strong id="user-kpi-avg-saved" class="metric-value">0.0</strong>
+                <small class="metric-sub-trend positive">Cloud Synced Favorites</small>
+              </div>
+            </div>
+
+            <div class="metric-card user-kpi-card">
+              <div class="metric-icon users-subject-icon">🏆</div>
+              <div class="metric-info">
+                <span class="metric-label">Top Subject Interest</span>
+                <strong id="user-kpi-top-subject" class="metric-value">Polity</strong>
+                <small class="metric-sub-trend">Highest Study Attention</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Smart Toolbar: Search + Filter Activity + Sort -->
+          <div class="table-tools-wrap users-toolbar-wrap">
+            <div class="table-search users-search-box">
+              <input id="users-search-input" type="search" placeholder="Search students by name, email, or subject preference..." autocomplete="off">
+            </div>
+
+            <div class="users-filters-row">
+              <select id="users-filter-activity" class="table-select-filter">
+                <option value="all">All Activity</option>
+                <option value="today">🟢 Active Today (24h)</option>
+                <option value="week">🟡 Active Past 7 Days</option>
+              </select>
+
+              <select id="users-filter-exam" class="table-select-filter">
+                <option value="all">All Target Exams</option>
+                <option value="UPSC">🏛️ UPSC Aspirants</option>
+                <option value="SSC">🏢 SSC Aspirants</option>
+                <option value="RRB">🚆 RRB Aspirants</option>
+                <option value="IBPS">🏦 IBPS / Banking</option>
+                <option value="State PSC">🗺️ State PSC</option>
+                <option value="Others">📚 Others</option>
+              </select>
+
+              <select id="users-sort-select" class="table-select-filter">
+                <option value="active-desc">⚡ Last Active (Recent First)</option>
+                <option value="views-desc">👁️ Most Views (High → Low)</option>
+                <option value="likes-desc">❤️ Most Likes (High → Low)</option>
+                <option value="downloads-desc">⬇️ Most Downloads (High → Low)</option>
+                <option value="shares-desc">📤 Most Shares (High → Low)</option>
+                <option value="name-asc">🔤 Name (A → Z)</option>
+                <option value="joined-desc">📅 Joined (Newest First)</option>
+              </select>
+            </div>
+
+            <span id="users-table-count-badge" class="likes-search-count">Showing all students</span>
+          </div>
+
+          <!-- Student User Directory Table -->
+          <div class="likes-table-scroll-wrap users-table-wrap">
+            <table class="likes-leaderboard-table users-table">
+              <thead>
+                <tr>
+                  <th class="likes-th-sortable" data-user-sort="name" title="Sort by Student Name">
+                    <div class="likes-th-inner">Student <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th class="likes-th-sortable" data-user-sort="exam" style="width: 145px;" title="Target Competitive Exam">
+                    <div class="likes-th-inner">Target Exam 🎯 <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th class="likes-th-sortable active" data-user-sort="active" style="width: 130px;" title="Sort by Last Active">
+                    <div class="likes-th-inner">Last Active <span class="likes-th-arrow">↓</span></div>
+                  </th>
+                  <th class="likes-th-sortable" data-user-sort="views" style="width: 95px; text-align: center;" title="Sort by Views">
+                    <div class="likes-th-inner">Views 👁️ <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th class="likes-th-sortable" data-user-sort="likes" style="width: 95px; text-align: center;" title="Sort by Likes">
+                    <div class="likes-th-inner">Likes ❤️ <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th class="likes-th-sortable" data-user-sort="downloads" style="width: 105px; text-align: center;" title="Sort by Downloads">
+                    <div class="likes-th-inner">Downloads ⬇️ <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th class="likes-th-sortable" data-user-sort="shares" style="width: 95px; text-align: center;" title="Sort by Shares">
+                    <div class="likes-th-inner">Shares 📤 <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th style="width: 100px; text-align: center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="users-table-body">
+                <!-- Dynamically populated student user rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <!-- View: Tags (Tag Cloud, Frequency Analytics & Quick Drilldowns) -->
@@ -886,18 +1030,30 @@
                   </div>
                 </div>
 
-              </div>
+                <!-- Cloudinary / Direct Image URL Input Box -->
+                <div class="publish-url-card">
+                  <div class="publish-label-row">
+                    <label for="studio-image-url" class="publish-field-label">
+                      <span class="label-icon">🔗</span> Cloudinary / Image URL <span class="req-star" title="Mandatory Field">*</span>
+                    </label>
+                    <span class="cloudinary-badge">⚡ Cloudinary Link</span>
+                  </div>
+                  <div class="publish-input-wrap url-input-wrap">
+                    <input id="studio-image-url" class="publish-input" type="url" placeholder="Paste Cloudinary URL (https://res.cloudinary.com/...)" autocomplete="off" spellcheck="false">
+                    <button type="button" id="studio-url-clear-btn" class="url-clear-btn" title="Clear URL" hidden>×</button>
+                  </div>
+                  <div id="studio-url-status" class="url-status-msg" hidden></div>
+                </div>
 
-              <!-- Right Column: Note Image Dropzone & Live Note Card Preview -->
-              <div class="publish-preview-pane">
-                
-                <label class="publish-field-label">
-                  <span class="label-icon">🖼️</span> Note Image & Live Student Card Simulator <span class="req-star" title="Mandatory Field">*</span>
-                </label>
+                <div class="publish-divider-row">
+                  <span class="divider-line"></span>
+                  <span class="divider-text">OR upload image file</span>
+                  <span class="divider-line"></span>
+                </div>
 
                 <!-- Enhanced Modern Image-Only Dropzone -->
                 <div id="studio-dropzone" class="studio-dropzone">
-                  <input id="studio-file-input" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.svg" required>
+                  <input id="studio-file-input" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.svg">
                   
                   <div id="dropzone-prompt" class="dropzone-prompt">
                     <div class="dropzone-cloud-icon">☁️</div>
@@ -933,6 +1089,89 @@
                       <span class="sim-tag">#UPSC</span>
                       <span class="sim-tag">#Constitution</span>
                     </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Right Column: Note Overview & Key Points (Full Vertical Match) -->
+              <div class="publish-overview-pane">
+                
+                <!-- Study Overview & Key Points (Blog-Style Information) with Rich Text Formatting Toolbar -->
+                <div class="publish-field-group publish-overview-group">
+                  <div class="publish-label-row">
+                    <label for="studio-note-overview-editor" class="publish-field-label">
+                      <span class="label-icon">📖</span> Note Overview & Key Points
+                    </label>
+                    <span class="char-count" id="studio-overview-char-count">0/2000</span>
+                  </div>
+
+                  <div class="rte-wrapper" id="studio-rte-wrapper">
+                    <!-- Rich Formatting Toolbar -->
+                    <div class="rte-toolbar" role="toolbar" aria-label="Text formatting toolbar">
+                      <div class="rte-btn-group">
+                        <button type="button" class="rte-btn" data-command="bold" title="Bold (Ctrl+B)"><strong>B</strong></button>
+                        <button type="button" class="rte-btn" data-command="italic" title="Italic (Ctrl+I)"><em>I</em></button>
+                        <button type="button" class="rte-btn rte-btn-underline" data-command="red-underline" title="Red Underline">
+                          <span class="rte-u-preview">U</span>
+                          <span class="rte-red-bar"></span>
+                        </button>
+                      </div>
+
+                      <div class="rte-divider"></div>
+
+                      <!-- Text Alignment -->
+                      <div class="rte-btn-group rte-align-group">
+                        <button type="button" class="rte-btn" data-command="justifyLeft" title="Align Left">
+                          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="15" y2="12"></line><line x1="3" y1="18" x2="19" y2="18"></line></svg>
+                        </button>
+                        <button type="button" class="rte-btn" data-command="justifyCenter" title="Align Center">
+                          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="6" y1="12" x2="18" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
+                        </button>
+                        <button type="button" class="rte-btn" data-command="justifyRight" title="Align Right">
+                          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="9" y1="12" x2="21" y2="12"></line><line x1="5" y1="18" x2="21" y2="18"></line></svg>
+                        </button>
+                        <button type="button" class="rte-btn" data-command="justifyFull" title="Justify Text">
+                          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                        </button>
+                      </div>
+
+                      <div class="rte-divider"></div>
+
+                      <!-- Text Color Selector -->
+                      <div class="rte-btn-group rte-color-group">
+                        <span class="rte-label-hint">Color:</span>
+                        <button type="button" class="rte-color-btn active" data-color="default" title="Default Text Color" style="background:#0f172a;"></button>
+                        <button type="button" class="rte-color-btn" data-color="#dc2626" title="Red Text" style="background:#dc2626;"></button>
+                        <button type="button" class="rte-color-btn" data-color="#2563eb" title="Blue Text" style="background:#2563eb;"></button>
+                        <button type="button" class="rte-color-btn" data-color="#16a34a" title="Green Text" style="background:#16a34a;"></button>
+                        <button type="button" class="rte-color-btn" data-color="#d97706" title="Amber Text" style="background:#d97706;"></button>
+                        <button type="button" class="rte-color-btn" data-color="#7c3aed" title="Purple Text" style="background:#7c3aed;"></button>
+                      </div>
+
+                      <div class="rte-divider"></div>
+
+                      <!-- Marker Highlighter -->
+                      <div class="rte-btn-group rte-highlight-group">
+                        <span class="rte-label-hint">Highlight:</span>
+                        <button type="button" class="rte-highlight-btn" data-highlight="yellow" title="Yellow Exam Highlight" style="background:#fef08a; border: 1px solid #ca8a04;">🟡</button>
+                        <button type="button" class="rte-highlight-btn" data-highlight="green" title="Green Exam Highlight" style="background:#bbf7d0; border: 1px solid #16a34a;">🟢</button>
+                        <button type="button" class="rte-highlight-btn" data-highlight="blue" title="Blue Exam Highlight" style="background:#bfdbfe; border: 1px solid #2563eb;">🔵</button>
+                        <button type="button" class="rte-highlight-btn rte-highlight-clear" data-highlight="clear" title="Clear Highlight">✕</button>
+                      </div>
+
+                      <div class="rte-divider"></div>
+
+                      <div class="rte-btn-group">
+                        <button type="button" class="rte-btn" data-command="insertUnorderedList" title="Bullet List (•)">• List</button>
+                        <button type="button" class="rte-btn" data-command="insertOrderedList" title="Numbered List (1.)">1. List</button>
+                        <button type="button" class="rte-btn rte-btn-clear" data-command="removeFormat" title="Clear Formatting">🧹</button>
+                      </div>
+                    </div>
+
+                    <!-- WYSIWYG Editable Area -->
+                    <div id="studio-note-overview-editor" class="rte-editor publish-input publish-textarea" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true" data-placeholder="Enter key study points, explanations, bullet points, or visual mnemonics... (e.g. • Key Articles covered...)"></div>
+                    <textarea id="studio-note-overview" hidden></textarea>
                   </div>
                 </div>
 
@@ -1298,11 +1537,167 @@
         </div>
 
       </div>
+    </div>
+
+    <!-- Dedicated 1-Click Master Backup & Restore Center -->
+    <div id="admin-view-backup" class="admin-view-pane" hidden>
+      <div class="admin-profile-container" style="padding-top: 10px;">
+        <!-- Header Banner -->
+        <div class="dash-welcome-banner glass-card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(59, 130, 246, 0.05) 100%); border-left: 4px solid #10b981; margin-bottom: 20px;">
+          <div class="banner-left">
+            <div class="banner-title-row">
+              <span class="banner-emoji">💾</span>
+              <h2>1-Click Master Backup & Instant Restore Center</h2>
+              <span class="badge-role" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">v4.0 Unified Engine</span>
+            </div>
+            <p class="banner-sub" style="margin-top: 4px;">
+              Export, preserve, and restore all revision notes, diagram images, student accounts, target exam goals, live analytics, and branding assets with 100% portable safety.
+            </p>
+          </div>
+          <div class="banner-right" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" id="backup-center-refresh-btn" class="profile-act-btn secondary" style="font-size: 0.8rem; padding: 8px 14px;">
+              <span>🔄</span> Refresh Stats
+            </button>
+          </div>
+        </div>
+
+        <!-- 4-Tile Live Data KPI Grid -->
+        <div class="user-quick-stats-grid four-col" style="margin-bottom: 24px;">
+          <div class="stat-summary-card" style="border-top: 3px solid #3b82f6;">
+            <div class="stat-icon-wrap" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6;">📚</div>
+            <div class="stat-info-col">
+              <span class="stat-kpi-label">Revision Notes & Diagrams</span>
+              <strong id="backup-kpi-notes" class="stat-kpi-val">0</strong>
+              <small class="stat-kpi-sub">Portable Base64 Bundled</small>
+            </div>
+          </div>
+
+          <div class="stat-summary-card" style="border-top: 3px solid #10b981;">
+            <div class="stat-icon-wrap" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">👥</div>
+            <div class="stat-info-col">
+              <span class="stat-kpi-label">Student User Profiles</span>
+              <strong id="backup-kpi-users" class="stat-kpi-val">0</strong>
+              <small class="stat-kpi-sub">Google Auth & Target Goals</small>
+            </div>
+          </div>
+
+          <div class="stat-summary-card" style="border-top: 3px solid #f59e0b;">
+            <div class="stat-icon-wrap" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b;">📊</div>
+            <div class="stat-info-col">
+              <span class="stat-kpi-label">Live Telemetry & Demands</span>
+              <strong id="backup-kpi-interactions" class="stat-kpi-val">0</strong>
+              <small class="stat-kpi-sub">Views, Likes & Searches</small>
+            </div>
+          </div>
+
+          <div class="stat-summary-card" style="border-top: 3px solid #8b5cf6;">
+            <div class="stat-icon-wrap" style="background: rgba(139, 92, 246, 0.12); color: #8b5cf6;">🎨</div>
+            <div class="stat-info-col">
+              <span class="stat-kpi-label">Branding & Media Assets</span>
+              <strong id="backup-kpi-assets" class="stat-kpi-val">Ready</strong>
+              <small class="stat-kpi-sub">Photo, Logo & QR Code</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Master Backup Action Cards (Export & Restore) -->
+        <div class="backup-actions-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+          
+          <!-- 1. Export Action Card -->
+          <div class="profile-card" style="padding: 22px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); display: flex; flex-direction: column; justify-content: space-between; gap: 16px; box-shadow: var(--shadow-sm);">
+            <div>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-size: 1.4rem; padding: 8px; background: rgba(59, 130, 246, 0.1); border-radius: 10px; color: #3b82f6;">📥</span>
+                  <div>
+                    <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--ink);">Download Master Backup (.json)</h3>
+                    <span style="font-size: 0.76rem; color: var(--ink-muted);">Comprehensive single-file archive</span>
+                  </div>
+                </div>
+                <span class="badge-role" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">1-Click</span>
+              </div>
+              <p style="font-size: 0.84rem; color: var(--ink-sub); line-height: 1.55; margin: 0 0 12px;">
+                Generates a completely standalone <code>.json</code> snapshot containing all revision notes, diagram images encoded in base64, registered student profiles with target goals, telemetry statistics, missing search demands, administrator avatar, website logo, and Instagram QR barcode.
+              </p>
+              <div style="background: var(--surface-subtle); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px dashed var(--border); font-size: 0.78rem; color: var(--ink-muted); display: flex; flex-direction: column; gap: 4px;">
+                <div><strong>Format:</strong> ExamAlertIndiaMasterBackup v4.0</div>
+                <div><strong>Portability:</strong> Safe across Render redeployments, cloud restarts & server migrations.</div>
+              </div>
+            </div>
+
+            <button type="button" id="backup-page-export-btn" class="profile-act-btn primary" style="width: 100%; font-size: 0.92rem; padding: 12px 20px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radius-md);">
+              <span>💾</span> Export Master Backup File (.json)
+            </button>
+          </div>
+
+          <!-- 2. Restore Action Card -->
+          <div class="profile-card" style="padding: 22px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); display: flex; flex-direction: column; justify-content: space-between; gap: 16px; box-shadow: var(--shadow-sm);">
+            <div>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-size: 1.4rem; padding: 8px; background: rgba(16, 185, 129, 0.1); border-radius: 10px; color: #10b981;">📤</span>
+                  <div>
+                    <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--ink);">Restore Website from Backup</h3>
+                    <span style="font-size: 0.76rem; color: var(--ink-muted);">Ultra-Glassmorphic Windows Transfer Engine</span>
+                  </div>
+                </div>
+                <span class="badge-role" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">Auto-Sync</span>
+              </div>
+              <p style="font-size: 0.84rem; color: var(--ink-sub); line-height: 1.55; margin: 0 0 12px;">
+                Select or drag-and-drop any backup JSON file to immediately populate notes, restore diagram images into local disk cache, reload student users with their target goals, and sync all administrator branding.
+              </p>
+              <div style="background: rgba(16, 185, 129, 0.05); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.78rem; color: var(--ink-muted); display: flex; flex-direction: column; gap: 4px;">
+                <div><strong style="color: #10b981;">🛡️ Pre-Restore Safety Guard:</strong> Server automatically makes a safety snapshot before applying new files.</div>
+              </div>
+            </div>
+
+            <div>
+              <input type="file" id="backup-page-restore-file-input" accept=".json,application/json" style="display:none;">
+              <button type="button" id="backup-page-restore-trigger-btn" class="profile-act-btn secondary" style="width: 100%; font-size: 0.92rem; padding: 12px 20px; border-color: var(--primary); color: var(--primary); font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radius-md);">
+                <span>🔄</span> Select Backup File to Restore
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Master Backup Specification Card -->
+        <div class="profile-card" style="padding: 20px 24px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface);">
+          <h4 style="margin: 0 0 12px; font-size: 0.95rem; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 8px;">
+            <span>📋</span> What is Included in the v4.0 Master Backup Snapshot?
+          </h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; font-size: 0.8rem; color: var(--ink-sub);">
+            <div style="padding: 10px 14px; background: var(--surface-subtle); border-radius: var(--radius-md); border: 1px solid var(--border);">
+              <strong style="color: var(--ink); display: block; margin-bottom: 2px;">📚 Study Notes & Media</strong>
+              Titles, subjects, category tags, rich markdown overviews, and base64 diagram buffers.
+            </div>
+            <div style="padding: 10px 14px; background: var(--surface-subtle); border-radius: var(--radius-md); border: 1px solid var(--border);">
+              <strong style="color: var(--ink); display: block; margin-bottom: 2px;">👥 Student User Accounts</strong>
+              Google profiles, target examination goals (UPSC, SSC, etc.), likes, and study telemetry.
+            </div>
+            <div style="padding: 10px 14px; background: var(--surface-subtle); border-radius: var(--radius-md); border: 1px solid var(--border);">
+              <strong style="color: var(--ink); display: block; margin-bottom: 2px;">📈 Real-Time Analytics</strong>
+              Live visitor counters, daily trends, note views, downloads, likes, and unfulfilled search requests.
+            </div>
+            <div style="padding: 10px 14px; background: var(--surface-subtle); border-radius: var(--radius-md); border: 1px solid var(--border);">
+              <strong style="color: var(--ink); display: block; margin-bottom: 2px;">🎨 Brand & Platform Assets</strong>
+              Admin profile avatar photo, official website logo, and Instagram QR barcode.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
     </section>
   </main>
 
   <!-- Edit Note Modal Dialog (Ultra-Glassmorphic Studio Modal) -->
   <dialog id="admin-edit-dialog" class="dialog edit-note-dialog edit-note-glass-dialog">
+    <!-- Close button OUTSIDE the form so form events never interfere -->
+    <button id="admin-edit-modal-close-btn" class="edit-modal-close" type="button"
+      title="Close (Esc)" aria-label="Close Edit Modal" data-close-edit-dialog>×</button>
+
     <form id="admin-edit-form" class="edit-dialog-form edit-glass-form">
       
       <div class="edit-dialog-header edit-glass-header">
@@ -1313,7 +1708,6 @@
             <p class="edit-modal-sub">Update topic title, academic subject, and search keywords</p>
           </div>
         </div>
-        <button class="edit-modal-close" type="button" data-close title="Close (Esc)">×</button>
       </div>
       
       <input id="edit-note-id" type="hidden">
@@ -1359,18 +1753,144 @@
           </div>
           <div id="edit-tags-spell-alert" class="spelling-alert-container" hidden></div>
         </div>
+
+        <div class="edit-field-card edit-field-full">
+          <div class="edit-field-label-row">
+            <label class="form-label-title" for="edit-note-image-url">
+              <span class="label-icon">🔗</span> Cloudinary / Image URL
+            </label>
+            <span class="cloudinary-badge-mini">⚡ Cloudinary</span>
+          </div>
+          <div class="publish-input-wrap">
+            <input id="edit-note-image-url" class="form-control edit-glass-input" type="url" placeholder="https://res.cloudinary.com/.../image.jpg" spellcheck="false">
+          </div>
+          <div id="edit-image-preview-box" class="edit-image-preview-box" hidden>
+            <img id="edit-img-preview" src="" alt="Note Preview" class="edit-thumb-img">
+            <span id="edit-img-preview-label" class="edit-thumb-label">Image Preview</span>
+          </div>
+        </div>
+
+        <div class="edit-field-card edit-field-full">
+          <div class="edit-field-label-row">
+            <label class="form-label-title" for="edit-note-overview-editor">
+              <span class="label-icon">📖</span> Note Overview & Key Points
+            </label>
+            <span class="char-count" id="edit-overview-char-count">0/2000</span>
+          </div>
+
+          <div class="rte-wrapper rte-wrapper-modal" id="edit-rte-wrapper">
+            <!-- Rich Formatting Toolbar -->
+            <div class="rte-toolbar" role="toolbar" aria-label="Text formatting toolbar">
+              <div class="rte-btn-group">
+                <button type="button" class="rte-btn" data-command="bold" title="Bold (Ctrl+B)"><strong>B</strong></button>
+                <button type="button" class="rte-btn" data-command="italic" title="Italic (Ctrl+I)"><em>I</em></button>
+                <button type="button" class="rte-btn rte-btn-underline" data-command="red-underline" title="Red Underline">
+                  <span class="rte-u-preview">U</span>
+                  <span class="rte-red-bar"></span>
+                </button>
+              </div>
+
+              <div class="rte-divider"></div>
+
+              <!-- Text Alignment -->
+              <div class="rte-btn-group rte-align-group">
+                <button type="button" class="rte-btn" data-command="justifyLeft" title="Align Left">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="15" y2="12"></line><line x1="3" y1="18" x2="19" y2="18"></line></svg>
+                </button>
+                <button type="button" class="rte-btn" data-command="justifyCenter" title="Align Center">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="6" y1="12" x2="18" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
+                </button>
+                <button type="button" class="rte-btn" data-command="justifyRight" title="Align Right">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="9" y1="12" x2="21" y2="12"></line><line x1="5" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+                <button type="button" class="rte-btn" data-command="justifyFull" title="Justify Text">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+              </div>
+
+              <div class="rte-divider"></div>
+
+              <!-- Text Color Selector -->
+              <div class="rte-btn-group rte-color-group">
+                <span class="rte-label-hint">Color:</span>
+                <button type="button" class="rte-color-btn active" data-color="default" title="Default Text Color" style="background:#0f172a;"></button>
+                <button type="button" class="rte-color-btn" data-color="#dc2626" title="Red Text" style="background:#dc2626;"></button>
+                <button type="button" class="rte-color-btn" data-color="#2563eb" title="Blue Text" style="background:#2563eb;"></button>
+                <button type="button" class="rte-color-btn" data-color="#16a34a" title="Green Text" style="background:#16a34a;"></button>
+                <button type="button" class="rte-color-btn" data-color="#d97706" title="Amber Text" style="background:#d97706;"></button>
+                <button type="button" class="rte-color-btn" data-color="#7c3aed" title="Purple Text" style="background:#7c3aed;"></button>
+              </div>
+
+              <div class="rte-divider"></div>
+
+              <!-- Marker Highlighter -->
+              <div class="rte-btn-group rte-highlight-group">
+                <span class="rte-label-hint">Highlight:</span>
+                <button type="button" class="rte-highlight-btn" data-highlight="yellow" title="Yellow Exam Highlight" style="background:#fef08a; border: 1px solid #ca8a04;">🟡</button>
+                <button type="button" class="rte-highlight-btn" data-highlight="green" title="Green Exam Highlight" style="background:#bbf7d0; border: 1px solid #16a34a;">🟢</button>
+                <button type="button" class="rte-highlight-btn" data-highlight="blue" title="Blue Exam Highlight" style="background:#bfdbfe; border: 1px solid #2563eb;">🔵</button>
+                <button type="button" class="rte-highlight-btn rte-highlight-clear" data-highlight="clear" title="Clear Highlight">✕</button>
+              </div>
+
+              <div class="rte-divider"></div>
+
+              <div class="rte-btn-group">
+                <button type="button" class="rte-btn" data-command="insertUnorderedList" title="Bullet List (•)">• List</button>
+                <button type="button" class="rte-btn" data-command="insertOrderedList" title="Numbered List (1.)">1. List</button>
+                <button type="button" class="rte-btn rte-btn-clear" data-command="removeFormat" title="Clear Formatting">🧹</button>
+              </div>
+            </div>
+
+            <!-- WYSIWYG Editable Area -->
+            <div id="edit-note-overview-editor" class="rte-editor edit-glass-input edit-glass-textarea" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true" data-placeholder="Enter key study points, explanations, bullet points, or visual mnemonics..."></div>
+            <textarea id="edit-note-overview" hidden></textarea>
+          </div>
+        </div>
       </div>
 
       <p id="edit-form-msg" class="form-message"></p>
 
       <div class="modal-btn-row edit-modal-btn-row">
-        <button class="outline-button edit-glass-cancel-btn" type="button" data-close>Cancel</button>
+        <button id="admin-edit-cancel-btn" class="outline-button edit-glass-cancel-btn" type="button"
+          data-close-edit-dialog>Cancel</button>
         <button id="edit-submit-btn" class="upload-button edit-glass-submit-btn" type="submit">
           <span>✓</span> Save Changes
         </button>
       </div>
     </form>
   </dialog>
+  <script>
+    /* Keep the edit modal dismissible even if a later admin script has an error. */
+    (() => {
+      const dialog = document.getElementById("admin-edit-dialog");
+      const closeEditDialog = () => {
+        if (!dialog?.open) return;
+        if (typeof dialog.close === "function") {
+          dialog.close();
+        } else {
+          dialog.removeAttribute("open");
+        }
+      };
+
+      document.addEventListener("click", (event) => {
+        if (event.target.closest("[data-close-edit-dialog]")) {
+          event.preventDefault();
+          closeEditDialog();
+        }
+      }, true);
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && dialog?.open) {
+          event.preventDefault();
+          closeEditDialog();
+        }
+      }, true);
+
+      dialog?.addEventListener("click", (event) => {
+        if (event.target === dialog) closeEditDialog();
+      });
+    })();
+  </script>
 
   <!-- High-Security Clean All Data Confirmation Modal Dialog (Ultra-Glassmorphic) -->
   <dialog id="admin-clean-data-dialog" class="dialog edit-dialog clean-data-dialog clean-data-glass-dialog">
@@ -1815,48 +2335,89 @@
     </div>
   </dialog>
 
-  <!-- Lightbox / High-Res Note Preview Popup Window (Matching Home Page UI) -->
-  <dialog id="lightbox-dialog" class="lightbox-dialog">
-    <div class="lightbox-content">
-      <div class="lightbox-header">
+  <!-- Lightbox / Blog-Style Revision Note Popup Viewer Dialog (Matching Home Page UI) -->
+  <dialog id="lightbox-dialog" class="lightbox-dialog blog-lightbox-dialog" aria-labelledby="lightbox-title">
+    <div class="lightbox-content blog-lightbox-content">
+      
+      <!-- Top Blog Header: Category & Title Left, Close Right -->
+      <div class="lightbox-header blog-lightbox-header">
         <div class="lightbox-title-wrap">
           <span id="lightbox-badge" class="subject-chip">Subject</span>
-          <h2 id="lightbox-title">Note Title</h2>
+          <h2 id="lightbox-title" class="lightbox-blog-title">Note Title</h2>
         </div>
         <button id="lightbox-close-btn" class="icon-action-btn close-btn" type="button" title="Close (Esc)" aria-label="Close Note Popup">×</button>
       </div>
 
-      <div class="lightbox-body">
-        <button id="lightbox-prev-btn" class="lightbox-nav-btn prev" type="button" aria-label="Previous Note">‹</button>
+      <!-- Main 2-Column Split: Image Left, Overview Right -->
+      <div class="lightbox-blog-body">
         
-        <div id="lightbox-media-container" class="lightbox-media">
-          <!-- Dynamic high-res image or rich rendered card -->
-        </div>
+        <!-- Left Side: Interactive Image Diagram & Controls -->
+        <div class="lightbox-media-col">
+          <div class="lightbox-media-viewport">
+            <button id="lightbox-prev-btn" class="lightbox-nav-btn prev" type="button" aria-label="Previous Note" title="Previous Note">‹</button>
+            
+            <div id="lightbox-media-container" class="lightbox-media">
+              <!-- Dynamic high-res image or rich rendered card -->
+            </div>
 
-        <button id="lightbox-next-btn" class="lightbox-nav-btn next" type="button" aria-label="Next Note">›</button>
-      </div>
-
-      <div class="lightbox-footer">
-        <div class="lightbox-footer-left">
-          <div class="zoom-controls" role="group" aria-label="Image Zoom">
-            <button id="lightbox-zoom-out" class="icon-action-btn" type="button" title="Zoom Out (-)">−</button>
-            <span id="lightbox-zoom-level" class="zoom-level-text">100%</span>
-            <button id="lightbox-zoom-in" class="icon-action-btn" type="button" title="Zoom In (+)">+</button>
-            <button id="lightbox-zoom-reset" class="icon-action-btn" type="button" title="Reset Zoom (0)">↺</button>
+            <button id="lightbox-next-btn" class="lightbox-nav-btn next" type="button" aria-label="Next Note" title="Next Note">›</button>
           </div>
-          <a id="lightbox-download-btn" class="icon-action-btn" download="exam-note.jpg" title="Download High-Res Note" target="_blank" rel="noopener" aria-label="Download Note">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-          </a>
+
+          <!-- Bottom Image Toolbar (Zoom Controls & Quick Download) -->
+          <div class="lightbox-media-toolbar">
+            <div class="zoom-controls" role="group" aria-label="Image Zoom">
+              <button id="lightbox-zoom-out" class="icon-action-btn" type="button" title="Zoom Out (-)">−</button>
+              <span id="lightbox-zoom-level" class="zoom-level-text">100%</span>
+              <button id="lightbox-zoom-in" class="icon-action-btn" type="button" title="Zoom In (+)">+</button>
+              <button id="lightbox-zoom-reset" class="icon-action-btn" type="button" title="Reset Zoom (0)">↺</button>
+            </div>
+            <a id="lightbox-download-btn" class="lightbox-dl-action-btn" download="exam-note.jpg" title="Download High-Res Diagram" target="_blank" rel="noopener" aria-label="Download High-Res Note">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Download Diagram</span>
+            </a>
+          </div>
         </div>
-        <div class="lightbox-footer-right">
-          <span id="lightbox-meta" class="lightbox-meta-date" style="margin-right: 6px;">📅 Date</span>
-          <div id="lightbox-tags" class="lightbox-tags"></div>
+
+        <!-- Right Side: Blog Overview & Study Notes Information -->
+        <div class="lightbox-overview-col">
+          
+          <div class="lightbox-overview-card">
+            
+            <!-- Overview Header with Meta -->
+            <div class="lightbox-overview-head">
+              <div class="overview-head-left">
+                <span class="overview-head-icon">📖</span>
+                <div>
+                  <h3 class="overview-head-title">Study Notes & Overview</h3>
+                  <span class="overview-head-sub">High-yield revision summary & key exam concepts</span>
+                </div>
+              </div>
+              <span id="lightbox-meta" class="lightbox-meta-date">📅 Recent</span>
+            </div>
+
+            <!-- Scrollable Overview Text Body -->
+            <div class="lightbox-overview-scroll">
+              <div id="lightbox-overview-text" class="lightbox-overview-text">
+                <!-- Dynamically populated rich overview / bullet points -->
+              </div>
+            </div>
+
+            <!-- Tags Section -->
+            <div class="lightbox-overview-tags-wrap">
+              <span class="overview-tags-label">🏷️ Key Topics & Tags:</span>
+              <div id="lightbox-tags" class="lightbox-tags"></div>
+            </div>
+
+          </div>
+
         </div>
+
       </div>
+
     </div>
   </dialog>
 
@@ -2030,11 +2591,22 @@
             <span class="badge" id="likes-notes-count-badge">Ranked by Likes</span>
           </div>
 
-          <!-- Live Search Bar for Table -->
+          <!-- Live Search Bar for Table with Sort Selector -->
           <div class="likes-search-bar-wrap">
             <div class="likes-search-input-group">
               <span class="likes-search-icon">🔍</span>
               <input type="search" id="likes-notes-search" class="likes-search-input" placeholder="Search liked notes by title, subject, or tag..." autocomplete="off">
+            </div>
+            <div class="likes-sort-control">
+              <label for="likes-notes-sort" class="likes-sort-label">Sort By:</label>
+              <select id="likes-notes-sort" class="likes-sort-select">
+                <option value="likes-desc">❤️ Most Liked (High → Low)</option>
+                <option value="likes-asc">❤️ Least Liked (Low → High)</option>
+                <option value="title-asc">🔤 Title (A → Z)</option>
+                <option value="title-desc">🔤 Title (Z → A)</option>
+                <option value="subject-asc">📚 Subject (A → Z)</option>
+                <option value="rank-asc">🏆 Rank (#1 First)</option>
+              </select>
             </div>
             <span id="likes-search-count-badge" class="likes-search-count">Showing all notes</span>
           </div>
@@ -2044,10 +2616,18 @@
             <table class="likes-leaderboard-table">
               <thead>
                 <tr>
-                  <th style="width: 75px; text-align: center;">Rank</th>
-                  <th>Note Title</th>
-                  <th style="width: 140px;">Subject</th>
-                  <th style="width: 110px; text-align: center;">Likes ❤️</th>
+                  <th class="likes-th-sortable" data-sort-key="rank" style="width: 75px; text-align: center;" title="Sort by Rank">
+                    <div class="likes-th-inner">Rank <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th class="likes-th-sortable" data-sort-key="title" title="Sort by Title">
+                    <div class="likes-th-inner">Note Title <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th class="likes-th-sortable" data-sort-key="subject" style="width: 140px;" title="Sort by Subject">
+                    <div class="likes-th-inner">Subject <span class="likes-th-arrow">↕</span></div>
+                  </th>
+                  <th class="likes-th-sortable active" data-sort-key="likes" style="width: 120px; text-align: center;" title="Sort by Likes">
+                    <div class="likes-th-inner">Likes ❤️ <span class="likes-th-arrow">↓</span></div>
+                  </th>
                   <th style="width: 90px; text-align: center;">Action</th>
                 </tr>
               </thead>
@@ -2169,9 +2749,8 @@
             <div class="likes-sort-control">
               <label for="downloads-notes-sort" class="likes-sort-label">Sort By:</label>
               <select id="downloads-notes-sort" class="likes-sort-select">
-                <option value="downloads-desc">⬇️ Most Downloads</option>
-                <option value="downloads-asc">⬆️ Least Downloads</option>
-                <option value="likes-desc">❤️ Most Likes</option>
+                <option value="downloads-desc">⬇️ Most Downloads (High → Low)</option>
+                <option value="downloads-asc">⬇️ Least Downloads (Low → High)</option>
                 <option value="title-asc">🔤 Title (A → Z)</option>
                 <option value="title-desc">🔤 Title (Z → A)</option>
                 <option value="subject-asc">📚 Subject (A → Z)</option>
@@ -2195,11 +2774,8 @@
                   <th class="likes-th-sortable" data-sort-key="subject" style="width: 140px;" title="Sort by Subject">
                     <div class="likes-th-inner">Subject <span class="likes-th-arrow">↕</span></div>
                   </th>
-                  <th class="likes-th-sortable active" data-sort-key="downloads" style="width: 110px; text-align: center;" title="Sort by Downloads">
+                  <th class="likes-th-sortable active" data-sort-key="downloads" style="width: 120px; text-align: center;" title="Sort by Downloads">
                     <div class="likes-th-inner">Downloads ⬇️ <span class="likes-th-arrow">↓</span></div>
-                  </th>
-                  <th class="likes-th-sortable" data-sort-key="likes" style="width: 110px; text-align: center;" title="Sort by Likes">
-                    <div class="likes-th-inner">Likes ❤️ <span class="likes-th-arrow">↕</span></div>
                   </th>
                   <th style="width: 90px; text-align: center;">Action</th>
                 </tr>
@@ -2322,9 +2898,8 @@
             <div class="likes-sort-control">
               <label for="shares-notes-sort" class="likes-sort-label">Sort By:</label>
               <select id="shares-notes-sort" class="likes-sort-select">
-                <option value="shares-desc">📤 Most Shares</option>
-                <option value="shares-asc">📥 Least Shares</option>
-                <option value="likes-desc">❤️ Most Likes</option>
+                <option value="shares-desc">📤 Most Shares (High → Low)</option>
+                <option value="shares-asc">📥 Least Shares (Low → High)</option>
                 <option value="title-asc">🔤 Title (A → Z)</option>
                 <option value="title-desc">🔤 Title (Z → A)</option>
                 <option value="subject-asc">📚 Subject (A → Z)</option>
@@ -2348,11 +2923,8 @@
                   <th class="likes-th-sortable" data-sort-key="subject" style="width: 140px;" title="Sort by Subject">
                     <div class="likes-th-inner">Subject <span class="likes-th-arrow">↕</span></div>
                   </th>
-                  <th class="likes-th-sortable active" data-sort-key="shares" style="width: 110px; text-align: center;" title="Sort by Shares">
+                  <th class="likes-th-sortable active" data-sort-key="shares" style="width: 120px; text-align: center;" title="Sort by Shares">
                     <div class="likes-th-inner">Shares 📤 <span class="likes-th-arrow">↓</span></div>
-                  </th>
-                  <th class="likes-th-sortable" data-sort-key="likes" style="width: 110px; text-align: center;" title="Sort by Likes">
-                    <div class="likes-th-inner">Likes ❤️ <span class="likes-th-arrow">↕</span></div>
                   </th>
                   <th style="width: 90px; text-align: center;">Action</th>
                 </tr>
@@ -2376,14 +2948,14 @@
     </div>
   </dialog>
 
-  <!-- Note Impressions & Viewer Traffic Dialog -->
+  <!-- Total Views & Viewer Traffic Dialog -->
   <dialog id="views-analysis-dialog" class="dialog likes-analysis-dialog views-dialog" aria-labelledby="views-modal-title">
     <div class="likes-modal-card">
       <div class="likes-modal-header views-header">
         <div class="likes-header-left">
           <div class="likes-badge-icon views-badge">👁️</div>
           <div>
-            <h3 id="views-modal-title" class="likes-modal-title">Note Impressions & Viewer Traffic</h3>
+            <h3 id="views-modal-title" class="likes-modal-title">Total Views & Viewer Traffic</h3>
             <p class="likes-modal-sub">Deep-dive breakdown of student study attention, popup viewers opened, and subject interest</p>
           </div>
         </div>
@@ -2394,7 +2966,7 @@
         <!-- 4 Key KPI Tiles -->
         <div class="likes-stats-row">
           <div class="likes-stat-tile">
-            <span class="likes-stat-label">Total Note Impressions</span>
+            <span class="likes-stat-label">Total Views</span>
             <div class="likes-stat-val-row">
               <strong id="views-kpi-total" class="likes-stat-num" style="color: #f59e0b;">0</strong>
               <span class="likes-kpi-pill" style="color: #f59e0b; background: rgba(245, 158, 11, 0.1);">Live Telemetry</span>
@@ -2474,9 +3046,8 @@
             <div class="likes-sort-control">
               <label for="views-notes-sort" class="likes-sort-label">Sort By:</label>
               <select id="views-notes-sort" class="likes-sort-select">
-                <option value="views-desc">👁️ Most Views</option>
-                <option value="views-asc">🕶️ Least Views</option>
-                <option value="likes-desc">❤️ Most Likes</option>
+                <option value="views-desc">👁️ Most Views (High → Low)</option>
+                <option value="views-asc">🕶️ Least Views (Low → High)</option>
                 <option value="title-asc">🔤 Title (A → Z)</option>
                 <option value="title-desc">🔤 Title (Z → A)</option>
                 <option value="subject-asc">📚 Subject (A → Z)</option>
@@ -2500,11 +3071,8 @@
                   <th class="likes-th-sortable" data-sort-key="subject" style="width: 140px;" title="Sort by Subject">
                     <div class="likes-th-inner">Subject <span class="likes-th-arrow">↕</span></div>
                   </th>
-                  <th class="likes-th-sortable active" data-sort-key="views" style="width: 110px; text-align: center;" title="Sort by Views">
-                    <div class="likes-th-inner">Views 👁️ <span class="likes-th-arrow">↓</span></div>
-                  </th>
-                  <th class="likes-th-sortable" data-sort-key="likes" style="width: 110px; text-align: center;" title="Sort by Likes">
-                    <div class="likes-th-inner">Likes ❤️ <span class="likes-th-arrow">↕</span></div>
+                  <th class="likes-th-sortable active" data-sort-key="views" style="width: 120px; text-align: center;" title="Sort by Views">
+                    <div class="likes-th-inner">Total Views 👁️ <span class="likes-th-arrow">↓</span></div>
                   </th>
                   <th style="width: 90px; text-align: center;">Action</th>
                 </tr>
@@ -2528,9 +3096,107 @@
     </div>
   </dialog>
 
+  <!-- In-Depth Student User Telemetry & Learning Profile Dialog -->
+  <!-- In-Depth Student User Telemetry & Learning Profile Dialog -->
+  <dialog id="user-details-dialog" class="dialog user-details-dialog" aria-labelledby="user-detail-name">
+    <div class="user-details-modal-card">
+      <div class="user-details-header">
+        <div class="user-header-left">
+          <img id="user-detail-avatar" class="user-detail-avatar" src="" alt="Student Avatar">
+          <div class="user-header-info">
+            <div class="user-name-row">
+              <h3 id="user-detail-name" class="user-detail-name">Student Name</h3>
+              <span class="google-verified-badge" title="Authenticated with Google">✓ Google Verified</span>
+            </div>
+            <p id="user-detail-email" class="user-detail-email">student@gmail.com</p>
+            <div class="user-meta-sub">
+              <span id="user-detail-joined">Joined: 12 Aug 2026</span>
+              <span class="meta-dot">·</span>
+              <span id="user-detail-last-active">Last Active: Today</span>
+              <span class="meta-dot">·</span>
+              <span id="user-detail-login-count">1 Session</span>
+            </div>
+            <div class="user-target-exam-pill-row">
+              <span class="user-target-exam-badge">🎯 Goal: <strong id="user-detail-target-exam">UPSC Aspirant</strong></span>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="user-details-close-btn" aria-label="Close dialog">✕</button>
+      </div>
+
+      <div class="user-details-body">
+        <!-- 4 Clean Quick Stats -->
+        <div class="user-quick-stats-grid four-col">
+          <div class="user-stat-box">
+            <span class="stat-icon">👁️</span>
+            <div class="stat-meta">
+              <strong id="user-detail-views-stat">0</strong>
+              <small>Views</small>
+            </div>
+          </div>
+          <div class="user-stat-box">
+            <span class="stat-icon">❤️</span>
+            <div class="stat-meta">
+              <strong id="user-detail-likes-stat">0</strong>
+              <small>Likes</small>
+            </div>
+          </div>
+          <div class="user-stat-box">
+            <span class="stat-icon">⬇️</span>
+            <div class="stat-meta">
+              <strong id="user-detail-downloads-stat">0</strong>
+              <small>Downloads</small>
+            </div>
+          </div>
+          <div class="user-stat-box">
+            <span class="stat-icon">📤</span>
+            <div class="stat-meta">
+              <strong id="user-detail-shares-stat">0</strong>
+              <small>Shares</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subject Engagement Breakdown -->
+        <div class="user-section-card">
+          <h4 class="user-section-title">📊 Subject Engagement Distribution</h4>
+          <div id="user-subject-bars-container" class="user-subject-bars">
+            <!-- Dynamically populated progress bars -->
+          </div>
+        </div>
+
+        <!-- Liked Revision Notes List -->
+        <div class="user-section-card">
+          <div class="user-section-header-row">
+            <h4 class="user-section-title">❤️ Liked Revision Notes</h4>
+            <span id="user-bookmarks-count-pill" class="badge">0 Notes</span>
+          </div>
+          <div id="user-bookmarks-list" class="user-bookmarks-list">
+            <!-- Dynamically populated liked notes -->
+          </div>
+        </div>
+
+        <!-- Recent Study Activity Log -->
+        <div class="user-section-card">
+          <h4 class="user-section-title">⏱️ Recent Study Activity History</h4>
+          <div id="user-activity-timeline" class="user-activity-timeline">
+            <!-- Dynamically populated recent view logs -->
+          </div>
+        </div>
+      </div>
+
+      <div class="user-details-footer">
+        <button type="button" id="delete-user-btn" class="text-btn danger" title="Remove this student's telemetry record">
+          🗑️ Delete User Record
+        </button>
+        <button type="button" class="outline-button" id="user-modal-done-btn">Close</button>
+      </div>
+    </div>
+  </dialog>
+
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=43.0"></script>
+  <script src="admin.js?v=59.0"></script>
 </body>
 </html>
