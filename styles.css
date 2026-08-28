@@ -11772,9 +11772,23 @@ body.about-mode .mobile-category-strip {
 }
 
 .profile-act-btn.secondary:hover {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+}
+
+.profile-act-btn.danger {
   background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.3);
+  border: 1px solid rgba(239, 68, 68, 0.25);
   color: #ef4444;
+}
+
+.profile-act-btn.danger:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+  transform: translateY(-1px);
 }
 
 /* 3-Column Profile Dashboard Grid */

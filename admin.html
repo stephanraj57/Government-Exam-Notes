@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=81.0">
+  <link rel="stylesheet" href="styles.css?v=82.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -1327,6 +1327,12 @@
               <button type="button" class="profile-act-btn edit-prof-btn" id="profile-open-edit-btn" title="Edit Administrator Profile">
                 <span>✏️</span> Edit Profile
               </button>
+              <button type="button" class="profile-act-btn secondary" id="profile-open-pwd-btn" title="Change Admin Password">
+                <span>🔑</span> Change Password
+              </button>
+              <button type="button" class="profile-act-btn danger" id="profile-logout-all-btn" title="Terminate all active administrator sessions across all devices">
+                <span>🚪</span> Logout All Sessions
+              </button>
             </div>
           </div>
         </div>
@@ -2122,6 +2128,132 @@
             <span>💾</span> Save Profile Changes
           </button>
         </div>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Change Admin Password Popup Window -->
+  <dialog id="admin-change-password-dialog" class="dialog edit-note-glass-dialog">
+    <form id="admin-change-password-form" class="edit-modal-form" method="dialog">
+      <div class="edit-modal-header">
+        <div class="edit-modal-header-left">
+          <div class="edit-modal-badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+            <span>🔑</span>
+          </div>
+          <div>
+            <h3 class="edit-modal-title">Change Admin Password</h3>
+            <p class="edit-modal-sub">Update your Super Administrator login credentials</p>
+          </div>
+        </div>
+        <button class="icon-button edit-modal-close" type="button" data-close title="Close Window">✕</button>
+      </div>
+
+      <div class="edit-modal-body" style="padding: 20px 24px;">
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label-title" for="change-pwd-current">
+            <span>🔒</span> Current Admin Password <span class="req-star" style="color: #ef4444;">*</span>
+          </label>
+          <div class="pwd-input-wrap" style="position: relative; display: flex; align-items: center;">
+            <input id="change-pwd-current" class="form-control" type="password" placeholder="Enter current password" required autocomplete="current-password" style="padding-right: 38px;">
+            <button type="button" id="toggle-change-pwd-curr" class="pwd-toggle-btn" title="Toggle password visibility" style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: var(--ink-muted); display: flex; align-items: center; padding: 4px;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label-title" for="change-pwd-new">
+            <span>✨</span> New Admin Password <span class="req-star" style="color: var(--primary);">*</span>
+          </label>
+          <div class="pwd-input-wrap" style="position: relative; display: flex; align-items: center;">
+            <input id="change-pwd-new" class="form-control" type="password" placeholder="Enter new password (min 4 chars)" required minlength="4" autocomplete="new-password" style="padding-right: 38px;">
+            <button type="button" id="toggle-change-pwd-new" class="pwd-toggle-btn" title="Toggle password visibility" style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: var(--ink-muted); display: flex; align-items: center; padding: 4px;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label-title" for="change-pwd-confirm">
+            <span>✓</span> Confirm New Password <span class="req-star" style="color: var(--primary);">*</span>
+          </label>
+          <div class="pwd-input-wrap" style="position: relative; display: flex; align-items: center;">
+            <input id="change-pwd-confirm" class="form-control" type="password" placeholder="Re-enter new password" required minlength="4" autocomplete="new-password" style="padding-right: 38px;">
+            <button type="button" id="toggle-change-pwd-conf" class="pwd-toggle-btn" title="Toggle password visibility" style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: var(--ink-muted); display: flex; align-items: center; padding: 4px;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <p id="admin-change-pwd-msg" class="form-message" style="margin-top: 6px;"></p>
+      </div>
+
+      <div class="modal-btn-row edit-modal-footer" style="justify-content: flex-end; gap: 10px;">
+        <button class="outline-button edit-glass-cancel-btn" type="button" data-close>Cancel</button>
+        <button id="admin-change-pwd-submit" class="upload-button edit-glass-submit-btn" type="submit" style="padding: 10px 22px; font-weight: 800;">
+          <span>🔒</span> Update Password
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Logout All Sessions Confirmation Modal -->
+  <dialog id="admin-logout-all-dialog" class="dialog edit-note-glass-dialog">
+    <form id="admin-logout-all-form" class="edit-modal-form" method="dialog">
+      <div class="edit-modal-header">
+        <div class="edit-modal-header-left">
+          <div class="edit-modal-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+            <span>🚪</span>
+          </div>
+          <div>
+            <h3 class="edit-modal-title">Logout All Sessions</h3>
+            <p class="edit-modal-sub">Terminate all active Super Administrator sessions across all devices</p>
+          </div>
+        </div>
+        <button class="icon-button edit-modal-close" type="button" data-close title="Close Window">✕</button>
+      </div>
+
+      <div class="edit-modal-body" style="padding: 20px 24px;">
+        <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 12px; padding: 14px; margin-bottom: 16px; display: flex; gap: 12px; align-items: flex-start;">
+          <span style="font-size: 1.5rem; line-height: 1;">⚠️</span>
+          <div style="font-size: 0.85rem; color: var(--ink); line-height: 1.5;">
+            <strong>Warning: This action revokes all login sessions.</strong>
+            <p style="margin: 4px 0 0; color: var(--ink-sub);">Every browser, desktop, and mobile session currently logged into this admin account will be immediately signed out, including your current device.</p>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label-title" for="logout-all-admin-password">
+            <span>🔒</span> Confirm Super Admin Password <span class="req-star" style="color: #ef4444;">*</span>
+          </label>
+          <div class="pwd-input-wrap" style="position: relative; display: flex; align-items: center;">
+            <input id="logout-all-admin-password" class="form-control" type="password" placeholder="Enter admin password to authorize" required autocomplete="current-password" style="padding-right: 38px;">
+            <button type="button" id="toggle-logout-all-pwd-visibility" class="pwd-toggle-btn" title="Toggle password visibility" style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: var(--ink-muted); display: flex; align-items: center; padding: 4px;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <p id="admin-logout-all-msg" class="form-message" style="margin-top: 8px;"></p>
+      </div>
+
+      <div class="modal-btn-row edit-modal-footer" style="justify-content: flex-end; gap: 10px;">
+        <button class="outline-button edit-glass-cancel-btn" type="button" data-close>Cancel</button>
+        <button id="admin-logout-all-submit" class="upload-button" type="submit" style="background: #ef4444; border-color: #dc2626; color: #fff; padding: 10px 22px; font-weight: 800;">
+          <span>🚪</span> Terminate All Sessions
+        </button>
       </div>
     </form>
   </dialog>
@@ -3135,6 +3267,6 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=61.0"></script>
+  <script src="admin.js?v=63.0"></script>
 </body>
 </html>

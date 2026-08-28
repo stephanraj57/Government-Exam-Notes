@@ -148,7 +148,7 @@ function formatViewsCount(count) {
   const num = Number(count) || 0;
   if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
   if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, "") + "k";
-  return num.toLocaleString("en-IN");
+  return num.toString();
 }
 
 function showToast(message, type = "info") {
@@ -472,7 +472,6 @@ function render() {
         const subjKey = getSubjectKey(n.subject);
         const viewsCount = getNoteViews(n.id);
         const viewsFormatted = formatViewsCount(viewsCount);
-        const viewsLabel = `${viewsFormatted} ${viewsCount === 1 ? 'view' : 'views'}`;
 
         const tagsList = (n.tags || []).map(t =>
           `<span class="note-tag-chip ${activeTag === t ? 'active' : ''}" data-tag="${escapeHtml(t)}" title="Filter by #${escapeHtml(t)}">#${escapeHtml(t)}</span>`
@@ -491,12 +490,12 @@ function render() {
               <h3 class="note-title">${escapeHtml(n.title)}</h3>
               ${tagsHtml}
               <div class="note-meta">
-                <span class="note-views-badge" title="${viewsCount} student views">
+                <span class="note-views-badge" title="${viewsCount} views">
                   <svg class="views-eye-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                     <circle cx="12" cy="12" r="3"></circle>
                   </svg>
-                  <span class="views-badge-text">${viewsLabel}</span>
+                  <span class="views-badge-text">${viewsFormatted}</span>
                 </span>
                 <button class="card-share-btn" data-share="${n.id}" type="button" title="Share Note (WhatsApp, Telegram, Link)" aria-label="Share Note">
                   <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -902,7 +901,7 @@ function recordRecentView(noteId) {
   const cardBadge = document.querySelector(`[data-note-id="${noteId}"] .views-badge-text`);
   if (cardBadge) {
     const updatedCount = getNoteViews(noteId);
-    cardBadge.textContent = `${formatViewsCount(updatedCount)} ${updatedCount === 1 ? 'view' : 'views'}`;
+    cardBadge.textContent = formatViewsCount(updatedCount);
   }
 }
 

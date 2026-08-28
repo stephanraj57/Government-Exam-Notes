@@ -37,10 +37,12 @@ const INTERACTIONS_FILE = path.join(DATA_DIR, "interactions.json");
 const PROFILE_FILE = path.join(DATA_DIR, "profile.json");
 const SESSIONS_FILE = path.join(DATA_DIR, "sessions.json");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
+const SECURITY_FILE = path.join(DATA_DIR, "admin_security.json");
 const environment = globalThis.process?.env || {};
 const previewConfig = globalThis.__EXAM_ALERT_CONFIG || {};
 const PORT = Number(previewConfig.port || environment.PORT || 4173);
 const ADMIN_PASSWORD = previewConfig.adminPassword || environment.ADMIN_PASSWORD || "admin123";
+let currentAdminPassword = ADMIN_PASSWORD;
 const GOOGLE_CLIENT_ID = environment.GOOGLE_CLIENT_ID || "";
 const GOOGLE_CLIENT_SECRET = environment.GOOGLE_CLIENT_SECRET || "";
 const MONGODB_URI = environment.MONGODB_URI || previewConfig.mongodbUri || "";
@@ -142,6 +144,7 @@ async function ensureStorage() {
   await createJsonIfMissing(PROFILE_FILE, DEFAULT_PROFILE);
   await createJsonIfMissing(SESSIONS_FILE, []);
   await createJsonIfMissing(USERS_FILE, []);
+  await createJsonIfMissing(SECURITY_FILE, { adminPassword: ADMIN_PASSWORD || "admin123" });
 
   await initMongoConnection();
   if (isMongoConnected) {
@@ -158,6 +161,13 @@ async function ensureStorage() {
       for (const t of Object.keys(savedSessions)) {
         if (typeof t === "string" && t.length >= 16) sessions.set(t, true);
       }
+    }
+  } catch {}
+
+  try {
+    const sec = await readJson(SECURITY_FILE);
+    if (sec && typeof sec.adminPassword === "string" && sec.adminPassword.trim()) {
+      currentAdminPassword = sec.adminPassword.trim();
     }
   } catch {}
 }
@@ -187,6 +197,10 @@ async function readJson(filePath) {
       if (filePath === PROFILE_FILE) {
         const doc = await mongoDb.collection("profile").findOne({ type: "admin_profile" }, { projection: { _id: 0 } });
         return doc || { ...DEFAULT_PROFILE };
+      }
+      if (filePath === SECURITY_FILE) {
+        const doc = await mongoDb.collection("security").findOne({ type: "admin_security" }, { projection: { _id: 0 } });
+        return doc || { adminPassword: currentAdminPassword };
       }
       if (filePath === INTERACTIONS_FILE) {
         const doc = await mongoDb.collection("interactions").findOne({ type: "global_interactions" }, { projection: { _id: 0 } });
@@ -243,6 +257,11 @@ async function writeJson(filePath, value) {
       if (filePath === PROFILE_FILE) {
         const col = mongoDb.collection("profile");
         await col.updateOne({ type: "admin_profile" }, { $set: { ...value, type: "admin_profile" } }, { upsert: true });
+        return;
+      }
+      if (filePath === SECURITY_FILE) {
+        const col = mongoDb.collection("security");
+        await col.updateOne({ type: "admin_security" }, { $set: { ...value, type: "admin_security" } }, { upsert: true });
         return;
       }
       if (filePath === INTERACTIONS_FILE) {
@@ -302,8 +321,8 @@ function isAdmin(request) {
 function safePasswordMatch(value) {
   const suppliedStr = String(value || "").trim();
   if (!suppliedStr) return false;
-  const targetPassword = String(ADMIN_PASSWORD || "admin123").trim();
-  if (suppliedStr === targetPassword || suppliedStr === "admin123" || suppliedStr === "admin") return true;
+  const targetPassword = String(currentAdminPassword || ADMIN_PASSWORD || "admin123").trim();
+  if (suppliedStr === targetPassword) return true;
   try {
     const supplied = Buffer.from(suppliedStr);
     const expected = Buffer.from(targetPassword);
@@ -801,6 +820,52 @@ async function handleApi(request, response, url) {
       await persistSessions();
     }
     sendJson(response, 200, { admin: false }, { "Set-Cookie": "examAdminSession=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax" });
+    return true;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/admin/change-password") {
+    if (!isAdmin(request)) return sendUnauthorized(response), true;
+    const body = await readBody(request).catch(() => ({}));
+    const currentPass = String(body.currentPassword || "").trim();
+    const newPass = String(body.newPassword || "").trim();
+
+    if (!safePasswordMatch(currentPass)) {
+      sendJson(response, 400, { error: "Current admin password is incorrect." });
+      return true;
+    }
+
+    if (!newPass || newPass.length < 4) {
+      sendJson(response, 400, { error: "New password must be at least 4 characters long." });
+      return true;
+    }
+
+    currentAdminPassword = newPass;
+    await writeJson(SECURITY_FILE, { adminPassword: newPass, updatedAt: new Date().toISOString() });
+    
+    sendJson(response, 200, { success: true, message: "Admin password changed successfully!" });
+    return true;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/admin/logout-all-sessions") {
+    if (!isAdmin(request)) return sendUnauthorized(response), true;
+    const body = await readBody(request).catch(() => ({}));
+    const enteredPassword = String(body.password || "").trim();
+
+    if (enteredPassword && !safePasswordMatch(enteredPassword)) {
+      sendJson(response, 400, { error: "Incorrect admin password. Cannot terminate sessions." });
+      return true;
+    }
+
+    // Terminate all active admin sessions across all devices
+    sessions.clear();
+    await persistSessions();
+
+    sendJson(
+      response,
+      200,
+      { success: true, loggedOutAll: true, message: "All admin sessions terminated across all devices." },
+      { "Set-Cookie": "examAdminSession=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax" }
+    );
     return true;
   }
 

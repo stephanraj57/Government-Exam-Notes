@@ -5424,6 +5424,187 @@ function setupEventListeners() {
 
   $("#profile-open-edit-btn")?.addEventListener("click", openProfileEditDialog);
 
+  // Change Admin Password Modal Handlers
+  const changePwdDialog = $("#admin-change-password-dialog");
+  const changePwdOpenBtn = $("#profile-open-pwd-btn");
+  const changePwdForm = $("#admin-change-password-form");
+  const changePwdMsg = $("#admin-change-pwd-msg");
+  const changePwdSubmitBtn = $("#admin-change-pwd-submit");
+
+  changePwdOpenBtn?.addEventListener("click", () => {
+    if (changePwdForm) changePwdForm.reset();
+    if (changePwdMsg) {
+      changePwdMsg.textContent = "";
+      changePwdMsg.className = "form-message";
+    }
+    if (changePwdDialog) changePwdDialog.showModal();
+    $("#change-pwd-current")?.focus();
+  });
+
+  function setupChangePwdToggle(btnId, inputId) {
+    $(`#${btnId}`)?.addEventListener("click", () => {
+      const input = $(`#${inputId}`);
+      if (!input) return;
+      const isPassword = input.type === "password";
+      input.type = isPassword ? "text" : "password";
+      const svg = $(`#${btnId} svg`);
+      if (svg) {
+        svg.innerHTML = isPassword
+          ? `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>`
+          : `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
+      }
+    });
+  }
+
+  setupChangePwdToggle("toggle-change-pwd-curr", "change-pwd-current");
+  setupChangePwdToggle("toggle-change-pwd-new", "change-pwd-new");
+  setupChangePwdToggle("toggle-change-pwd-conf", "change-pwd-confirm");
+
+  changePwdForm?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const currInput = $("#change-pwd-current");
+    const newInput = $("#change-pwd-new");
+    const confInput = $("#change-pwd-confirm");
+
+    const currentPassword = currInput?.value?.trim() || "";
+    const newPassword = newInput?.value?.trim() || "";
+    const confirmPassword = confInput?.value?.trim() || "";
+
+    if (!currentPassword) {
+      if (changePwdMsg) {
+        changePwdMsg.textContent = "Please enter your current admin password.";
+        changePwdMsg.className = "form-message error";
+      }
+      currInput?.focus();
+      return;
+    }
+
+    if (!newPassword || newPassword.length < 4) {
+      if (changePwdMsg) {
+        changePwdMsg.textContent = "New password must be at least 4 characters long.";
+        changePwdMsg.className = "form-message error";
+      }
+      newInput?.focus();
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      if (changePwdMsg) {
+        changePwdMsg.textContent = "New passwords do not match. Please re-check.";
+        changePwdMsg.className = "form-message error";
+      }
+      confInput?.focus();
+      return;
+    }
+
+    if (changePwdSubmitBtn) {
+      changePwdSubmitBtn.disabled = true;
+      changePwdSubmitBtn.innerHTML = `<span>⏳</span> Updating Password…`;
+    }
+
+    try {
+      await api("/api/admin/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+
+      showToast("✓ Super Admin password updated successfully!", "success");
+      if (changePwdDialog) changePwdDialog.close();
+      if (changePwdForm) changePwdForm.reset();
+    } catch (err) {
+      const errMsg = err.message || "Failed to update password.";
+      if (changePwdMsg) {
+        changePwdMsg.textContent = errMsg;
+        changePwdMsg.className = "form-message error";
+      }
+      showToast(errMsg, "error");
+    } finally {
+      if (changePwdSubmitBtn) {
+        changePwdSubmitBtn.disabled = false;
+        changePwdSubmitBtn.innerHTML = `<span>🔒</span> Update Password`;
+      }
+    }
+  });
+
+  // Logout All Sessions Handlers
+  const logoutAllDialog = $("#admin-logout-all-dialog");
+  const logoutAllOpenBtn = $("#profile-logout-all-btn");
+  const logoutAllForm = $("#admin-logout-all-form");
+  const logoutAllMsg = $("#admin-logout-all-msg");
+  const logoutAllSubmitBtn = $("#admin-logout-all-submit");
+
+  logoutAllOpenBtn?.addEventListener("click", () => {
+    if (logoutAllForm) logoutAllForm.reset();
+    if (logoutAllMsg) {
+      logoutAllMsg.textContent = "";
+      logoutAllMsg.className = "form-message";
+    }
+    if (logoutAllDialog) logoutAllDialog.showModal();
+    $("#logout-all-admin-password")?.focus();
+  });
+
+  $("#toggle-logout-all-pwd-visibility")?.addEventListener("click", () => {
+    const input = $("#logout-all-admin-password");
+    if (!input) return;
+    const isPassword = input.type === "password";
+    input.type = isPassword ? "text" : "password";
+    const svg = $("#toggle-logout-all-pwd-visibility svg");
+    if (svg) {
+      svg.innerHTML = isPassword
+        ? `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>`
+        : `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
+    }
+  });
+
+  logoutAllForm?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const pwdInput = $("#logout-all-admin-password");
+    const password = pwdInput?.value?.trim() || "";
+
+    if (!password) {
+      if (logoutAllMsg) {
+        logoutAllMsg.textContent = "Please enter your admin password.";
+        logoutAllMsg.className = "form-message error";
+      }
+      pwdInput?.focus();
+      return;
+    }
+
+    if (logoutAllSubmitBtn) {
+      logoutAllSubmitBtn.disabled = true;
+      logoutAllSubmitBtn.innerHTML = `<span>⏳</span> Terminating Sessions…`;
+    }
+
+    try {
+      await api("/api/admin/logout-all-sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password })
+      });
+
+      sessionStorage.removeItem("exam_admin_local_session");
+      showToast("🚪 All administrator sessions have been terminated.", "info");
+      if (logoutAllDialog) logoutAllDialog.close();
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 600);
+    } catch (err) {
+      const errMsg = err.message || "Failed to terminate sessions.";
+      if (logoutAllMsg) {
+        logoutAllMsg.textContent = errMsg;
+        logoutAllMsg.className = "form-message error";
+      }
+      showToast(errMsg, "error");
+    } finally {
+      if (logoutAllSubmitBtn) {
+        logoutAllSubmitBtn.disabled = false;
+        logoutAllSubmitBtn.innerHTML = `<span>🚪</span> Terminate All Sessions`;
+      }
+    }
+  });
+
   // Toggle password visibility in profile modal
   $("#toggle-edit-profile-pwd-visibility")?.addEventListener("click", () => {
     const pwdInput = $("#edit-admin-password");
