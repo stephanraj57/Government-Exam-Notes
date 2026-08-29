@@ -1247,98 +1247,27 @@ function renderInteractionsView() {
 
     if (searchEntries.length === 0) {
       searchCloudContainer.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--ink-muted); font-size: 0.82rem; width: 100%;">No student searches executed yet. Searches performed on the Public Portal will appear here.</div>`;
-      return;
-    }
+    } else {
+      searchCloudContainer.innerHTML = searchEntries.map(item => `
+        <button type="button" class="search-tag-bubble" data-search-term="${escapeHtml(item.query)}" title="Filter library by '${escapeHtml(item.query)}' (${item.count} search${item.count > 1 ? 'es' : ''})">
+          <span>🔍 ${escapeHtml(item.query)}</span>
+          <span class="search-tag-count">${item.count}</span>
+        </button>
+      `).join("");
 
-    searchCloudContainer.innerHTML = searchEntries.map(item => `
-      <button type="button" class="search-tag-bubble" data-search-term="${escapeHtml(item.query)}" title="Filter library by '${escapeHtml(item.query)}' (${item.count} search${item.count > 1 ? 'es' : ''})">
-        <span>🔍 ${escapeHtml(item.query)}</span>
-        <span class="search-tag-count">${item.count}</span>
-      </button>
-    `).join("");
-
-    searchCloudContainer.querySelectorAll("[data-search-term]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const query = btn.dataset.searchTerm;
-        const searchInput = $("#admin-table-search");
-        if (searchInput) {
-          searchInput.value = query;
-        }
-        switchAdminView("modify");
-        renderTable();
+      searchCloudContainer.querySelectorAll("[data-search-term]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const query = btn.dataset.searchTerm;
+          const searchInput = $("#admin-table-search");
+          if (searchInput) {
+            searchInput.value = query;
+          }
+          switchAdminView("modify");
+          renderTable();
+        });
       });
-    });
+    }
   }
-
-  // Tab Switch Handler
-  const tabTopNotesBtn = $("#tab-top-notes-btn");
-  const tabTopSearchesBtn = $("#tab-top-searches-btn");
-  const paneTopNotes = $("#pane-top-notes");
-  const paneTopSearches = $("#pane-top-searches");
-
-  tabTopNotesBtn?.addEventListener("click", () => {
-    tabTopNotesBtn.classList.add("active");
-    tabTopSearchesBtn?.classList.remove("active");
-    if (paneTopNotes) paneTopNotes.hidden = false;
-    if (paneTopSearches) paneTopSearches.hidden = true;
-  });
-
-  tabTopSearchesBtn?.addEventListener("click", () => {
-    tabTopSearchesBtn.classList.add("active");
-    tabTopNotesBtn?.classList.remove("active");
-    if (paneTopNotes) paneTopNotes.hidden = true;
-    if (paneTopSearches) paneTopSearches.hidden = false;
-  });
-
-  // Interaction In-Depth Analysis Modal Triggers
-  $("#kpi-card-likes")?.addEventListener("click", () => openLikesAnalysisModal());
-  $("#interaction-row-likes")?.addEventListener("click", () => openLikesAnalysisModal());
-  $("#likes-modal-close-btn")?.addEventListener("click", () => $("#likes-analysis-dialog")?.close());
-
-  $("#kpi-card-downloads")?.addEventListener("click", () => openDownloadsAnalysisModal());
-  $("#interaction-row-downloads")?.addEventListener("click", () => openDownloadsAnalysisModal());
-  $("#downloads-modal-close-btn")?.addEventListener("click", () => $("#downloads-analysis-dialog")?.close());
-
-  $("#kpi-card-shares")?.addEventListener("click", () => openSharesAnalysisModal());
-  $("#interaction-row-shares")?.addEventListener("click", () => openSharesAnalysisModal());
-  $("#shares-modal-close-btn")?.addEventListener("click", () => $("#shares-analysis-dialog")?.close());
-
-  $("#kpi-card-views")?.addEventListener("click", () => openViewsAnalysisModal());
-  $("#interaction-row-views")?.addEventListener("click", () => openViewsAnalysisModal());
-  $("#views-modal-close-btn")?.addEventListener("click", () => $("#views-analysis-dialog")?.close());
-
-  // Clear All Interactions Button
-  $("#clear-all-interactions-btn")?.addEventListener("click", async () => {
-    if (!confirm("Are you sure you want to clear all student interaction telemetry (Likes, Downloads, Shares, Searches & Impressions)? This will reset all counters on this page to 0.")) {
-      return;
-    }
-
-    try {
-      await api("/api/admin/interactions/clear", { method: "POST" });
-    } catch {}
-
-    liveInteractions = {
-      totalLikes: 0,
-      totalDownloads: 0,
-      totalShares: 0,
-      totalSearches: 0,
-      totalImpressions: 0,
-      notes: {},
-      shares: {},
-      searches: {},
-      missingSearches: {}
-    };
-
-    try {
-      localStorage.setItem("exam_notes_interactions_data", JSON.stringify(liveInteractions));
-    } catch {}
-
-    renderInteractionsView();
-    if (typeof loadDashboardData === "function") {
-      loadDashboardData();
-    }
-    showToast("✓ All student interaction telemetry has been cleared!", "success");
-  });
 }
 
 // ==========================================
@@ -5200,6 +5129,58 @@ function setupEventListeners() {
         parentDialog.close();
       }
     }
+  });
+
+  // Student Engagement & Interaction Telemetry View Event Listeners
+  $("#clear-all-interactions-btn")?.addEventListener("click", async () => {
+    if (!confirm("Are you sure you want to clear all student interaction telemetry (Likes, Downloads, Shares, Searches & Impressions)? This will reset all counters on this page to 0.")) {
+      return;
+    }
+
+    try {
+      await api("/api/admin/interactions/clear", { method: "POST" });
+    } catch {}
+
+    liveInteractions = {
+      totalLikes: 0,
+      totalDownloads: 0,
+      totalShares: 0,
+      totalSearches: 0,
+      totalImpressions: 0,
+      notes: {},
+      shares: {},
+      searches: {},
+      missingSearches: {}
+    };
+
+    try {
+      localStorage.setItem("exam_notes_interactions_data", JSON.stringify(liveInteractions));
+    } catch {}
+
+    renderInteractionsView();
+    if (typeof loadDashboardData === "function") {
+      loadDashboardData();
+    }
+    showToast("✓ All student interaction telemetry has been cleared!", "success");
+  });
+
+  // Top Notes vs Top Searches Tab Switch Handlers in Interactions View
+  $("#tab-top-notes-btn")?.addEventListener("click", () => {
+    $("#tab-top-notes-btn")?.classList.add("active");
+    $("#tab-top-searches-btn")?.classList.remove("active");
+    const paneNotes = $("#pane-top-notes");
+    const paneSearches = $("#pane-top-searches");
+    if (paneNotes) paneNotes.hidden = false;
+    if (paneSearches) paneSearches.hidden = true;
+  });
+
+  $("#tab-top-searches-btn")?.addEventListener("click", () => {
+    $("#tab-top-searches-btn")?.classList.add("active");
+    $("#tab-top-notes-btn")?.classList.remove("active");
+    const paneNotes = $("#pane-top-notes");
+    const paneSearches = $("#pane-top-searches");
+    if (paneNotes) paneNotes.hidden = true;
+    if (paneSearches) paneSearches.hidden = false;
   });
 
   // Users & Students View Event Listeners
