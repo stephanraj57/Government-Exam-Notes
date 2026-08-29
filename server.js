@@ -1343,29 +1343,33 @@ async function handleApi(request, response, url) {
   }
 
 // ==========================================
-// Exam Study Notes Keyword & Proper Noun Preservation
-// Protects articles, acts, acronyms, historical figures & legal maxims
+// Exam Study Notes Keyword & HTML Tag Preservation
+// Protects HTML formatting (<mark>, <span class="highlight-*">, styles), articles, acts, acronyms, and figures
 // ==========================================
 function maskExamKeywords(text) {
   const map = new Map();
   let counter = 0;
 
+  // 1. Protect all HTML tags first so machine translation never alters tags or attributes
+  let masked = text.replace(/<[^>]+>/g, (match) => {
+    const ph = `ZTAG${counter++}Z`;
+    map.set(ph, match);
+    return ph;
+  });
+
+  // 2. Protect proper nouns, articles, acronyms, historical figures in remaining text
   const patterns = [
-    // 1. Articles, Parts, Schedules, Amendments, Sections
     /\b(?:Article|Art\.?|Part|Schedule|Section|Clause|Amendment Act|Schedule)\s+[0-9IVXLCDMA-Za-z\-]+/gi,
-    // 2. All-Caps Acronyms & Short Codes (UPSC, SSC, IAS, IPS, RBI, ISRO, CAG, GST, etc.)
     /\b[A-Z]{2,8}\b/g,
-    // 3. Key Proper Entities, Legal Doctrines, Latin Maxims & Exam Bodies
     /\b(?:Supreme Court|High Court|Parliament|Lok Sabha|Rajya Sabha|Constituent Assembly|Preamble|Fundamental Rights|Directive Principles|Fundamental Duties|Cabinet Mission|Simon Commission|Government of India Act|Charter Act|Regulating Act|Indian Independence Act|Kesavananda Bharati|Minerva Mills|Maneka Gandhi|Berubari|Golaknath|Habeas Corpus|Mandamus|Quo Warranto|Certiorari|Prohibition|Ultra Vires|De Jure|De Facto|Basic Structure|Panchayati Raj|Comptroller and Auditor General|Election Commission|Finance Commission|Union Public Service Commission|Staff Selection Commission)\b/gi,
-    // 4. Prominent Historical Figures & Leaders
     /\b(?:Dr\.?\s+B\.?\s*R\.?\s*Ambedkar|B\.?\s*R\.?\s*Ambedkar|Mahatma Gandhi|Jawaharlal Nehru|Sardar Patel|Sardar Vallabhbhai Patel|Lord Mountbatten|Lord Curzon|Lord Canning|Warren Hastings|Lord Dalhousie|Lord Ripon|Lord William Bentinck|Subhas Chandra Bose|Bhagat Singh|Dr\.?\s+Rajendra Prasad|Dadabhai Naoroji|Bal Gangadhar Tilak|Gopal Krishna Gokhale|Lala Lajpat Rai|Rabindranath Tagore|A\.?\s*P\.?\s*J\.?\s*Abdul Kalam|APJ Abdul Kalam|Indira Gandhi|Atal Bihari Vajpayee|Narendra Modi)\b/gi
   ];
 
-  let masked = text;
   for (const pat of patterns) {
     masked = masked.replace(pat, (match) => {
-      if (match.startsWith("__TERM") && match.endsWith("__")) return match;
-      const ph = `__TERM${counter++}__`;
+      if (match.startsWith("ZTAG") && match.endsWith("Z")) return match;
+      if (match.startsWith("ZTRM") && match.endsWith("Z")) return match;
+      const ph = `ZTRM${counter++}Z`;
       map.set(ph, match);
       return ph;
     });

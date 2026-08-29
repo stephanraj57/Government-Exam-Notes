@@ -3135,6 +3135,51 @@ mark.highlight-blue {
   color: #93c5fd;
 }
 
+.highlight-pink,
+mark.highlight-pink {
+  background-color: rgba(251, 207, 232, 0.75);
+  color: #831843;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.highlight-purple,
+mark.highlight-purple {
+  background-color: rgba(233, 213, 255, 0.75);
+  color: #581c87;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.highlight-orange,
+mark.highlight-orange {
+  background-color: rgba(254, 215, 170, 0.75);
+  color: #7c2d12;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .highlight-pink,
+.dark-theme .highlight-pink {
+  background-color: rgba(244, 63, 94, 0.3);
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .highlight-purple,
+.dark-theme .highlight-purple {
+  background-color: rgba(168, 85, 247, 0.3);
+  color: #d8b4fe;
+}
+
+[data-theme="dark"] .highlight-orange,
+.dark-theme .highlight-orange {
+  background-color: rgba(249, 115, 22, 0.3);
+  color: #fed7aa;
+}
+
 .lightbox-overview-text ul,
 .lightbox-overview-text .overview-bullet-list {
   margin: 0 0 12px 0;

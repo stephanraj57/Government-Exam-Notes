@@ -1037,14 +1037,13 @@ function formatOverviewHtml(rawText) {
   }
 
   const trimmed = rawText.trim();
-  // Detect if rawText already contains rich HTML tags
-  const hasHtml = /<[a-z][\s\S]*>/i.test(trimmed);
-
-  if (hasHtml) {
+  // Check if it's already a complete block-level HTML document
+  const hasBlockHtml = /<\/?(p|ul|ol|li|div|table|h[1-6]|blockquote)\b/i.test(trimmed);
+  if (hasBlockHtml) {
     return sanitizeRichHtml(trimmed);
   }
 
-  // Fallback markdown / bullet points parser for legacy plain text notes
+  // Parse lines, supporting bullet points + inline HTML tags (like <span class="highlight-yellow">, <strong>, etc.)
   const lines = trimmed.split("\n");
   let html = "";
   let inList = false;
@@ -1079,13 +1078,14 @@ function formatOverviewHtml(rawText) {
     html += "</ul>";
   }
 
-  return html;
+  return sanitizeRichHtml(html);
 }
 
 function formatInlineText(text) {
-  let escaped = escapeHtml(text);
-  escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  return escaped;
+  let content = text;
+  // Convert markdown **bold** to <strong>
+  content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  return content;
 }
 
 // ==========================================
