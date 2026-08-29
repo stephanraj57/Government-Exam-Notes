@@ -1277,6 +1277,23 @@ async function handleApi(request, response, url) {
     return true;
   }
 
+// ==========================================
+// Student Likes & Telemetry Helper
+// ==========================================
+function getUniqueLikedNoteIds(user) {
+  if (!user) return [];
+  const set = new Set();
+  (user.likes || []).forEach(l => {
+    const id = typeof l === "object" && l ? l.noteId : l;
+    if (id && typeof id === "string" && id.trim()) set.add(id.trim());
+  });
+  (user.bookmarks || []).forEach(b => {
+    const id = typeof b === "object" && b ? b.noteId : b;
+    if (id && typeof id === "string" && id.trim()) set.add(id.trim());
+  });
+  return Array.from(set);
+}
+
   // Record Student Learning Telemetry Event
   if (request.method === "POST" && url.pathname === "/api/user/telemetry") {
     const user = await getStudentUser(request);
@@ -1289,13 +1306,31 @@ async function handleApi(request, response, url) {
 
       if (type === "like" && noteId) {
         if (!Array.isArray(user.likes)) user.likes = [];
-        const exists = user.likes.some(l => (typeof l === "object" ? l.noteId : l) === noteId);
+        if (!Array.isArray(user.bookmarks)) user.bookmarks = [];
+        const exists = user.likes.some(l => (typeof l === "object" && l ? l.noteId : l) === noteId);
         if (!exists) {
           user.likes.push({ noteId, timestamp: nowIso });
         }
+        if (!user.bookmarks.includes(noteId)) {
+          user.bookmarks.push(noteId);
+        }
       } else if (type === "unlike" && noteId) {
         if (Array.isArray(user.likes)) {
-          user.likes = user.likes.filter(l => (typeof l === "object" ? l.noteId : l) !== noteId);
+          user.likes = user.likes.filter(l => (typeof l === "object" && l ? l.noteId : l) !== noteId);
+        }
+        if (Array.isArray(user.bookmarks)) {
+          user.bookmarks = user.bookmarks.filter(id => id !== noteId);
+        }
+      } else if (type === "bookmark" && noteId) {
+        if (!Array.isArray(user.bookmarks)) user.bookmarks = [];
+        if (!Array.isArray(user.likes)) user.likes = [];
+        if (remove) {
+          user.bookmarks = user.bookmarks.filter(id => id !== noteId);
+          user.likes = user.likes.filter(l => (typeof l === "object" && l ? l.noteId : l) !== noteId);
+        } else {
+          if (!user.bookmarks.includes(noteId)) user.bookmarks.push(noteId);
+          const exists = user.likes.some(l => (typeof l === "object" && l ? l.noteId : l) === noteId);
+          if (!exists) user.likes.push({ noteId, timestamp: nowIso });
         }
       } else if (type === "share" && noteId) {
         if (!Array.isArray(user.shares)) user.shares = [];
@@ -1305,13 +1340,6 @@ async function handleApi(request, response, url) {
         if (!Array.isArray(user.views)) user.views = [];
         user.views.push({ noteId, timestamp: nowIso });
         if (user.views.length > 500) user.views = user.views.slice(-500);
-      } else if (type === "bookmark" && noteId) {
-        if (!Array.isArray(user.bookmarks)) user.bookmarks = [];
-        if (remove) {
-          user.bookmarks = user.bookmarks.filter(id => id !== noteId);
-        } else if (!user.bookmarks.includes(noteId)) {
-          user.bookmarks.push(noteId);
-        }
       } else if (type === "download" && noteId) {
         if (!Array.isArray(user.downloads)) user.downloads = [];
         user.downloads.push({ noteId, timestamp: nowIso });
@@ -1327,10 +1355,12 @@ async function handleApi(request, response, url) {
       if (idx >= 0) users[idx] = user;
       await writeJson(USERS_FILE, users);
 
+      const uniqueLikes = getUniqueLikedNoteIds(user);
+
       sendJson(response, 200, {
         success: true,
-        bookmarks: user.bookmarks || [],
-        likesCount: (user.likes || []).length,
+        bookmarks: uniqueLikes,
+        likesCount: uniqueLikes.length,
         sharesCount: (user.shares || []).length,
         viewsCount: (user.views || []).length,
         downloadsCount: (user.downloads || []).length
@@ -1479,7 +1509,7 @@ function unmaskExamKeywords(text, map) {
     if (!isAdmin(request)) return sendUnauthorized(response), true;
 
     let rawUsers = await readJson(USERS_FILE).catch(() => []);
-    // Deduplicate by email so duplicate rows never appear in admin table
+    // Deduplicate by email/googleId/id so duplicate rows never appear in admin table
     const uniqueMap = new Map();
     for (const u of rawUsers) {
       const em = (u.email || "").toLowerCase().trim();
@@ -1494,10 +1524,25 @@ function unmaskExamKeywords(text, map) {
         }
         if (u.targetExam && !existing.targetExam) existing.targetExam = u.targetExam;
         if (u.targetExamDetail && !existing.targetExamDetail) existing.targetExamDetail = u.targetExamDetail;
-        // Merge likes/views
-        const existingLikes = new Set(existing.likes || []);
-        (u.likes || []).forEach(l => existingLikes.add(l));
-        existing.likes = Array.from(existingLikes);
+        
+        // Merge likes & bookmarks accurately
+        const existingLikedIds = new Set(getUniqueLikedNoteIds(existing));
+        const mergedLikes = Array.isArray(existing.likes) ? [...existing.likes] : [];
+        (u.likes || []).forEach(l => {
+          const id = typeof l === "object" && l ? l.noteId : l;
+          if (id && !existingLikedIds.has(id)) {
+            existingLikedIds.add(id);
+            mergedLikes.push(typeof l === "object" ? l : { noteId: id, timestamp: u.lastActiveAt || new Date().toISOString() });
+          }
+        });
+        (u.bookmarks || []).forEach(bId => {
+          if (bId && !existingLikedIds.has(bId)) {
+            existingLikedIds.add(bId);
+            mergedLikes.push({ noteId: bId, timestamp: u.lastActiveAt || new Date().toISOString() });
+          }
+        });
+        existing.likes = mergedLikes;
+        existing.bookmarks = Array.from(existingLikedIds);
       }
     }
     const users = Array.from(uniqueMap.values());
@@ -1525,8 +1570,9 @@ function unmaskExamKeywords(text, map) {
       if (lastActiveTs >= sevenDaysAgo) active7Days++;
       if (joinedTs >= sevenDaysAgo) newSignups7Days++;
 
-      const bmarksCount = (user.bookmarks || []).length;
-      totalBookmarksAcrossUsers += bmarksCount;
+      const uniqueLikedIds = getUniqueLikedNoteIds(user);
+      const likesCount = uniqueLikedIds.length;
+      totalBookmarksAcrossUsers += likesCount;
 
       // Calculate primary subject preference for this user
       const userSubjectCounts = {};
@@ -1534,7 +1580,7 @@ function unmaskExamKeywords(text, map) {
         const n = notesMap.get(v.noteId);
         if (n && n.subject) userSubjectCounts[n.subject] = (userSubjectCounts[n.subject] || 0) + 1;
       });
-      (user.bookmarks || []).forEach(bId => {
+      uniqueLikedIds.forEach(bId => {
         const n = notesMap.get(bId);
         if (n && n.subject) userSubjectCounts[n.subject] = (userSubjectCounts[n.subject] || 0) + 2;
       });
@@ -1560,10 +1606,10 @@ function unmaskExamKeywords(text, map) {
         joinedAt: user.joinedAt,
         lastActiveAt: user.lastActiveAt,
         loginCount: user.loginCount || 1,
-        likesCount: (user.likes || []).length,
+        likesCount: likesCount,
         sharesCount: (user.shares || []).length,
         viewsCount: (user.views || []).length,
-        bookmarksCount: bmarksCount,
+        bookmarksCount: likesCount,
         downloadsCount: (user.downloads || []).length,
         searchesCount: (user.searches || []).length,
         topSubject: topSubject,
@@ -1623,17 +1669,8 @@ function unmaskExamKeywords(text, map) {
     const notes = await readJson(NOTES_FILE).catch(() => []);
     const notesMap = new Map(notes.map(n => [n.id, n]));
 
-    // Enrich liked and bookmarked notes with full note objects
-    const likedNoteIds = new Set();
-    (user.likes || []).forEach(l => {
-      const id = typeof l === "object" ? l.noteId : l;
-      if (id) likedNoteIds.add(id);
-    });
-    (user.bookmarks || []).forEach(bId => {
-      if (bId) likedNoteIds.add(bId);
-    });
-
-    const likedNotes = [...likedNoteIds].map(nId => {
+    const uniqueLikedIds = getUniqueLikedNoteIds(user);
+    const likedNotes = uniqueLikedIds.map(nId => {
       const note = notesMap.get(nId);
       return note ? { id: note.id, title: note.title, subject: note.subject, imageUrl: note.imageUrl } : { id: nId, title: "Visual Revision Note", subject: "General" };
     });
@@ -1656,14 +1693,8 @@ function unmaskExamKeywords(text, map) {
       const s = note?.subject || "General";
       subCounts[s] = (subCounts[s] || 0) + 1;
     });
-    (user.likes || []).forEach(l => {
-      const id = typeof l === "object" ? l.noteId : l;
+    uniqueLikedIds.forEach(id => {
       const note = notesMap.get(id);
-      const s = note?.subject || "General";
-      subCounts[s] = (subCounts[s] || 0) + 2;
-    });
-    (user.bookmarks || []).forEach(bId => {
-      const note = notesMap.get(bId);
       const s = note?.subject || "General";
       subCounts[s] = (subCounts[s] || 0) + 2;
     });
@@ -1696,7 +1727,8 @@ function unmaskExamKeywords(text, map) {
         likedNotes,
         bookmarkedNotes: likedNotes,
         recentViews,
-        likesCount: Math.max((user.likes || []).length, likedNotes.length),
+        likesCount: uniqueLikedIds.length,
+        bookmarksCount: uniqueLikedIds.length,
         sharesCount: (user.shares || []).length,
         viewsCount: (user.views || []).length,
         downloadsCount: (user.downloads || []).length,
