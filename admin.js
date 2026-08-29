@@ -1342,7 +1342,7 @@ function renderInteractionsView() {
 }
 
 // ==========================================
-// Generic Helper: Bind Modal Table Sorting & Live Search
+// Generic Helper: Bind Modal Table Sorting, Live Search, and Pagination (10, 20, 50, 100, all)
 // ==========================================
 function bindModalTableSortingAndSearch({
   dialog,
@@ -1351,6 +1351,9 @@ function bindModalTableSortingAndSearch({
   countBadgeId,
   tableBodyId,
   notesCountBadgeId,
+  rowsPerPageSelectId,
+  paginationSummaryId,
+  paginationPagesId,
   items,
   defaultSortKey = "likes",
   defaultSortDir = "desc",
@@ -1359,6 +1362,8 @@ function bindModalTableSortingAndSearch({
 }) {
   let currentSortKey = defaultSortKey;
   let currentSortDir = defaultSortDir;
+  let pageSize = 10;
+  let currentPage = 1;
 
   const notesCountBadge = dialog.querySelector(`#${notesCountBadgeId}`);
   if (notesCountBadge) {
@@ -1380,6 +1385,9 @@ function bindModalTableSortingAndSearch({
   const getLiveSortSelect = () => sortSelectId ? dialog.querySelector(`#${sortSelectId}`) : null;
   const getLiveCountBadge = () => dialog.querySelector(`#${countBadgeId}`);
   const getLiveTableBody = () => dialog.querySelector(`#${tableBodyId}`);
+  const getLiveRowsPerPageSelect = () => rowsPerPageSelectId ? dialog.querySelector(`#${rowsPerPageSelectId}`) : null;
+  const getLivePaginationSummary = () => paginationSummaryId ? dialog.querySelector(`#${paginationSummaryId}`) : null;
+  const getLivePaginationPages = () => paginationPagesId ? dialog.querySelector(`#${paginationPagesId}`) : null;
 
   const renderTableRows = (list) => {
     const tableBody = getLiveTableBody();
@@ -1411,7 +1419,88 @@ function bindModalTableSortingAndSearch({
     });
   };
 
-  const applySortAndFilter = () => {
+  const updatePaginationUI = (totalFiltered) => {
+    const summaryEl = getLivePaginationSummary();
+    const pagesEl = getLivePaginationPages();
+    const isAll = pageSize === "all" || pageSize >= totalFiltered;
+    const effectivePageSize = isAll ? totalFiltered : Number(pageSize);
+    const totalPages = isAll ? 1 : Math.max(1, Math.ceil(totalFiltered / effectivePageSize));
+    currentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+    if (summaryEl) {
+      if (totalFiltered === 0) {
+        summaryEl.textContent = "Showing 0 notes";
+      } else if (isAll) {
+        summaryEl.textContent = `Showing all ${totalFiltered} notes`;
+      } else {
+        const start = (currentPage - 1) * effectivePageSize + 1;
+        const end = Math.min(currentPage * effectivePageSize, totalFiltered);
+        summaryEl.textContent = `Showing ${start}–${end} of ${totalFiltered} notes`;
+      }
+    }
+
+    if (!pagesEl) return;
+
+    if (totalPages <= 1) {
+      pagesEl.innerHTML = "";
+      return;
+    }
+
+    let html = `<button type="button" class="page-nav-btn modal-prev-btn" ${currentPage === 1 ? "disabled" : ""} title="Previous Page">‹ Prev</button>`;
+
+    const maxButtons = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+    let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+    if (endPage - startPage + 1 < maxButtons) {
+      startPage = Math.max(1, endPage - maxButtons + 1);
+    }
+
+    if (startPage > 1) {
+      html += `<button type="button" class="page-num-btn ${currentPage === 1 ? "active" : ""}" data-modal-page="1">1</button>`;
+      if (startPage > 2) html += `<span class="page-dots">…</span>`;
+    }
+
+    for (let p = startPage; p <= endPage; p++) {
+      html += `<button type="button" class="page-num-btn ${p === currentPage ? "active" : ""}" data-modal-page="${p}">${p}</button>`;
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) html += `<span class="page-dots">…</span>`;
+      html += `<button type="button" class="page-num-btn ${currentPage === totalPages ? "active" : ""}" data-modal-page="${totalPages}">${totalPages}</button>`;
+    }
+
+    html += `<button type="button" class="page-nav-btn modal-next-btn" ${currentPage === totalPages ? "disabled" : ""} title="Next Page">Next ›</button>`;
+
+    pagesEl.innerHTML = html;
+
+    pagesEl.querySelector(".modal-prev-btn")?.addEventListener("click", () => {
+      if (currentPage > 1) {
+        currentPage--;
+        applySortAndFilter(false);
+      }
+    });
+
+    pagesEl.querySelector(".modal-next-btn")?.addEventListener("click", () => {
+      if (currentPage < totalPages) {
+        currentPage++;
+        applySortAndFilter(false);
+      }
+    });
+
+    pagesEl.querySelectorAll("[data-modal-page]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const p = Number(btn.dataset.modalPage);
+        if (p && p !== currentPage) {
+          currentPage = p;
+          applySortAndFilter(false);
+        }
+      });
+    });
+  };
+
+  const applySortAndFilter = (resetPage = true) => {
+    if (resetPage) currentPage = 1;
+
     const searchInput = getLiveSearchInput();
     const q = (searchInput?.value || "").trim().toLowerCase();
     let filtered = items;
@@ -1442,7 +1531,15 @@ function bindModalTableSortingAndSearch({
       return currentSortDir === "asc" ? diff : -diff;
     });
 
-    renderTableRows(sorted);
+    // Update pagination calculations
+    const isAll = pageSize === "all";
+    const effectivePageSize = isAll ? sorted.length : Number(pageSize);
+    const startIdx = isAll ? 0 : (currentPage - 1) * effectivePageSize;
+    const endIdx = isAll ? sorted.length : startIdx + effectivePageSize;
+    const pageSlice = sorted.slice(startIdx, endIdx);
+
+    renderTableRows(pageSlice);
+    updatePaginationUI(sorted.length);
 
     const countBadge = getLiveCountBadge();
     if (countBadge) {
@@ -1482,7 +1579,7 @@ function bindModalTableSortingAndSearch({
     searchInput.value = "";
     const newSearchInput = searchInput.cloneNode(true);
     searchInput.parentNode.replaceChild(newSearchInput, searchInput);
-    newSearchInput.addEventListener("input", applySortAndFilter);
+    newSearchInput.addEventListener("input", () => applySortAndFilter(true));
   }
 
   // Wire sort dropdown
@@ -1499,8 +1596,22 @@ function bindModalTableSortingAndSearch({
       if (parts.length === 2) {
         currentSortKey = parts[0];
         currentSortDir = parts[1];
-        applySortAndFilter();
+        applySortAndFilter(true);
       }
+    });
+  }
+
+  // Wire rows per page dropdown
+  const rowsSelect = getLiveRowsPerPageSelect();
+  if (rowsSelect) {
+    rowsSelect.value = "10";
+    const newRowsSelect = rowsSelect.cloneNode(true);
+    rowsSelect.parentNode.replaceChild(newRowsSelect, rowsSelect);
+    newRowsSelect.addEventListener("change", (e) => {
+      const val = e.target.value;
+      pageSize = val === "all" ? "all" : (Number(val) || 10);
+      currentPage = 1;
+      applySortAndFilter(true);
     });
   }
 
@@ -1517,12 +1628,12 @@ function bindModalTableSortingAndSearch({
         currentSortKey = key;
         currentSortDir = (key === "title" || key === "subject" || key === "rank") ? "asc" : "desc";
       }
-      applySortAndFilter();
+      applySortAndFilter(true);
     });
   });
 
   // Initial render
-  applySortAndFilter();
+  applySortAndFilter(true);
 }
 
 // ==========================================
@@ -1692,14 +1803,16 @@ function openLikesAnalysisModal() {
     });
   }
 
-  // 3. Ranked Top Liked Notes Table with Live Search
+  // 3. Ranked Top Liked Notes Table with Live Search & Pagination
   bindModalTableSortingAndSearch({
     dialog,
     searchInputId: "likes-notes-search",
-    sortSelectId: "likes-notes-sort",
     countBadgeId: "likes-search-count-badge",
     tableBodyId: "likes-table-body",
     notesCountBadgeId: "likes-notes-count-badge",
+    rowsPerPageSelectId: "likes-rows-per-page",
+    paginationSummaryId: "likes-pagination-summary",
+    paginationPagesId: "likes-pagination-pages",
     items: notesWithLikes,
     defaultSortKey: "likes",
     defaultSortDir: "desc",
@@ -1894,14 +2007,16 @@ function openDownloadsAnalysisModal() {
     }).join("");
   }
 
-  // 3. Ranked Top Downloaded Notes Table with Live Search & Sort
+  // 3. Ranked Top Downloaded Notes Table with Live Search & Sort & Pagination
   bindModalTableSortingAndSearch({
     dialog,
     searchInputId: "downloads-notes-search",
-    sortSelectId: "downloads-notes-sort",
     countBadgeId: "downloads-search-count-badge",
     tableBodyId: "downloads-table-body",
     notesCountBadgeId: "downloads-notes-count-badge",
+    rowsPerPageSelectId: "downloads-rows-per-page",
+    paginationSummaryId: "downloads-pagination-summary",
+    paginationPagesId: "downloads-pagination-pages",
     items: notesWithDownloads,
     defaultSortKey: "downloads",
     defaultSortDir: "desc",
@@ -2069,14 +2184,16 @@ function openSharesAnalysisModal() {
     `).join("");
   }
 
-  // 3. Ranked Most Shared Notes Table with Live Search & Sort
+  // 3. Ranked Most Shared Notes Table with Live Search & Sort & Pagination
   bindModalTableSortingAndSearch({
     dialog,
     searchInputId: "shares-notes-search",
-    sortSelectId: "shares-notes-sort",
     countBadgeId: "shares-search-count-badge",
     tableBodyId: "shares-table-body",
     notesCountBadgeId: "shares-notes-count-badge",
+    rowsPerPageSelectId: "shares-rows-per-page",
+    paginationSummaryId: "shares-pagination-summary",
+    paginationPagesId: "shares-pagination-pages",
     items: notesWithShares,
     defaultSortKey: "shares",
     defaultSortDir: "desc",
@@ -2271,14 +2388,16 @@ function openViewsAnalysisModal() {
     }).join("");
   }
 
-  // 3. Ranked Most Explored Notes Table with Live Search & Sort
+  // 3. Ranked Most Explored Notes Table with Live Search & Pagination
   bindModalTableSortingAndSearch({
     dialog,
     searchInputId: "views-notes-search",
-    sortSelectId: "views-notes-sort",
     countBadgeId: "views-search-count-badge",
     tableBodyId: "views-table-body",
     notesCountBadgeId: "views-notes-count-badge",
+    rowsPerPageSelectId: "views-rows-per-page",
+    paginationSummaryId: "views-pagination-summary",
+    paginationPagesId: "views-pagination-pages",
     items: notesWithViews,
     defaultSortKey: "views",
     defaultSortDir: "desc",
@@ -2475,6 +2594,8 @@ let adminUsersData = [];
 let usersMetricsData = {};
 let userSortKey = "active";
 let userSortDir = "desc";
+let userPageSize = 10;
+let userCurrentPage = 1;
 let currentUserDetailId = null;
 
 async function fetchAdminUsersData() {
@@ -2510,11 +2631,12 @@ function renderUsersView() {
     if (navBadge) navBadge.textContent = (adminUsersData.length || 0).toString();
 
     // 2. Render Users Table
-    renderUsersTable();
+    renderUsersTable(true);
   });
 }
 
-function renderUsersTable() {
+function renderUsersTable(resetPage = true) {
+  if (resetPage) userCurrentPage = 1;
   const tableBody = $("#users-table-body");
   const searchInput = $("#users-search-input");
   const activityFilter = $("#users-filter-activity")?.value || "all";
@@ -2591,9 +2713,91 @@ function renderUsersTable() {
     }
   });
 
+  // Pagination Slice
+  const isAll = userPageSize === "all";
+  const effectivePageSize = isAll ? filtered.length : Number(userPageSize);
+  const totalPages = isAll ? 1 : Math.max(1, Math.ceil(filtered.length / effectivePageSize));
+  userCurrentPage = Math.min(Math.max(1, userCurrentPage), totalPages);
+
+  const startIdx = isAll ? 0 : (userCurrentPage - 1) * effectivePageSize;
+  const endIdx = isAll ? filtered.length : startIdx + effectivePageSize;
+  const paginatedUsers = filtered.slice(startIdx, endIdx);
+
+  // Update Users Pagination UI
+  const summaryEl = $("#users-pagination-summary");
+  const pagesEl = $("#users-pagination-pages");
+  if (summaryEl) {
+    if (filtered.length === 0) {
+      summaryEl.textContent = "Showing 0 students";
+    } else if (isAll) {
+      summaryEl.textContent = `Showing all ${filtered.length} students`;
+    } else {
+      const displayStart = startIdx + 1;
+      const displayEnd = Math.min(endIdx, filtered.length);
+      summaryEl.textContent = `Showing ${displayStart}–${displayEnd} of ${filtered.length} students`;
+    }
+  }
+
+  if (pagesEl) {
+    if (totalPages <= 1) {
+      pagesEl.innerHTML = "";
+    } else {
+      let html = `<button type="button" class="page-nav-btn users-prev-btn" ${userCurrentPage === 1 ? "disabled" : ""} title="Previous Page">‹ Prev</button>`;
+
+      const maxButtons = 5;
+      let startPage = Math.max(1, userCurrentPage - Math.floor(maxButtons / 2));
+      let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+      if (endPage - startPage + 1 < maxButtons) {
+        startPage = Math.max(1, endPage - maxButtons + 1);
+      }
+
+      if (startPage > 1) {
+        html += `<button type="button" class="page-num-btn ${userCurrentPage === 1 ? "active" : ""}" data-user-page="1">1</button>`;
+        if (startPage > 2) html += `<span class="page-dots">…</span>`;
+      }
+
+      for (let p = startPage; p <= endPage; p++) {
+        html += `<button type="button" class="page-num-btn ${p === userCurrentPage ? "active" : ""}" data-user-page="${p}">${p}</button>`;
+      }
+
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) html += `<span class="page-dots">…</span>`;
+        html += `<button type="button" class="page-num-btn ${userCurrentPage === totalPages ? "active" : ""}" data-user-page="${totalPages}">${totalPages}</button>`;
+      }
+
+      html += `<button type="button" class="page-nav-btn users-next-btn" ${userCurrentPage === totalPages ? "disabled" : ""} title="Next Page">Next ›</button>`;
+
+      pagesEl.innerHTML = html;
+
+      pagesEl.querySelector(".users-prev-btn")?.addEventListener("click", () => {
+        if (userCurrentPage > 1) {
+          userCurrentPage--;
+          renderUsersTable(false);
+        }
+      });
+
+      pagesEl.querySelector(".users-next-btn")?.addEventListener("click", () => {
+        if (userCurrentPage < totalPages) {
+          userCurrentPage++;
+          renderUsersTable(false);
+        }
+      });
+
+      pagesEl.querySelectorAll("[data-user-page]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const p = Number(btn.dataset.userPage);
+          if (p && p !== userCurrentPage) {
+            userCurrentPage = p;
+            renderUsersTable(false);
+          }
+        });
+      });
+    }
+  }
+
   if (!tableBody) return;
 
-  if (filtered.length === 0) {
+  if (paginatedUsers.length === 0) {
     tableBody.innerHTML = `
       <tr>
         <td colspan="8" class="likes-table-empty-row">
@@ -2607,7 +2811,7 @@ function renderUsersTable() {
     return;
   }
 
-  tableBody.innerHTML = filtered.map(user => {
+  tableBody.innerHTML = paginatedUsers.map(user => {
     const activeStr = formatRelativeOrExactTime(user.lastActiveAt);
     const statusDotClass = user.isActiveToday ? "active-today" : (user.isActiveThisWeek ? "active-week" : "active-idle");
     const targetExamLabel = user.targetExam ? escapeHtml(user.targetExam) : "Not Set";
@@ -5000,15 +5204,15 @@ function setupEventListeners() {
 
   // Users & Students View Event Listeners
   $("#users-search-input")?.addEventListener("input", () => {
-    renderUsersTable();
+    renderUsersTable(true);
   });
 
   $("#users-filter-activity")?.addEventListener("change", () => {
-    renderUsersTable();
+    renderUsersTable(true);
   });
 
   $("#users-filter-exam")?.addEventListener("change", () => {
-    renderUsersTable();
+    renderUsersTable(true);
   });
 
   $("#users-sort-select")?.addEventListener("change", (e) => {
@@ -5020,7 +5224,14 @@ function setupEventListeners() {
     else if (val === "downloads-desc") { userSortKey = "downloads"; userSortDir = "desc"; }
     else if (val === "name-asc") { userSortKey = "name"; userSortDir = "asc"; }
     else if (val === "joined-desc") { userSortKey = "joined"; userSortDir = "desc"; }
-    renderUsersTable();
+    renderUsersTable(true);
+  });
+
+  $("#users-rows-per-page")?.addEventListener("change", (e) => {
+    const val = e.target.value;
+    userPageSize = val === "all" ? "all" : (Number(val) || 10);
+    userCurrentPage = 1;
+    renderUsersTable(false);
   });
 
   document.querySelectorAll("[data-user-sort]").forEach(th => {
@@ -5032,7 +5243,7 @@ function setupEventListeners() {
         userSortKey = key;
         userSortDir = (key === "name") ? "asc" : "desc";
       }
-      renderUsersTable();
+      renderUsersTable(true);
     });
   });
 

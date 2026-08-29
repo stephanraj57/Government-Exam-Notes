@@ -1343,6 +1343,75 @@ async function handleApi(request, response, url) {
   }
 
   // ==========================================
+  // Public Instant Indian Language Translation API
+  // Supports Hindi (hi), Tamil (ta), Telugu (te), Malayalam (ml), Kannada (kn)
+  // ==========================================
+  if (request.method === "POST" && url.pathname === "/api/translate") {
+    const body = await readBody(request).catch(() => ({}));
+    const text = String(body.text || "").trim();
+    const targetLang = String(body.targetLang || "en").trim().toLowerCase();
+
+    if (!text || targetLang === "en") {
+      sendJson(response, 200, { translatedText: text, targetLang: "en" });
+      return true;
+    }
+
+    try {
+      // Split into paragraphs / bullet lines to preserve formatting
+      const lines = text.split("\n");
+      const translatedLines = await Promise.all(
+        lines.map(async line => {
+          const trimmed = line.trim();
+          if (!trimmed) return "";
+
+          // Check if line starts with bullet / list prefix
+          const bulletMatch = line.match(/^(\s*[•\-\*\d\.]+\s*)(.*)$/);
+          const prefix = bulletMatch ? bulletMatch[1] : "";
+          const contentToTranslate = bulletMatch ? bulletMatch[2] : trimmed;
+
+          if (!contentToTranslate) return line;
+
+          // 1. Try MyMemory Translation API
+          try {
+            const myMemoryUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(contentToTranslate)}&langpair=en|${encodeURIComponent(targetLang)}`;
+            const mmRes = await fetch(myMemoryUrl, {
+              headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+              }
+            });
+            if (mmRes.ok) {
+              const mmData = await mmRes.json();
+              if (mmData?.responseData?.translatedText && mmData.responseData.translatedText !== contentToTranslate) {
+                return prefix + mmData.responseData.translatedText;
+              }
+            }
+          } catch {}
+
+          // 2. Fallback to Google Translate endpoint
+          try {
+            const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(contentToTranslate)}`;
+            const gRes = await fetch(gUrl);
+            if (gRes.ok) {
+              const gData = await gRes.json();
+              if (Array.isArray(gData?.[0])) {
+                return prefix + gData[0].map(item => item?.[0] || "").join("");
+              }
+            }
+          } catch {}
+
+          return line;
+        })
+      );
+
+      const translatedText = translatedLines.join("\n");
+      sendJson(response, 200, { translatedText, targetLang });
+    } catch (err) {
+      sendJson(response, 200, { translatedText: text, targetLang, fallback: true, error: err.message });
+    }
+    return true;
+  }
+
+  // ==========================================
   // Admin Student Users & Analytics APIs
   // ==========================================
   if (request.method === "GET" && url.pathname === "/api/admin/users") {
@@ -1936,6 +2005,7 @@ async function handleApi(request, response, url) {
     const token = parseCookies(request).examAdminSession || crypto.randomBytes(32).toString("hex");
     sessions.set(token, Date.now());
 
+    // Wipe all notes, users, visits, interactions, student sessions
     await writeJson(NOTES_FILE, []);
     await writeJson(USERS_FILE, []);
     await writeJson(VISITS_FILE, { count: 0, daily: {} });
@@ -1953,15 +2023,27 @@ async function handleApi(request, response, url) {
     await writeJson(SESSIONS_FILE, []);
     studentSessions.clear();
 
-    // Clean up uploaded images
+    // Clean up uploaded note images while strictly PRESERVING admin profile avatar, logo & QR assets
     try {
+      const profile = await readJson(PROFILE_FILE).catch(() => ({}));
+      const protectedFiles = new Set([
+        profile.avatarUrl ? path.basename(profile.avatarUrl.split("?")[0]) : null,
+        profile.logoUrl ? path.basename(profile.logoUrl.split("?")[0]) : null,
+        profile.instagramQrUrl ? path.basename(profile.instagramQrUrl.split("?")[0]) : null
+      ].filter(Boolean));
+
       const files = await fs.readdir(UPLOAD_DIR);
       for (const file of files) {
-        await fs.unlink(path.join(UPLOAD_DIR, file)).catch(() => {});
+        if (!protectedFiles.has(file)) {
+          await fs.unlink(path.join(UPLOAD_DIR, file)).catch(() => {});
+        }
       }
     } catch {}
 
-    sendJson(response, 200, { reset: true, message: "All server notes, students, visits, interactions and uploads have been completely reset to 0." }, {
+    sendJson(response, 200, {
+      reset: true,
+      message: "Website reset successfully to brand new state. All notes, students, metrics and uploads wiped. Admin profile and password preserved."
+    }, {
       "Set-Cookie": `examAdminSession=${token}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax`
     });
     return true;

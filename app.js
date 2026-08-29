@@ -1088,6 +1088,84 @@ function formatInlineText(text) {
   return escaped;
 }
 
+// ==========================================
+// Indian Regional Language Translation Engine
+// Supports Hindi (hi), Tamil (ta), Telugu (te), Malayalam (ml), Kannada (kn), English (en)
+// ==========================================
+const INDIAN_LANGUAGES = {
+  en: "English",
+  hi: "हिन्दी",
+  ta: "தமிழ்",
+  te: "తెలుగు",
+  ml: "മലയാളം",
+  kn: "ಕನ್ನಡ"
+};
+
+let currentTranslationLang = localStorage.getItem("exam_notes_preferred_lang") || "en";
+const overviewTranslationCache = new Map();
+
+async function renderNoteOverview(note, targetLang = "en") {
+  if (!note) return;
+  const overviewEl = $("#lightbox-overview-text");
+  if (!overviewEl) return;
+
+  // Update language pills UI active state
+  document.querySelectorAll(".translate-lang-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.lang === targetLang);
+  });
+
+  const rawOverview = note.overview || note.description || "";
+  if (!rawOverview) {
+    overviewEl.innerHTML = '<p class="overview-empty-muted" style="color: var(--ink-muted); font-style: italic;">No specific study overview notes written for this diagram.</p>';
+    return;
+  }
+
+  // 1. If English selected, render original formatted overview
+  if (targetLang === "en") {
+    overviewEl.innerHTML = formatOverviewHtml(rawOverview);
+    return;
+  }
+
+  // 2. Check in-memory translation cache for instant response
+  const cacheKey = `${note.id}_${targetLang}`;
+  if (overviewTranslationCache.has(cacheKey)) {
+    const cachedText = overviewTranslationCache.get(cacheKey);
+    overviewEl.innerHTML = formatOverviewHtml(cachedText);
+    return;
+  }
+
+  // 3. Show sleek loading placeholder
+  const langLabel = INDIAN_LANGUAGES[targetLang] || targetLang;
+  overviewEl.innerHTML = `
+    <div class="translate-loading-shimmer">
+      <span>🌐</span> Translating study notes to ${escapeHtml(langLabel)}…
+    </div>
+  `;
+
+  try {
+    const response = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: rawOverview, targetLang })
+    });
+
+    if (!response.ok) throw new Error("Translation request failed");
+    const data = await response.json();
+    const translatedText = data.translatedText || rawOverview;
+
+    overviewTranslationCache.set(cacheKey, translatedText);
+
+    // Verify current note is still the active note before updating DOM
+    if (currentFilteredList[currentLightboxIndex]?.id === note.id && currentTranslationLang === targetLang) {
+      overviewEl.innerHTML = formatOverviewHtml(translatedText);
+    }
+  } catch (err) {
+    if (currentFilteredList[currentLightboxIndex]?.id === note.id && currentTranslationLang === targetLang) {
+      overviewEl.innerHTML = formatOverviewHtml(rawOverview);
+    }
+  }
+}
+
 function updateLightboxContent(note) {
   if (!note) return;
   const title = $("#lightbox-title");
@@ -1124,9 +1202,8 @@ function updateLightboxContent(note) {
     }
   }
 
-  if (overviewEl) {
-    overviewEl.innerHTML = formatOverviewHtml(note.overview || note.description || "");
-  }
+  // Render overview in active language
+  renderNoteOverview(note, currentTranslationLang);
 
   if (meta) {
     let dateFormatted = "Recent";
@@ -1786,6 +1863,22 @@ function setupEventListeners() {
     }
   });
 
+  // Indian Language Translation Pills Listener
+  document.querySelectorAll(".translate-lang-btn").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.preventDefault();
+      const lang = btn.dataset.lang || "en";
+      currentTranslationLang = lang;
+      try {
+        localStorage.setItem("exam_notes_preferred_lang", lang);
+      } catch {}
+      if (currentLightboxIndex >= 0 && currentLightboxIndex < currentFilteredList.length) {
+        const note = currentFilteredList[currentLightboxIndex];
+        renderNoteOverview(note, lang);
+      }
+    });
+  });
+
   // Reset Filters Link
   $("#reset-filters-btn")?.addEventListener("click", () => {
     category = "All Notes";
@@ -1821,10 +1914,22 @@ function applyProfileState(p) {
     const bioEl = document.querySelector(".creator-bio");
     if (bioEl) bioEl.textContent = `"${p.bio}"`;
   }
+  if (p.email) {
+    document.querySelectorAll(".creator-email-text").forEach(el => el.textContent = p.email);
+    document.querySelectorAll(".creator-email-chip").forEach(el => el.href = `mailto:${p.email}`);
+  }
+  if (p.phone) {
+    document.querySelectorAll(".creator-phone-text").forEach(el => el.textContent = p.phone);
+    document.querySelectorAll(".creator-phone-chip").forEach(el => el.href = `tel:${p.phone.replace(/\s+/g, "")}`);
+  }
   if (p.instagram) {
     const igHandle = p.instagram.replace(/^@/, "");
     document.querySelectorAll(".ig-qr-handle").forEach(el => el.textContent = `@${igHandle}`);
     document.querySelectorAll(".ig-handle-text").forEach(el => el.textContent = `Instagram @${igHandle}`);
+    document.querySelectorAll(".creator-ig-text").forEach(el => el.textContent = `@${igHandle}`);
+    document.querySelectorAll(".creator-ig-chip").forEach(el => {
+      el.href = `https://www.instagram.com/${igHandle}/`;
+    });
     document.querySelectorAll(".ig-follow-btn-link").forEach(el => {
       el.href = `https://www.instagram.com/${igHandle}/`;
     });

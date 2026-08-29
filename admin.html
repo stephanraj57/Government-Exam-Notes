@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=82.0">
+  <link rel="stylesheet" href="styles.css?v=89.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -278,9 +278,9 @@
             <span class="quick-link-text">Public Portal</span>
             <span class="quick-link-arrow">↗</span>
           </a>
-          <button type="button" id="admin-clean-data-btn" class="sidebar-quick-link clean-data-link" title="Clean all uploads, cache and reset to pristine state">
+          <button type="button" id="admin-clean-data-btn" class="sidebar-quick-link clean-data-link" title="Clear all notes, users, metrics & start fresh like a new website (Keeps admin profile & password)">
             <span class="quick-link-icon">🧹</span>
-            <span class="quick-link-text">Clean All Data</span>
+            <span class="quick-link-text">Clear All Data</span>
             <span class="quick-link-arrow">↺</span>
           </button>
         </div>
@@ -779,6 +779,26 @@
                 <!-- Dynamically populated student user rows -->
               </tbody>
             </table>
+          </div>
+
+          <!-- Users Table Pagination Bar -->
+          <div id="users-pagination-bar" class="admin-table-pagination users-pagination-bar">
+            <div class="pagination-info">
+              <span id="users-pagination-summary">Showing 1–10 of 10 students</span>
+            </div>
+            <div class="pagination-controls-wrap">
+              <div class="pagination-pages" id="users-pagination-pages"></div>
+            </div>
+            <div class="pagination-per-page">
+              <label for="users-rows-per-page">Rows:</label>
+              <select id="users-rows-per-page" class="per-page-select" title="Select number of students per page">
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="all">All</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -1843,8 +1863,8 @@
         <div class="edit-header-left">
           <div class="clean-badge-icon">🚨</div>
           <div>
-            <h3 class="edit-modal-title" style="color: #ef4444;">Clean All Website Data</h3>
-            <p class="edit-modal-sub">Permanently wipe all revision notes, visitor metrics, search demands, and local caches</p>
+            <h3 class="edit-modal-title" style="color: #ef4444;">Clear All Website Data (Factory Reset)</h3>
+            <p class="edit-modal-sub">Reset platform like a brand new website. Admin profile and password will be safely kept.</p>
           </div>
         </div>
         <button class="edit-modal-close" type="button" data-close title="Close (Esc)">×</button>
@@ -1854,17 +1874,19 @@
         <div class="clean-data-warning-box clean-data-glass-warning">
           <span class="warning-icon" style="font-size: 1.6rem;">⚠️</span>
           <div class="warning-text">
-            <strong style="color: #ef4444; font-size: 0.92rem;">Irreversible Platform Operation</strong>
-            <p style="margin: 3px 0 0; font-size: 0.82rem; color: var(--ink-sub); line-height: 1.45;">Enter your Super Administrator password to authorize wiping all platform data.</p>
+            <strong style="color: #ef4444; font-size: 0.92rem;">Irreversible Platform Reset</strong>
+            <p style="margin: 3px 0 0; font-size: 0.82rem; color: var(--ink-sub); line-height: 1.45;">
+              This will permanently delete all revision notes, registered student accounts, interaction metrics (likes, downloads, shares, views), and search history. <strong>Your Admin Profile and Password will NOT be deleted.</strong>
+            </p>
           </div>
         </div>
 
         <div class="edit-field-card clean-pwd-field-card" style="margin-top: 12px;">
           <label class="form-label-title" for="clean-data-password-input">
-            <span class="label-icon">🔒</span> Super Admin Password <span class="req-star" style="color: #ef4444;">*</span>
+            <span class="label-icon">🔒</span> Admin Password Required <span class="req-star" style="color: #ef4444;">*</span>
           </label>
           <div class="pwd-input-wrap" style="position: relative; display: flex; align-items: center;">
-            <input id="clean-data-password-input" class="form-control edit-glass-input" type="password" placeholder="Enter admin password to confirm" required autocomplete="current-password" style="padding-right: 38px;">
+            <input id="clean-data-password-input" class="form-control edit-glass-input" type="password" placeholder="Enter admin password to authorize reset" required autocomplete="current-password" style="padding-right: 38px;">
             <button type="button" id="toggle-clean-pwd-visibility" class="pwd-visibility-btn" title="Toggle password visibility" style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: var(--ink-muted); display: flex; align-items: center; padding: 4px;">
               <svg id="clean-pwd-eye-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -1880,7 +1902,7 @@
       <div class="modal-btn-row clean-data-glass-footer">
         <button class="outline-button edit-glass-cancel-btn" type="button" data-close>Cancel</button>
         <button id="clean-data-submit-btn" class="danger-btn bulk-btn clean-data-submit-btn" type="submit" style="padding: 10px 18px; font-weight: 700; background: #ef4444; color: #fff; border: 0; border-radius: var(--radius-md); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-          <span>🗑️</span> Confirm & Wipe All Data
+          <span>🗑️</span> Confirm & Wipe to New Website
         </button>
       </div>
     </form>
@@ -2661,21 +2683,20 @@
             <span class="badge" id="likes-notes-count-badge">Ranked by Likes</span>
           </div>
 
-          <!-- Live Search Bar for Table with Sort Selector -->
+          <!-- Live Search Bar for Table with Rows Per Page Selector -->
           <div class="likes-search-bar-wrap">
             <div class="likes-search-input-group">
               <span class="likes-search-icon">🔍</span>
               <input type="search" id="likes-notes-search" class="likes-search-input" placeholder="Search liked notes by title, subject, or tag..." autocomplete="off">
             </div>
-            <div class="likes-sort-control">
-              <label for="likes-notes-sort" class="likes-sort-label">Sort By:</label>
-              <select id="likes-notes-sort" class="likes-sort-select">
-                <option value="likes-desc">❤️ Most Liked (High → Low)</option>
-                <option value="likes-asc">❤️ Least Liked (Low → High)</option>
-                <option value="title-asc">🔤 Title (A → Z)</option>
-                <option value="title-desc">🔤 Title (Z → A)</option>
-                <option value="subject-asc">📚 Subject (A → Z)</option>
-                <option value="rank-asc">🏆 Rank (#1 First)</option>
+            <div class="likes-sort-control likes-rows-control">
+              <label for="likes-rows-per-page" class="likes-sort-label">Rows:</label>
+              <select id="likes-rows-per-page" class="likes-sort-select per-page-select" title="Select number of notes per page">
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="all">All</option>
               </select>
             </div>
             <span id="likes-search-count-badge" class="likes-search-count">Showing all notes</span>
@@ -2705,6 +2726,16 @@
                 <!-- Dynamically populated ranked note rows -->
               </tbody>
             </table>
+          </div>
+
+          <!-- Likes Table Pagination Bar -->
+          <div id="likes-pagination-bar" class="admin-table-pagination likes-modal-pagination">
+            <div class="pagination-info">
+              <span id="likes-pagination-summary">Showing 1–10 of 10 notes</span>
+            </div>
+            <div class="pagination-controls-wrap">
+              <div class="pagination-pages" id="likes-pagination-pages"></div>
+            </div>
           </div>
         </div>
 
@@ -2810,21 +2841,20 @@
             <span class="badge" id="downloads-notes-count-badge">Ranked by Downloads</span>
           </div>
 
-          <!-- Live Search Bar for Table with Sort Selector -->
+          <!-- Live Search Bar for Table with Rows Per Page Selector -->
           <div class="likes-search-bar-wrap">
             <div class="likes-search-input-group">
               <span class="likes-search-icon">🔍</span>
               <input type="search" id="downloads-notes-search" class="likes-search-input" placeholder="Search downloaded notes by title, subject, or tag..." autocomplete="off">
             </div>
-            <div class="likes-sort-control">
-              <label for="downloads-notes-sort" class="likes-sort-label">Sort By:</label>
-              <select id="downloads-notes-sort" class="likes-sort-select">
-                <option value="downloads-desc">⬇️ Most Downloads (High → Low)</option>
-                <option value="downloads-asc">⬇️ Least Downloads (Low → High)</option>
-                <option value="title-asc">🔤 Title (A → Z)</option>
-                <option value="title-desc">🔤 Title (Z → A)</option>
-                <option value="subject-asc">📚 Subject (A → Z)</option>
-                <option value="rank-asc">🏆 Rank (#1 First)</option>
+            <div class="likes-sort-control likes-rows-control">
+              <label for="downloads-rows-per-page" class="likes-sort-label">Rows:</label>
+              <select id="downloads-rows-per-page" class="likes-sort-select per-page-select" title="Select number of notes per page">
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="all">All</option>
               </select>
             </div>
             <span id="downloads-search-count-badge" class="likes-search-count">Showing all notes</span>
@@ -2854,6 +2884,16 @@
                 <!-- Dynamically populated ranked note rows -->
               </tbody>
             </table>
+          </div>
+
+          <!-- Downloads Table Pagination Bar -->
+          <div id="downloads-pagination-bar" class="admin-table-pagination likes-modal-pagination">
+            <div class="pagination-info">
+              <span id="downloads-pagination-summary">Showing 1–10 of 10 notes</span>
+            </div>
+            <div class="pagination-controls-wrap">
+              <div class="pagination-pages" id="downloads-pagination-pages"></div>
+            </div>
           </div>
         </div>
 
@@ -2959,21 +2999,20 @@
             <span class="badge" id="shares-notes-count-badge">Ranked by Shares</span>
           </div>
 
-          <!-- Live Search Bar for Table with Sort Selector -->
+          <!-- Live Search Bar for Table with Rows Per Page Selector -->
           <div class="likes-search-bar-wrap">
             <div class="likes-search-input-group">
               <span class="likes-search-icon">🔍</span>
               <input type="search" id="shares-notes-search" class="likes-search-input" placeholder="Search shared notes by title, subject, or tag..." autocomplete="off">
             </div>
-            <div class="likes-sort-control">
-              <label for="shares-notes-sort" class="likes-sort-label">Sort By:</label>
-              <select id="shares-notes-sort" class="likes-sort-select">
-                <option value="shares-desc">📤 Most Shares (High → Low)</option>
-                <option value="shares-asc">📥 Least Shares (Low → High)</option>
-                <option value="title-asc">🔤 Title (A → Z)</option>
-                <option value="title-desc">🔤 Title (Z → A)</option>
-                <option value="subject-asc">📚 Subject (A → Z)</option>
-                <option value="rank-asc">🏆 Rank (#1 First)</option>
+            <div class="likes-sort-control likes-rows-control">
+              <label for="shares-rows-per-page" class="likes-sort-label">Rows:</label>
+              <select id="shares-rows-per-page" class="likes-sort-select per-page-select" title="Select number of notes per page">
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="all">All</option>
               </select>
             </div>
             <span id="shares-search-count-badge" class="likes-search-count">Showing all notes</span>
@@ -3003,6 +3042,16 @@
                 <!-- Dynamically populated ranked note rows -->
               </tbody>
             </table>
+          </div>
+
+          <!-- Shares Table Pagination Bar -->
+          <div id="shares-pagination-bar" class="admin-table-pagination likes-modal-pagination">
+            <div class="pagination-info">
+              <span id="shares-pagination-summary">Showing 1–10 of 10 notes</span>
+            </div>
+            <div class="pagination-controls-wrap">
+              <div class="pagination-pages" id="shares-pagination-pages"></div>
+            </div>
           </div>
         </div>
 
@@ -3107,21 +3156,20 @@
             <span class="badge" id="views-notes-count-badge">Ranked by Impressions</span>
           </div>
 
-          <!-- Live Search Bar for Table with Sort Selector -->
+          <!-- Live Search Bar for Table with Rows Per Page Selector -->
           <div class="likes-search-bar-wrap">
             <div class="likes-search-input-group">
               <span class="likes-search-icon">🔍</span>
               <input type="search" id="views-notes-search" class="likes-search-input" placeholder="Search viewed notes by title, subject, or tag..." autocomplete="off">
             </div>
-            <div class="likes-sort-control">
-              <label for="views-notes-sort" class="likes-sort-label">Sort By:</label>
-              <select id="views-notes-sort" class="likes-sort-select">
-                <option value="views-desc">👁️ Most Views (High → Low)</option>
-                <option value="views-asc">🕶️ Least Views (Low → High)</option>
-                <option value="title-asc">🔤 Title (A → Z)</option>
-                <option value="title-desc">🔤 Title (Z → A)</option>
-                <option value="subject-asc">📚 Subject (A → Z)</option>
-                <option value="rank-asc">🏆 Rank (#1 First)</option>
+            <div class="likes-sort-control likes-rows-control">
+              <label for="views-rows-per-page" class="likes-sort-label">Rows:</label>
+              <select id="views-rows-per-page" class="likes-sort-select per-page-select" title="Select number of notes per page">
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="all">All</option>
               </select>
             </div>
             <span id="views-search-count-badge" class="likes-search-count">Showing all notes</span>
@@ -3152,6 +3200,16 @@
               </tbody>
             </table>
           </div>
+
+          <!-- Views Table Pagination Bar -->
+          <div id="views-pagination-bar" class="admin-table-pagination likes-modal-pagination">
+            <div class="pagination-info">
+              <span id="views-pagination-summary">Showing 1–10 of 10 notes</span>
+            </div>
+            <div class="pagination-controls-wrap">
+              <div class="pagination-pages" id="views-pagination-pages"></div>
+            </div>
+          </div>
         </div>
 
         <!-- Strategic Content Recommendation Banner -->
@@ -3172,7 +3230,9 @@
     <div class="user-details-modal-card student-details-glass-content">
       <div class="user-details-header">
         <div class="user-header-left">
-          <img id="user-detail-avatar" class="user-detail-avatar" src="" alt="Student Avatar">
+          <div class="user-detail-avatar-container">
+            <img id="user-detail-avatar" class="user-detail-avatar" src="" alt="Student Avatar" onerror="this.src='https://api.dicebear.com/7.x/bottts/svg?seed=student'">
+          </div>
           <div class="user-header-info">
             <div class="user-name-row">
               <h3 id="user-detail-name" class="user-detail-name">Student Name</h3>
@@ -3191,7 +3251,7 @@
             </div>
           </div>
         </div>
-        <button type="button" class="modal-close-btn" id="user-details-close-btn" aria-label="Close dialog">✕</button>
+        <button type="button" class="icon-button edit-modal-close" id="user-details-close-btn" aria-label="Close dialog" title="Close Window">✕</button>
       </div>
 
       <div class="user-details-body">
@@ -3256,10 +3316,10 @@
       </div>
 
       <div class="user-details-footer">
-        <button type="button" id="delete-user-btn" class="text-btn danger" title="Remove this student's telemetry record">
-          🗑️ Delete User Record
+        <button type="button" id="delete-user-btn" class="profile-act-btn danger" style="font-size: 0.78rem; padding: 8px 14px;" title="Remove this student's telemetry record">
+          <span>🗑️</span> Delete User Record
         </button>
-        <button type="button" class="outline-button" id="user-modal-done-btn">Close</button>
+        <button type="button" class="outline-button edit-glass-cancel-btn" id="user-modal-done-btn">Close</button>
       </div>
     </div>
   </dialog>
@@ -3267,6 +3327,6 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=63.0"></script>
+  <script src="admin.js?v=67.0"></script>
 </body>
 </html>
