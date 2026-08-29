@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=90.0">
+  <link rel="stylesheet" href="styles.css?v=91.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -2491,6 +2491,22 @@
               <span id="lightbox-meta" class="lightbox-meta-date">📅 Recent</span>
             </div>
 
+            <!-- Indian Regional Language Translation Strip -->
+            <div class="overview-translate-bar" aria-label="Regional Language Translation">
+              <div class="translate-bar-left">
+                <span class="translate-icon">🌐</span>
+                <span class="translate-label">Language:</span>
+              </div>
+              <div class="translate-lang-pills" id="overview-translate-pills" role="radiogroup" aria-label="Select Study Notes Language">
+                <button type="button" class="translate-lang-btn active" data-lang="en" title="English (Original)">English</button>
+                <button type="button" class="translate-lang-btn" data-lang="hi" title="हिन्दी (Hindi)">हिन्दी</button>
+                <button type="button" class="translate-lang-btn" data-lang="ta" title="தமிழ் (Tamil)">தமிழ்</button>
+                <button type="button" class="translate-lang-btn" data-lang="te" title="తెలుగు (Telugu)">తెలుగు</button>
+                <button type="button" class="translate-lang-btn" data-lang="ml" title="മലയാളം (Malayalam)">മലയാളം</button>
+                <button type="button" class="translate-lang-btn" data-lang="kn" title="ಕನ್ನಡ (Kannada)">ಕನ್ನಡ</button>
+              </div>
+            </div>
+
             <!-- Scrollable Overview Text Body -->
             <div class="lightbox-overview-scroll">
               <div id="lightbox-overview-text" class="lightbox-overview-text">
@@ -3327,6 +3343,6 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=68.0"></script>
+  <script src="admin.js?v=69.0"></script>
 </body>
 </html>

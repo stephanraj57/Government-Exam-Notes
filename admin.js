@@ -7243,6 +7243,30 @@ function setupEventListeners() {
     $("#lightbox-dialog")?.close();
   });
 
+  // Regional Translation Pills in Admin Lightbox
+  $("#overview-translate-pills")?.addEventListener("click", e => {
+    const btn = e.target.closest(".translate-lang-btn");
+    if (!btn) return;
+    const targetLang = btn.dataset.lang || "en";
+    currentTranslationLang = targetLang;
+    if (currentLightboxIndex >= 0 && currentLightboxIndex < allNotes.length) {
+      renderNoteOverview(allNotes[currentLightboxIndex], targetLang);
+    }
+  });
+
+  // Global Delegated Click Listener for Any Note Preview / View Button
+  document.addEventListener("click", e => {
+    const viewBtn = e.target.closest("[data-view-note-id]");
+    if (viewBtn) {
+      const noteId = viewBtn.dataset.viewNoteId;
+      if (noteId) {
+        const parentDialog = viewBtn.closest("dialog:not(#lightbox-dialog)");
+        if (parentDialog) parentDialog.close();
+        openLightbox(noteId);
+      }
+    }
+  });
+
   // Mouse Wheel Zoom & Drag-to-Pan inside Lightbox (Zero Scroll)
   const mediaBox = $("#lightbox-media-container");
   if (mediaBox) {
@@ -7364,6 +7388,161 @@ let isDragging = false;
 let dragStartX = 0;
 let dragStartY = 0;
 
+const INDIAN_LANGUAGES = {
+  en: "English",
+  hi: "हिन्दी",
+  ta: "தமிழ்",
+  te: "తెలుగు",
+  ml: "മലയാളം",
+  kn: "ಕನ್ನಡ"
+};
+
+let currentTranslationLang = localStorage.getItem("exam_notes_preferred_lang") || "en";
+const overviewTranslationCache = new Map();
+
+function sanitizeRichHtml(html) {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    const badTags = ["script", "iframe", "object", "embed", "link", "style", "form", "input", "button"];
+    badTags.forEach(tag => {
+      doc.querySelectorAll(tag).forEach(el => el.remove());
+    });
+
+    doc.querySelectorAll("*").forEach(el => {
+      for (let i = el.attributes.length - 1; i >= 0; i--) {
+        const attr = el.attributes[i];
+        const attrName = attr.name.toLowerCase();
+        if (attrName.startsWith("on") || (attr.value && attr.value.toLowerCase().includes("javascript:"))) {
+          el.removeAttribute(attr.name);
+        }
+      }
+    });
+
+    return doc.body.innerHTML;
+  } catch {
+    return escapeHtml(html);
+  }
+}
+
+function formatOverviewHtml(rawText) {
+  if (!rawText || !rawText.trim()) {
+    return `<div class="overview-empty-box"><p class="overview-empty-prompt">💡 <em>High-yield revision diagram. Focus on core exam keywords, flowchart connections, and visual mnemonics for rapid recall.</em></p></div>`;
+  }
+
+  const trimmed = rawText.trim();
+  // Check if it's already a complete block-level HTML document
+  const hasBlockHtml = /<\/?(p|ul|ol|li|div|table|h[1-6]|blockquote)\b/i.test(trimmed);
+  if (hasBlockHtml) {
+    return sanitizeRichHtml(trimmed);
+  }
+
+  // Parse lines, supporting bullet points + inline HTML tags (like <span class="highlight-yellow">, <strong>, etc.)
+  const lines = trimmed.split("\n");
+  let html = "";
+  let inList = false;
+
+  for (let line of lines) {
+    const l = line.trim();
+    if (!l) {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      continue;
+    }
+
+    if (l.startsWith("•") || l.startsWith("- ") || l.startsWith("* ")) {
+      if (!inList) {
+        html += '<ul class="overview-bullet-list">';
+        inList = true;
+      }
+      const itemContent = l.replace(/^[•\-\*]\s*/, "");
+      html += `<li>${formatInlineText(itemContent)}</li>`;
+    } else {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      html += `<p class="overview-para">${formatInlineText(l)}</p>`;
+    }
+  }
+
+  if (inList) {
+    html += "</ul>";
+  }
+
+  return sanitizeRichHtml(html);
+}
+
+function formatInlineText(text) {
+  let content = text;
+  // Convert markdown **bold** to <strong>
+  content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  return content;
+}
+
+async function renderNoteOverview(note, targetLang = "en") {
+  if (!note) return;
+  const overviewEl = $("#lightbox-overview-text");
+  if (!overviewEl) return;
+
+  // Update language pills UI active state
+  document.querySelectorAll("#overview-translate-pills .translate-lang-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.lang === targetLang);
+  });
+
+  const rawOverview = note.overview || note.description || "";
+  if (!rawOverview) {
+    overviewEl.innerHTML = '<p class="overview-empty-muted" style="color: var(--ink-muted); font-style: italic;">No specific study overview notes written for this diagram.</p>';
+    return;
+  }
+
+  // 1. If English selected, render original formatted overview
+  if (targetLang === "en") {
+    overviewEl.innerHTML = formatOverviewHtml(rawOverview);
+    return;
+  }
+
+  // 2. Check in-memory translation cache for instant response
+  const cacheKey = `${note.id}_${targetLang}`;
+  if (overviewTranslationCache.has(cacheKey)) {
+    const cachedText = overviewTranslationCache.get(cacheKey);
+    overviewEl.innerHTML = formatOverviewHtml(cachedText);
+    return;
+  }
+
+  // 3. Show sleek loading placeholder
+  const langLabel = INDIAN_LANGUAGES[targetLang] || targetLang;
+  overviewEl.innerHTML = `
+    <div class="translate-loading-shimmer">
+      <span>🌐</span> Translating study notes to ${escapeHtml(langLabel)}…
+    </div>
+  `;
+
+  try {
+    const response = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: rawOverview, targetLang })
+    });
+
+    if (!response.ok) throw new Error("Translation request failed");
+    const data = await response.json();
+    const translatedText = data.translatedText || rawOverview;
+
+    overviewTranslationCache.set(cacheKey, translatedText);
+
+    if (allNotes[currentLightboxIndex]?.id === note.id && currentTranslationLang === targetLang) {
+      overviewEl.innerHTML = formatOverviewHtml(translatedText);
+    }
+  } catch (err) {
+    if (allNotes[currentLightboxIndex]?.id === note.id && currentTranslationLang === targetLang) {
+      overviewEl.innerHTML = formatOverviewHtml(rawOverview);
+    }
+  }
+}
+
 function applyZoomTransform() {
   const container = $("#lightbox-media-container");
   const layer = $("#lightbox-media-container .lightbox-img-transform-layer") || $("#lightbox-media-container img");
@@ -7418,55 +7597,9 @@ function openLightbox(noteIdOrIdx) {
   updateLightboxContent(note);
   resetZoom();
   const dialog = $("#lightbox-dialog");
-  if (dialog) dialog.showModal();
-}
-
-function formatOverviewHtml(rawText) {
-  if (!rawText || !rawText.trim()) {
-    return `<div class="overview-empty-box"><p class="overview-empty-prompt">💡 <em>High-yield revision diagram. Focus on core exam keywords, flowchart connections, and visual mnemonics for rapid recall.</em></p></div>`;
+  if (dialog && !dialog.open) {
+    try { dialog.showModal(); } catch { dialog.setAttribute("open", ""); }
   }
-
-  const lines = rawText.trim().split("\n");
-  let html = "";
-  let inList = false;
-
-  for (let line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) {
-      if (inList) {
-        html += "</ul>";
-        inList = false;
-      }
-      continue;
-    }
-
-    if (trimmed.startsWith("•") || trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-      if (!inList) {
-        html += '<ul class="overview-bullet-list">';
-        inList = true;
-      }
-      const itemContent = trimmed.replace(/^[•\-\*]\s*/, "");
-      html += `<li>${formatInlineText(itemContent)}</li>`;
-    } else {
-      if (inList) {
-        html += "</ul>";
-        inList = false;
-      }
-      html += `<p class="overview-para">${formatInlineText(trimmed)}</p>`;
-    }
-  }
-
-  if (inList) {
-    html += "</ul>";
-  }
-
-  return html;
-}
-
-function formatInlineText(text) {
-  let escaped = escapeHtml(text);
-  escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  return escaped;
 }
 
 function updateLightboxContent(note) {
@@ -7477,7 +7610,6 @@ function updateLightboxContent(note) {
   const meta = $("#lightbox-meta");
   const downloadBtn = $("#lightbox-download-btn");
   const tagsContainer = $("#lightbox-tags");
-  const overviewEl = $("#lightbox-overview-text");
 
   if (title) title.textContent = note.title;
   if (badge) {
@@ -7502,9 +7634,8 @@ function updateLightboxContent(note) {
     }
   }
 
-  if (overviewEl) {
-    overviewEl.innerHTML = formatOverviewHtml(note.overview || note.description || "");
-  }
+  // Render overview in active language
+  renderNoteOverview(note, currentTranslationLang);
 
   if (meta) {
     let dateFormatted = "Recent";
