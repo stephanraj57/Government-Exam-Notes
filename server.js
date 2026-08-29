@@ -1357,49 +1357,60 @@ async function handleApi(request, response, url) {
     }
 
     try {
-      // Split into paragraphs / bullet lines to preserve formatting
+      // Helper function to translate a single text chunk via Google Translate
+      const translateChunk = async (chunk) => {
+        const trimmed = chunk.trim();
+        if (!trimmed) return chunk;
+
+        // Check if chunk starts with bullet / numbering prefix
+        const bulletMatch = chunk.match(/^(\s*[•\-\*\d\.]+\s*)(.*)$/);
+        const prefix = bulletMatch ? bulletMatch[1] : "";
+        const cleanText = bulletMatch ? bulletMatch[2] : trimmed;
+        if (!cleanText) return chunk;
+
+        // 1. Try Google Translate clients5 API (No character limit errors)
+        try {
+          const gUrl = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=${encodeURIComponent(targetLang)}&q=${encodeURIComponent(cleanText)}`;
+          const gRes = await fetch(gUrl, {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+          });
+          if (gRes.ok) {
+            const data = await gRes.json();
+            if (Array.isArray(data) && data[0] && typeof data[0][0] === "string") {
+              return prefix + data[0][0];
+            }
+          }
+        } catch {}
+
+        // 2. Fallback to gtx endpoint
+        try {
+          const gUrl2 = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(cleanText)}`;
+          const gRes2 = await fetch(gUrl2);
+          if (gRes2.ok) {
+            const data2 = await gRes2.json();
+            if (Array.isArray(data2?.[0])) {
+              return prefix + data2[0].map(item => item?.[0] || "").join("");
+            }
+          }
+        } catch {}
+
+        return chunk;
+      };
+
+      // Split into lines/paragraphs so bullets and paragraphs are preserved
       const lines = text.split("\n");
       const translatedLines = await Promise.all(
         lines.map(async line => {
-          const trimmed = line.trim();
-          if (!trimmed) return "";
-
-          // Check if line starts with bullet / list prefix
-          const bulletMatch = line.match(/^(\s*[•\-\*\d\.]+\s*)(.*)$/);
-          const prefix = bulletMatch ? bulletMatch[1] : "";
-          const contentToTranslate = bulletMatch ? bulletMatch[2] : trimmed;
-
-          if (!contentToTranslate) return line;
-
-          // 1. Try MyMemory Translation API
-          try {
-            const myMemoryUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(contentToTranslate)}&langpair=en|${encodeURIComponent(targetLang)}`;
-            const mmRes = await fetch(myMemoryUrl, {
-              headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-              }
-            });
-            if (mmRes.ok) {
-              const mmData = await mmRes.json();
-              if (mmData?.responseData?.translatedText && mmData.responseData.translatedText !== contentToTranslate) {
-                return prefix + mmData.responseData.translatedText;
-              }
-            }
-          } catch {}
-
-          // 2. Fallback to Google Translate endpoint
-          try {
-            const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(contentToTranslate)}`;
-            const gRes = await fetch(gUrl);
-            if (gRes.ok) {
-              const gData = await gRes.json();
-              if (Array.isArray(gData?.[0])) {
-                return prefix + gData[0].map(item => item?.[0] || "").join("");
-              }
-            }
-          } catch {}
-
-          return line;
+          if (!line.trim()) return "";
+          // If a single line is extraordinarily long (> 1200 chars), split by sentences
+          if (line.length > 1200) {
+            const sentences = line.split(/(?<=[.?!;।])\s+/);
+            const translatedSentences = await Promise.all(sentences.map(s => translateChunk(s)));
+            return translatedSentences.join(" ");
+          }
+          return await translateChunk(line);
         })
       );
 
