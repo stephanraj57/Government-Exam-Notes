@@ -625,10 +625,9 @@ async function loadDashboardData() {
       api("/api/interactions").catch(() => null)
     ]);
 
-    uploaded = notesData.notes || [];
-    todayVisits = Number(visitsData.today) || 0;
-    visitsCount = Math.max(Number(visitsData.count) || 0, todayVisits);
     activeUsers = (visitsData && visitsData.activeUsers) || (interData && interData.activeUsers) || 1;
+    todayVisits = Math.max(Number(visitsData.today) || 0, activeUsers);
+    visitsCount = Math.max(Number(visitsData.count) || 0, todayVisits, activeUsers);
     if (interData && interData.totalLikes !== undefined) {
       liveInteractions = interData;
     } else {

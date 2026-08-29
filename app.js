@@ -302,18 +302,15 @@ async function loadNotes() {
     .catch(() => {});
 
   // Track genuine student homepage visit (recording daily & total website traffic)
-  if (!sessionStorage.getItem("exam_student_session_visit")) {
-    sessionStorage.setItem("exam_student_session_visit", "true");
-    fetch("/api/visits/track", { method: "POST" })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data) {
-          localStorage.setItem("exam_notes_local_visits", String(data.count || 0));
-          localStorage.setItem("exam_notes_local_visits_today", String(data.today || 0));
-        }
-      })
-      .catch(() => {});
-  }
+  fetch("/api/visits/track", { method: "POST" })
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (data) {
+        localStorage.setItem("exam_notes_local_visits", String(data.count || 0));
+        localStorage.setItem("exam_notes_local_visits_today", String(data.today || 0));
+      }
+    })
+    .catch(() => {});
 
   updateAdminState();
   updatePopularTags();

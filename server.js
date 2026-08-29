@@ -457,17 +457,27 @@ async function handleApi(request, response, url) {
 
   if (request.method === "GET" && url.pathname === "/api/visits") {
     registerSessionHeartbeat(request);
+    const activeUsersNow = getActiveUsersCount();
     const visits = await readJson(VISITS_FILE).catch(() => ({ count: 0, daily: {} }));
     if (!visits.daily) visits.daily = {};
     const todayKey = getLocalDateKey();
-    const todayCount = Number(visits.daily[todayKey]) || 0;
+    let todayCount = Number(visits.daily[todayKey]) || 0;
+
+    // Logical Consistency: If active readers are currently online, today's visits cannot be 0
+    if (todayCount < activeUsersNow) {
+      todayCount = activeUsersNow;
+      visits.daily[todayKey] = todayCount;
+      visits.count = Math.max(Number(visits.count) || 0, todayCount);
+      await writeJson(VISITS_FILE, visits).catch(() => {});
+    }
+
     const dailySum = Object.values(visits.daily).reduce((sum, val) => sum + (Number(val) || 0), 0);
-    const totalCount = Math.max(Number(visits.count) || 0, dailySum, todayCount);
+    const totalCount = Math.max(Number(visits.count) || 0, dailySum, todayCount, activeUsersNow);
 
     sendJson(response, 200, {
       count: totalCount,
       today: todayCount,
-      activeUsers: getActiveUsersCount(),
+      activeUsers: activeUsersNow,
       daily: visits.daily
     });
     return true;
@@ -476,6 +486,7 @@ async function handleApi(request, response, url) {
   if (request.method === "POST" && url.pathname === "/api/visits/track") {
     const body = await readBody(request).catch(() => ({}));
     registerSessionHeartbeat(request, body);
+    const activeUsersNow = getActiveUsersCount();
     const visits = await readJson(VISITS_FILE).catch(() => ({ count: 0, daily: {} }));
     if (!visits.daily) visits.daily = {};
     const cookies = parseCookies(request);
@@ -483,10 +494,10 @@ async function handleApi(request, response, url) {
     const setCookiesList = [];
     let shouldSave = false;
 
-    // Track Today's Unique Visitor (if client hasn't visited today yet)
-    if (cookies.examVisitorDay !== todayKey) {
-      visits.daily[todayKey] = (Number(visits.daily[todayKey]) || 0) + 1;
-      visits.count = (Number(visits.count) || 0) + 1;
+    // Track Today's Unique Visitor (if client hasn't visited today yet or after a data reset)
+    if (cookies.examVisitorDay !== todayKey || (Number(visits.daily[todayKey]) || 0) < activeUsersNow) {
+      visits.daily[todayKey] = Math.max((Number(visits.daily[todayKey]) || 0) + 1, activeUsersNow);
+      visits.count = Math.max((Number(visits.count) || 0) + 1, Number(visits.daily[todayKey]));
       setCookiesList.push(`examVisitorDay=${todayKey}; Path=/; Max-Age=86400; SameSite=Lax`);
       shouldSave = true;
     }
@@ -511,13 +522,13 @@ async function handleApi(request, response, url) {
       headers["Set-Cookie"] = setCookiesList.length === 1 ? setCookiesList[0] : setCookiesList;
     }
 
-    const todayCount = Number(visits.daily[todayKey]) || 0;
-    const finalCount = Math.max(Number(visits.count) || 0, dailySum, todayCount);
+    const todayCount = Math.max(Number(visits.daily[todayKey]) || 0, activeUsersNow);
+    const finalCount = Math.max(Number(visits.count) || 0, dailySum, todayCount, activeUsersNow);
 
     sendJson(response, 200, {
       count: finalCount,
       today: todayCount,
-      activeUsers: getActiveUsersCount(),
+      activeUsers: activeUsersNow,
       daily: visits.daily
     }, headers);
     return true;
