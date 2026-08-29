@@ -1342,6 +1342,47 @@ async function handleApi(request, response, url) {
     return true;
   }
 
+// ==========================================
+// Exam Study Notes Keyword & Proper Noun Preservation
+// Protects articles, acts, acronyms, historical figures & legal maxims
+// ==========================================
+function maskExamKeywords(text) {
+  const map = new Map();
+  let counter = 0;
+
+  const patterns = [
+    // 1. Articles, Parts, Schedules, Amendments, Sections
+    /\b(?:Article|Art\.?|Part|Schedule|Section|Clause|Amendment Act|Schedule)\s+[0-9IVXLCDMA-Za-z\-]+/gi,
+    // 2. All-Caps Acronyms & Short Codes (UPSC, SSC, IAS, IPS, RBI, ISRO, CAG, GST, etc.)
+    /\b[A-Z]{2,8}\b/g,
+    // 3. Key Proper Entities, Legal Doctrines, Latin Maxims & Exam Bodies
+    /\b(?:Supreme Court|High Court|Parliament|Lok Sabha|Rajya Sabha|Constituent Assembly|Preamble|Fundamental Rights|Directive Principles|Fundamental Duties|Cabinet Mission|Simon Commission|Government of India Act|Charter Act|Regulating Act|Indian Independence Act|Kesavananda Bharati|Minerva Mills|Maneka Gandhi|Berubari|Golaknath|Habeas Corpus|Mandamus|Quo Warranto|Certiorari|Prohibition|Ultra Vires|De Jure|De Facto|Basic Structure|Panchayati Raj|Comptroller and Auditor General|Election Commission|Finance Commission|Union Public Service Commission|Staff Selection Commission)\b/gi,
+    // 4. Prominent Historical Figures & Leaders
+    /\b(?:Dr\.?\s+B\.?\s*R\.?\s*Ambedkar|B\.?\s*R\.?\s*Ambedkar|Mahatma Gandhi|Jawaharlal Nehru|Sardar Patel|Sardar Vallabhbhai Patel|Lord Mountbatten|Lord Curzon|Lord Canning|Warren Hastings|Lord Dalhousie|Lord Ripon|Lord William Bentinck|Subhas Chandra Bose|Bhagat Singh|Dr\.?\s+Rajendra Prasad|Dadabhai Naoroji|Bal Gangadhar Tilak|Gopal Krishna Gokhale|Lala Lajpat Rai|Rabindranath Tagore|A\.?\s*P\.?\s*J\.?\s*Abdul Kalam|APJ Abdul Kalam|Indira Gandhi|Atal Bihari Vajpayee|Narendra Modi)\b/gi
+  ];
+
+  let masked = text;
+  for (const pat of patterns) {
+    masked = masked.replace(pat, (match) => {
+      if (match.startsWith("__TERM") && match.endsWith("__")) return match;
+      const ph = `__TERM${counter++}__`;
+      map.set(ph, match);
+      return ph;
+    });
+  }
+
+  return { masked, map };
+}
+
+function unmaskExamKeywords(text, map) {
+  if (!map || map.size === 0) return text;
+  let result = text;
+  for (const [ph, originalTerm] of map.entries()) {
+    result = result.replace(new RegExp(ph, "gi"), originalTerm);
+  }
+  return result;
+}
+
   // ==========================================
   // Public Instant Indian Language Translation API
   // Supports Hindi (hi), Tamil (ta), Telugu (te), Malayalam (ml), Kannada (kn)
@@ -1357,6 +1398,9 @@ async function handleApi(request, response, url) {
     }
 
     try {
+      // 1. Mask proper nouns, exam identifiers, articles, and acts to preserve them in English
+      const { masked, map: termMap } = maskExamKeywords(text);
+
       // Helper function to translate a single text chunk via Google Translate
       const translateChunk = async (chunk) => {
         const trimmed = chunk.trim();
@@ -1368,7 +1412,7 @@ async function handleApi(request, response, url) {
         const cleanText = bulletMatch ? bulletMatch[2] : trimmed;
         if (!cleanText) return chunk;
 
-        // 1. Try Google Translate clients5 API (No character limit errors)
+        // Try Google Translate clients5 API
         try {
           const gUrl = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=${encodeURIComponent(targetLang)}&q=${encodeURIComponent(cleanText)}`;
           const gRes = await fetch(gUrl, {
@@ -1384,7 +1428,7 @@ async function handleApi(request, response, url) {
           }
         } catch {}
 
-        // 2. Fallback to gtx endpoint
+        // Fallback to gtx endpoint
         try {
           const gUrl2 = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(cleanText)}`;
           const gRes2 = await fetch(gUrl2);
@@ -1400,11 +1444,10 @@ async function handleApi(request, response, url) {
       };
 
       // Split into lines/paragraphs so bullets and paragraphs are preserved
-      const lines = text.split("\n");
+      const lines = masked.split("\n");
       const translatedLines = await Promise.all(
         lines.map(async line => {
           if (!line.trim()) return "";
-          // If a single line is extraordinarily long (> 1200 chars), split by sentences
           if (line.length > 1200) {
             const sentences = line.split(/(?<=[.?!;।])\s+/);
             const translatedSentences = await Promise.all(sentences.map(s => translateChunk(s)));
@@ -1414,7 +1457,10 @@ async function handleApi(request, response, url) {
         })
       );
 
-      const translatedText = translatedLines.join("\n");
+      const rawTranslated = translatedLines.join("\n");
+      // 2. Restore preserved proper nouns, articles, and acts in English
+      const translatedText = unmaskExamKeywords(rawTranslated, termMap);
+
       sendJson(response, 200, { translatedText, targetLang });
     } catch (err) {
       sendJson(response, 200, { translatedText: text, targetLang, fallback: true, error: err.message });
