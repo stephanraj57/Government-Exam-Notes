@@ -625,6 +625,7 @@ async function loadDashboardData() {
       api("/api/interactions").catch(() => null)
     ]);
 
+    uploaded = notesData?.notes || (Array.isArray(notesData) ? notesData : []) || [];
     activeUsers = (visitsData && visitsData.activeUsers) || (interData && interData.activeUsers) || 1;
     todayVisits = Math.max(Number(visitsData.today) || 0, activeUsers);
     visitsCount = Math.max(Number(visitsData.count) || 0, todayVisits, activeUsers);
@@ -5130,39 +5131,6 @@ function setupEventListeners() {
     }
   });
 
-  // Student Engagement & Interaction Telemetry View Event Listeners
-  $("#clear-all-interactions-btn")?.addEventListener("click", async () => {
-    if (!confirm("Are you sure you want to clear all student interaction telemetry (Likes, Downloads, Shares, Searches & Impressions)? This will reset all counters on this page to 0.")) {
-      return;
-    }
-
-    try {
-      await api("/api/admin/interactions/clear", { method: "POST" });
-    } catch {}
-
-    liveInteractions = {
-      totalLikes: 0,
-      totalDownloads: 0,
-      totalShares: 0,
-      totalSearches: 0,
-      totalImpressions: 0,
-      notes: {},
-      shares: {},
-      searches: {},
-      missingSearches: {}
-    };
-
-    try {
-      localStorage.setItem("exam_notes_interactions_data", JSON.stringify(liveInteractions));
-    } catch {}
-
-    renderInteractionsView();
-    if (typeof loadDashboardData === "function") {
-      loadDashboardData();
-    }
-    showToast("✓ All student interaction telemetry has been cleared!", "success");
-  });
-
   // Top Notes vs Top Searches Tab Switch Handlers in Interactions View
   $("#tab-top-notes-btn")?.addEventListener("click", () => {
     $("#tab-top-notes-btn")?.classList.add("active");
@@ -5260,24 +5228,6 @@ function setupEventListeners() {
       }
     });
   }
-
-  // Delete User Action
-  $("#delete-user-btn")?.addEventListener("click", async () => {
-    if (!currentUserDetailId) return;
-    if (!confirm("Are you sure you want to permanently delete this student's telemetry record?")) return;
-    try {
-      const res = await api(`/api/admin/users/${currentUserDetailId}`, { method: "DELETE" });
-      if (res && res.success) {
-        showToast("Student user deleted successfully.", "success");
-        $("#user-details-dialog")?.close();
-        renderUsersView();
-      } else {
-        showToast(res?.error || "Failed to delete user.", "error");
-      }
-    } catch {
-      showToast("Error communicating with server.", "error");
-    }
-  });
 
   // Live Spelling Correction & Red Underline Notifications
   attachSpellChecker(
@@ -6753,9 +6703,8 @@ function setupEventListeners() {
         body: JSON.stringify({ password: enteredPassword })
       });
 
-      localStorage.removeItem("exam_notes_custom_uploads");
-      localStorage.removeItem("exam_notes_deleted_sample_ids");
       localStorage.removeItem("exam_notes_local_visits");
+      localStorage.removeItem("exam_notes_local_visits_today");
       localStorage.removeItem("exam_notes_bookmarks");
       localStorage.removeItem("exam_notes_recent");
       localStorage.removeItem("exam_notes_favorites");
@@ -6780,9 +6729,10 @@ function setupEventListeners() {
       registeredUsers = [];
 
       if (cleanDialog) cleanDialog.close();
-      showToast("✓ All website notes, student users, analytics & local caches have been securely wiped clean!", "success");
+      showToast("✓ All student users, telemetry, analytics & visitor caches have been cleared! Uploaded notes and admin profile remain intact.", "success");
       await loadDashboardData();
       if (typeof renderUsersView === "function") renderUsersView();
+      if (typeof renderInteractionsView === "function") renderInteractionsView();
     } catch (err) {
       if (cleanMsg) {
         cleanMsg.textContent = err.message || "Incorrect admin password. Data wipe was rejected.";

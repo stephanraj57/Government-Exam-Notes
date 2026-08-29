@@ -2109,8 +2109,8 @@ function unmaskExamKeywords(text, map) {
     const token = parseCookies(request).examAdminSession || crypto.randomBytes(32).toString("hex");
     sessions.set(token, Date.now());
 
-    // Wipe all notes, users, visits, interactions, student sessions
-    await writeJson(NOTES_FILE, []);
+    // Wipe all registered student users, visits, interactions & telemetry, and active student sessions
+    // STRICTLY PRESERVE: NOTES_FILE (Uploaded Notes), UPLOAD_DIR (Note diagram images), and PROFILE_FILE (Admin profile)
     await writeJson(USERS_FILE, []);
     await writeJson(VISITS_FILE, { count: 0, daily: {} });
     await writeJson(INTERACTIONS_FILE, {
@@ -2127,26 +2127,9 @@ function unmaskExamKeywords(text, map) {
     await writeJson(SESSIONS_FILE, []);
     studentSessions.clear();
 
-    // Clean up uploaded note images while strictly PRESERVING admin profile avatar, logo & QR assets
-    try {
-      const profile = await readJson(PROFILE_FILE).catch(() => ({}));
-      const protectedFiles = new Set([
-        profile.avatarUrl ? path.basename(profile.avatarUrl.split("?")[0]) : null,
-        profile.logoUrl ? path.basename(profile.logoUrl.split("?")[0]) : null,
-        profile.instagramQrUrl ? path.basename(profile.instagramQrUrl.split("?")[0]) : null
-      ].filter(Boolean));
-
-      const files = await fs.readdir(UPLOAD_DIR);
-      for (const file of files) {
-        if (!protectedFiles.has(file)) {
-          await fs.unlink(path.join(UPLOAD_DIR, file)).catch(() => {});
-        }
-      }
-    } catch {}
-
     sendJson(response, 200, {
       reset: true,
-      message: "Website reset successfully to brand new state. All notes, students, metrics and uploads wiped. Admin profile and password preserved."
+      message: "Platform telemetry and student data cleared successfully. Uploaded notes and admin profile have been preserved."
     }, {
       "Set-Cookie": `examAdminSession=${token}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax`
     });
