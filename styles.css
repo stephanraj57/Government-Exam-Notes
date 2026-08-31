@@ -2194,15 +2194,51 @@ a.nav-link.active {
   box-sizing: border-box;
 }
 
+.mob-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .mob-icon {
   font-size: 1.25rem;
   line-height: 1;
+}
+
+.mob-badge {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #ffffff !important;
+  font-size: 0.65rem;
+  font-weight: 800;
+  font-family: var(--font-mono, monospace);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.45);
+  border: 1.5px solid var(--surface);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease;
+  box-sizing: border-box;
 }
 
 .mobile-nav-btn.active,
 a.mobile-nav-btn.active {
   color: var(--primary);
   text-decoration: none !important;
+}
+
+.mobile-nav-btn.active .mob-badge,
+a.mobile-nav-btn.active .mob-badge {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.6);
 }
 
 .mobile-nav-btn:hover,
@@ -3688,7 +3724,42 @@ dialog:not([open]) {
 
   .mobile-category-strip {
     display: block;
-    top: 94px;
+    top: 60px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 40;
+  }
+
+  .mobile-category-scroll {
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .cat-pill {
+    padding: 6px 14px;
+    font-size: 0.80rem;
+    font-weight: 700;
+    white-space: nowrap;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink-muted);
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .cat-pill.active {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #ffffff !important;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
   }
 
   .mobile-bottom-nav {
@@ -3701,7 +3772,7 @@ dialog:not([open]) {
   }
 
   .content {
-    padding: 14px;
+    padding: 14px 12px calc(80px + env(safe-area-inset-bottom, 0px));
     width: 100%;
     max-width: 100vw;
     box-sizing: border-box;
@@ -3709,53 +3780,203 @@ dialog:not([open]) {
 
   .content-heading {
     flex-direction: column;
-    gap: 8px;
-    margin-bottom: 16px;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+
+  .content-heading h1,
+  #page-title {
+    font-size: clamp(1.25rem, 5vw, 1.55rem);
+    font-weight: 900;
+    line-height: 1.22;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  #note-total {
+    font-size: 0.80rem;
+    color: var(--ink-muted);
+    margin: 0;
   }
 
   .toolbar {
-    margin: 12px 0 18px;
+    margin: 8px 0 16px;
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
+  }
+
+  .search-box {
+    height: 44px;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .search-box input {
+    font-size: 0.86rem;
+    padding-left: 36px;
+    padding-right: 32px;
   }
 
   .toolbar-controls {
     width: 100%;
+    display: flex;
+    align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
     gap: 8px;
   }
 
   .sort-label {
     flex: 1;
-    min-width: 140px;
+    min-width: 130px;
+    height: 38px;
+    font-size: 0.80rem;
+    border-radius: 10px;
+  }
+
+  .view-toggle {
+    height: 38px;
   }
 
   .notes-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .note-card {
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card-bookmark-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 0.95rem;
+    top: 8px;
+    right: 8px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    display: grid;
+    place-items: center;
+    z-index: 5;
   }
 
   .card-media {
-    height: 135px;
+    height: 120px;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
   }
 
   .note-content {
-    padding: 10px;
+    padding: 10px 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+  }
+
+  .subject-chip {
+    font-size: 0.65rem;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-weight: 700;
+    width: fit-content;
   }
 
   .note-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 4px 0 2px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: var(--ink);
+    min-height: 2.2em;
+  }
+
+  .note-tags-row {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    white-space: nowrap;
+    margin: 2px 0;
+  }
+
+  .note-tag-chip {
+    font-size: 0.64rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .note-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    margin-top: auto;
+    padding-top: 6px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 0.70rem;
+  }
+
+  .empty-state {
+    padding: 40px 16px 50px;
+    border-radius: 20px;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    text-align: center;
+    margin: 16px 0 40px;
+  }
+
+  .empty-icon {
+    font-size: 2.6rem;
+    margin-bottom: 10px;
+  }
+
+  .empty-state h2 {
+    font-size: 1.20rem;
+    font-weight: 800;
+    margin-bottom: 6px;
+  }
+
+  .empty-state p {
     font-size: 0.84rem;
-    min-height: auto;
+    line-height: 1.5;
+    color: var(--ink-muted);
+    max-width: 320px;
+    margin: 0 auto 16px;
+  }
+
+  .primary-pill-btn {
+    padding: 10px 22px;
+    font-size: 0.86rem;
+    border-radius: 999px;
+    min-height: 42px;
   }
 
   .pagination-wrapper {
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
     width: 100%;
+    margin: 20px 0 10px;
   }
 
   .pagination-controls {
@@ -11510,15 +11731,19 @@ body.about-mode .mobile-category-strip {
   font-family: inherit;
 }
 
-/* Responsive adjustments */
+/* ==========================================================================
+   Comprehensive Mobile & Tablet Responsiveness for About Page
+   ========================================================================== */
 @media (max-width: 992px) {
   .about-stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
   }
   .about-features-grid,
   .about-exams-grid,
   .about-steps-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
   }
   .about-instagram-card {
     grid-template-columns: 1fr;
@@ -11531,64 +11756,522 @@ body.about-mode .mobile-category-strip {
   }
   .ig-actions-row {
     justify-content: center;
+    width: 100%;
   }
 }
 
 @media (max-width: 768px) {
+  body.about-body,
+  body.about-mode {
+    padding-bottom: 0 !important;
+  }
+
   .about-page-wrapper {
-    padding: 24px 14px 100px;
-    gap: 52px;
+    padding: 16px 14px calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    gap: 0 !important;
   }
+
+  /* Spacing between all about page sections */
+  .about-page-wrapper > *,
+  .about-section {
+    margin-bottom: 34px !important;
+  }
+
+  .about-page-wrapper > *:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  /* 1. Hero Section Mobile Optimization */
   .about-hero-section {
-    padding: 36px 18px;
+    padding: 26px 16px 22px;
+    border-radius: 20px;
   }
+
+  .about-hero-badge {
+    font-size: 0.74rem;
+    padding: 5px 12px;
+    margin-bottom: 14px;
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.35;
+    box-sizing: border-box;
+  }
+
   .about-hero-title {
-    font-size: clamp(1.75rem, 6vw, 2.3rem);
+    font-size: clamp(1.48rem, 5.8vw, 1.95rem);
+    line-height: 1.25;
+    margin-bottom: 12px;
   }
+
+  .about-hero-subtitle {
+    font-size: 0.88rem;
+    line-height: 1.55;
+    margin-bottom: 20px;
+    padding: 0 4px;
+  }
+
   .about-hero-actions {
     flex-direction: column;
     width: 100%;
     gap: 10px;
   }
+
   .about-btn-primary,
   .about-btn-instagram,
-  .about-btn-secondary {
+  .about-btn-secondary,
+  .about-btn-bookmarks {
     width: 100%;
+    min-height: 46px;
     justify-content: center;
+    font-size: 0.90rem;
+    border-radius: 12px;
+    box-sizing: border-box;
   }
+
+  /* 2. Section Headers Mobile Optimization */
+  .about-section-header {
+    margin-top: 0;
+    margin-bottom: 18px;
+    text-align: center;
+  }
+
+  .about-section-badge {
+    font-size: 0.70rem;
+    padding: 4px 12px;
+    margin-bottom: 8px;
+    letter-spacing: 0.04em;
+  }
+
+  .about-section-title {
+    font-size: clamp(1.35rem, 5vw, 1.65rem);
+    line-height: 1.24;
+    margin-bottom: 6px;
+  }
+
+  .about-section-sub {
+    font-size: 0.84rem;
+    line-height: 1.48;
+    padding: 0 4px;
+  }
+
+  /* 3. Creator Card Mobile Optimization */
   .about-creator-card {
     flex-direction: column;
     text-align: center;
-    padding: 28px 18px;
-    gap: 20px;
+    padding: 24px 16px 20px;
+    gap: 16px;
     justify-content: center;
     align-items: center;
+    border-radius: 20px;
   }
+
+  .creator-avatar-wrap {
+    margin: 0 auto;
+  }
+
+  .creator-avatar-ring {
+    width: 88px;
+    height: 88px;
+  }
+
+  .creator-badge-seal {
+    width: 24px;
+    height: 24px;
+    font-size: 0.75rem;
+    bottom: 0;
+    right: 0;
+  }
+
+  .creator-info-wrap {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
   .creator-name-row {
     align-items: center;
     justify-content: center;
     text-align: center;
-  }
-  .about-features-grid,
-  .about-exams-grid,
-  .about-steps-grid {
-    grid-template-columns: 1fr;
-  }
-  .about-stats-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 480px) {
-  .about-stats-grid {
-    grid-template-columns: 1fr;
-  }
-  .ig-actions-row {
+    gap: 6px;
     width: 100%;
   }
+
+  .creator-name {
+    font-size: 1.35rem;
+  }
+
+  .creator-role-capsule {
+    font-size: 0.72rem;
+    padding: 3px 12px;
+  }
+
+  .creator-bio {
+    font-size: 0.86rem;
+    line-height: 1.58;
+    text-align: center;
+  }
+
+  .creator-contact-chips {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .creator-contact-chip {
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 0.82rem;
+    gap: 10px;
+    overflow: hidden;
+  }
+
+  .creator-contact-chip strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.82rem;
+  }
+
+  /* 4. Stats Grid: 2x2 Clean Cards */
+  .about-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+  }
+
+  .about-stat-card {
+    padding: 16px 10px;
+    border-radius: 16px;
+    gap: 2px;
+  }
+
+  .about-stat-icon {
+    font-size: 1.5rem;
+    margin-bottom: 2px;
+  }
+
+  .about-stat-number {
+    font-size: 1.35rem;
+    font-weight: 800;
+  }
+
+  .about-stat-label {
+    font-size: 0.72rem;
+    line-height: 1.3;
+  }
+
+  /* 5. Instagram Community Card Mobile */
+  .about-instagram-card {
+    grid-template-columns: 1fr !important;
+    padding: 22px 16px;
+    border-radius: 20px;
+    gap: 20px;
+  }
+
+  .ig-card-left {
+    align-items: flex-start;
+    text-align: left;
+    gap: 12px;
+  }
+
+  .ig-header-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+  }
+
+  .ig-icon-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    flex-shrink: 0;
+  }
+
+  .ig-icon-badge svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .ig-account-title {
+    font-size: 1.25rem;
+  }
+
+  .ig-account-desc {
+    font-size: 0.86rem;
+    line-height: 1.55;
+    text-align: left;
+  }
+
+  .ig-perks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    text-align: left;
+  }
+
+  .ig-perk-item {
+    font-size: 0.82rem;
+    gap: 8px;
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .ig-actions-row {
+    width: 100%;
+    margin-top: 4px;
+  }
+
   .ig-follow-btn {
     width: 100%;
     justify-content: center;
+    min-height: 48px;
+    font-size: 0.92rem;
+    border-radius: 12px;
+    box-sizing: border-box;
+  }
+
+  .ig-card-right {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  .ig-qr-frame {
+    width: 100%;
+    max-width: 250px;
+    padding: 16px 14px;
+    border-radius: 18px;
+    box-sizing: border-box;
+  }
+
+  .ig-qr-img {
+    width: 130px;
+    height: 130px;
+  }
+
+  .ig-qr-handle {
+    font-size: 0.88rem;
+  }
+
+  .ig-qr-hint {
+    font-size: 0.70rem;
+  }
+
+  /* 6. Features Grid Mobile (Horizontal mini-cards) */
+  .about-features-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+
+  .about-feature-card {
+    padding: 16px 14px;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+    text-align: left;
+  }
+
+  .about-feature-icon-box {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+
+  .about-feature-title {
+    font-size: 1.0rem;
+    margin-bottom: 3px;
+  }
+
+  .about-feature-desc {
+    font-size: 0.83rem;
+    line-height: 1.48;
+  }
+
+  /* 7. Exams Covered Grid Mobile */
+  .about-exams-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+
+  .about-exam-card {
+    padding: 14px 14px;
+    border-radius: 14px;
+    gap: 12px;
+    align-items: center;
+    text-align: left;
+  }
+
+  .about-exam-icon {
+    font-size: 1.45rem;
+    flex-shrink: 0;
+  }
+
+  .about-exam-name {
+    font-size: 0.94rem;
+    margin-bottom: 2px;
+  }
+
+  .about-exam-desc {
+    font-size: 0.78rem;
+    line-height: 1.35;
+  }
+
+  /* 8. Steps Workflow Grid Mobile */
+  .about-steps-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+
+  .about-step-card {
+    padding: 16px 14px;
+    border-radius: 16px;
+    text-align: left;
+  }
+
+  .about-step-number {
+    font-size: 1.5rem;
+    top: 12px;
+    right: 14px;
+    opacity: 0.45;
+  }
+
+  .about-step-icon {
+    font-size: 1.4rem;
+    margin-bottom: 6px;
+  }
+
+  .about-step-title {
+    font-size: 0.96rem;
+    margin-bottom: 3px;
+  }
+
+  .about-step-desc {
+    font-size: 0.82rem;
+    line-height: 1.44;
+  }
+
+  /* 9. CTA Card Mobile */
+  .about-cta-card {
+    padding: 26px 16px;
+    border-radius: 20px;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .about-cta-title {
+    font-size: clamp(1.30rem, 5vw, 1.65rem);
+    line-height: 1.25;
+  }
+
+  .about-cta-sub {
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .about-cta-btn {
+    width: 100%;
+    min-height: 46px;
+    font-size: 0.90rem;
+    border-radius: 12px;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
+  /* 10. Admin Portal Entry Card Mobile */
+  .about-admin-entry-card {
+    padding: 16px 14px !important;
+    border-radius: 18px !important;
+    margin-bottom: 34px !important;
+  }
+
+  .about-admin-entry-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    text-align: left;
+  }
+
+  .about-admin-badge-col {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .about-admin-entry-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+
+  .about-admin-entry-title {
+    font-size: 0.94rem;
+    margin: 0;
+  }
+
+  .about-admin-entry-sub {
+    font-size: 0.78rem;
+    line-height: 1.38;
+    margin-top: 3px;
+  }
+
+  .about-admin-entry-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+    font-size: 0.86rem;
+    border-radius: 10px;
+    box-sizing: border-box;
+  }
+
+  /* 11. Footer Mobile */
+  .about-site-footer {
+    padding: 20px 12px 14px;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .about-footer-links {
+    gap: 8px 12px;
+    font-size: 0.80rem;
+  }
+}
+
+/* Extra Compact Phones (iPhone SE, Galaxy S, <= 380px) */
+@media (max-width: 380px) {
+  .about-hero-title {
+    font-size: 1.38rem;
+  }
+  .about-section-title {
+    font-size: 1.25rem;
+  }
+  .creator-name {
+    font-size: 1.22rem;
+  }
+  .creator-contact-chip {
+    padding: 8px 10px;
+    font-size: 0.78rem;
+  }
+  .about-stat-number {
+    font-size: 1.22rem;
   }
 }
 

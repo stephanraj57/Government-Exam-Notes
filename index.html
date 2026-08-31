@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=91.0">
+  <link rel="stylesheet" href="styles.css?v=92.0">
   <script>
     fetch("/api/auth/google/config")
       .then(r => r.json())
@@ -619,16 +619,23 @@
 
   <!-- Mobile Bottom Navigation (3 Equal Tabs: Notes, Saved, About) -->
   <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
-    <button type="button" class="mobile-nav-btn active" data-view="notes">
-      <span class="mob-icon">▣</span>
+    <button type="button" class="mobile-nav-btn active" data-view="notes" title="Notes Revision Library">
+      <span class="mob-icon-wrap">
+        <span class="mob-icon">▣</span>
+      </span>
       <span>Notes</span>
     </button>
-    <button type="button" class="mobile-nav-btn" data-view="bookmarks">
-      <span class="mob-icon">♡</span>
+    <button type="button" class="mobile-nav-btn" data-view="bookmarks" title="View your liked and saved revision notes">
+      <span class="mob-icon-wrap">
+        <span class="mob-icon">♡</span>
+        <span id="mobile-bookmark-badge" class="mob-badge">0</span>
+      </span>
       <span>Saved</span>
     </button>
     <button type="button" class="mobile-nav-btn" data-view="about" title="About Free AI Govt Exam Notes">
-      <span class="mob-icon">ⓘ</span>
+      <span class="mob-icon-wrap">
+        <span class="mob-icon">ⓘ</span>
+      </span>
       <span>About</span>
     </button>
   </nav>
@@ -946,6 +953,6 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="app.js?v=63.0"></script>
+  <script src="app.js?v=64.0"></script>
 </body>
 </html>

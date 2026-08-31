@@ -685,12 +685,22 @@ async function handleApi(request, response, url) {
     const query = String(body.query || "").trim();
 
     if (type === "like") {
+      const studentUser = await getStudentUser(request);
+      if (!studentUser) {
+        sendJson(response, 401, { error: "Authentication required to like or save notes.", requiresAuth: true });
+        return true;
+      }
       interactions.totalLikes = Math.max(0, (interactions.totalLikes || 0) + 1);
       if (noteId) {
         if (!interactions.notes[noteId]) interactions.notes[noteId] = { likes: 0, downloads: 0, impressions: 0 };
         interactions.notes[noteId].likes = Math.max(0, (interactions.notes[noteId].likes || 0) + 1);
       }
     } else if (type === "unlike") {
+      const studentUser = await getStudentUser(request);
+      if (!studentUser) {
+        sendJson(response, 401, { error: "Authentication required to like or save notes.", requiresAuth: true });
+        return true;
+      }
       interactions.totalLikes = Math.max(0, (interactions.totalLikes || 0) - 1);
       if (noteId && interactions.notes[noteId]) {
         interactions.notes[noteId].likes = Math.max(0, (interactions.notes[noteId].likes || 0) - 1);

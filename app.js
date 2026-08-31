@@ -30,8 +30,12 @@ let noteInteractions = { notes: {}, totalImpressions: 0 };
 const PAGE_SIZE = 6;
 let currentPage = 1;
 
-// Local Storage Collections
-let bookmarks = new Set(JSON.parse(localStorage.getItem("exam_notes_bookmarks") || "[]"));
+// Local Storage Collections (Active for authenticated users)
+let bookmarks = new Set(
+  localStorage.getItem("exam_student_user") || localStorage.getItem("exam_student_token")
+    ? JSON.parse(localStorage.getItem("exam_notes_bookmarks") || "[]")
+    : []
+);
 let recentViewed = JSON.parse(localStorage.getItem("exam_notes_recent") || "[]");
 
 // ==========================================
@@ -553,10 +557,8 @@ function render() {
   // Update Category Counts
   updateCategoryCounts();
 
-  // Update Bookmarks Counter Badge
-  const bookmarkBadge = $("#bookmark-badge");
-  const validBookmarksCount = [...bookmarks].filter(id => notes.some(n => n.id === id)).length;
-  if (bookmarkBadge) bookmarkBadge.textContent = validBookmarksCount;
+  // Update Bookmarks Counter Badge across desktop and mobile bottom nav
+  updateBookmarkBadges();
 }
 
 // ==========================================
@@ -764,16 +766,30 @@ function selectCategory(catName) {
 // 8.1 Real-Time Interaction Telemetry Tracker
 // ==========================================
 async function trackInteraction(type, payload = {}) {
+  // Likes and unlikes are strictly restricted to Google authenticated users
+  if ((type === "like" || type === "unlike") && !currentStudentUser) {
+    return;
+  }
+
+  const token = localStorage.getItem("exam_student_token") || "";
+  const studentId = currentStudentUser?.id || "";
+
   try {
     fetch("/api/interactions/track", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-student-token": token,
+        "x-student-id": studentId
+      },
       body: JSON.stringify({ type, ...payload })
     }).catch(() => {});
   } catch (e) {}
 
   // Sync with student user telemetry
-  sendStudentTelemetry(type, payload);
+  if (currentStudentUser) {
+    sendStudentTelemetry(type, payload);
+  }
 
   // Local storage fallback sync
   try {
@@ -851,38 +867,45 @@ function toggleBookmark(noteId, e) {
     e.preventDefault();
   }
 
+  // 1. Mandatory Google Authentication Check
+  if (!currentStudentUser) {
+    pendingLikeNoteId = noteId;
+    showToast("Please sign in with Google to like and save revision notes! 🔒", "info");
+    openStudentAuthModal();
+    return;
+  }
+
+  // 2. Authenticated user like/unlike toggle
   const isCurrentlyLiked = bookmarks.has(noteId);
   if (isCurrentlyLiked) {
     bookmarks.delete(noteId);
     trackInteraction("unlike", { noteId });
-    if (currentStudentUser) {
-      sendStudentTelemetry("unlike", { noteId });
-    }
+    sendStudentTelemetry("unlike", { noteId });
     showToast("Removed from Saved notes.", "info");
   } else {
     bookmarks.add(noteId);
     trackInteraction("like", { noteId });
-    if (currentStudentUser) {
-      sendStudentTelemetry("like", { noteId });
-    }
+    sendStudentTelemetry("like", { noteId });
     showToast("Saved to your Liked Notes! ❤️", "success");
-
-    // If user is not authenticated yet, prompt sign-in so they know they can sync to cloud
-    if (!currentStudentUser) {
-      pendingLikeNoteId = noteId;
-      setTimeout(() => {
-        openStudentAuthModal();
-      }, 500);
-    }
   }
 
   localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
-  const menuBookmarksCount = $("#student-menu-bookmarks-count");
-  if (menuBookmarksCount) menuBookmarksCount.textContent = bookmarks.size;
-  const bookmarkBadge = $("#bookmark-badge");
-  if (bookmarkBadge) bookmarkBadge.textContent = bookmarks.size;
+  updateBookmarkBadges(bookmarks.size);
 
   render();
+}
+
+function updateBookmarkBadges(customCount = null) {
+  const validBookmarksCount = customCount !== null
+    ? customCount
+    : [...bookmarks].filter(id => notes.some(n => n.id === id)).length;
+
+  const countStr = validBookmarksCount.toString();
+  document.querySelectorAll("#bookmark-badge, #mobile-bookmark-badge, #about-mobile-bookmark-badge, .mob-badge").forEach(el => {
+    el.textContent = countStr;
+  });
+  const menuBookmarksCount = $("#student-menu-bookmarks-count");
+  if (menuBookmarksCount) menuBookmarksCount.textContent = countStr;
 }
 
 function recordRecentView(noteId) {
@@ -2051,9 +2074,8 @@ function updateStudentAuthUi(user, syncBookmarksFromUser = true) {
       localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
     }
 
-    if (menuBookmarksCount) menuBookmarksCount.textContent = bookmarks.size;
+    updateBookmarkBadges(bookmarks.size);
     if (menuViewsCount) menuViewsCount.textContent = user.viewsCount || 0;
-    if (bookmarkBadge) bookmarkBadge.textContent = bookmarks.size;
   } else {
     try {
       localStorage.removeItem("exam_student_user");
@@ -2064,8 +2086,7 @@ function updateStudentAuthUi(user, syncBookmarksFromUser = true) {
 
     bookmarks.clear();
     localStorage.removeItem("exam_notes_bookmarks");
-    if (bookmarkBadge) bookmarkBadge.textContent = "0";
-    if (menuBookmarksCount) menuBookmarksCount.textContent = "0";
+    updateBookmarkBadges(0);
   }
 }
 
@@ -2197,7 +2218,9 @@ async function handleStudentGoogleLogin(responsePayload) {
         pendingLikeNoteId = null;
         bookmarks.add(noteToLike);
         localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
+        trackInteraction("like", { noteId: noteToLike });
         sendStudentTelemetry("like", { noteId: noteToLike });
+        updateBookmarkBadges(bookmarks.size);
         showToast("Note saved to your account! ❤️", "success");
       }
 

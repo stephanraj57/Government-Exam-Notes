@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=91.0">
+  <link rel="stylesheet" href="styles.css?v=92.0">
 </head>
 <body class="about-body">
   <!-- Ambient Radial Mesh Glow Backdrop & Floating Orbs (Obsidian Studio Aesthetic) -->
@@ -444,16 +444,23 @@
 
   <!-- Mobile Bottom Navigation (3 Equal Tabs: Notes, Saved, About) -->
   <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
-    <a href="index.html" class="mobile-nav-btn">
-      <span class="mob-icon">▣</span>
+    <a href="index.html" class="mobile-nav-btn" title="Notes Revision Library">
+      <span class="mob-icon-wrap">
+        <span class="mob-icon">▣</span>
+      </span>
       <span>Notes</span>
     </a>
-    <a href="index.html#bookmarks" class="mobile-nav-btn">
-      <span class="mob-icon">♡</span>
+    <a href="index.html#bookmarks" class="mobile-nav-btn" title="View your liked and saved revision notes">
+      <span class="mob-icon-wrap">
+        <span class="mob-icon">♡</span>
+        <span id="about-mobile-bookmark-badge" class="mob-badge">0</span>
+      </span>
       <span>Saved</span>
     </a>
-    <a href="about.html" class="mobile-nav-btn active">
-      <span class="mob-icon">ⓘ</span>
+    <a href="about.html" class="mobile-nav-btn active" title="About Free AI Govt Exam Notes">
+      <span class="mob-icon-wrap">
+        <span class="mob-icon">ⓘ</span>
+      </span>
       <span>About</span>
     </a>
   </nav>
@@ -461,6 +468,15 @@
   <!-- Theme Toggle & Helper Script -->
   <script>
     (function() {
+      // Initialize saved bookmarks count
+      try {
+        const rawBookmarks = localStorage.getItem("exam_notes_bookmarks");
+        const bList = rawBookmarks ? JSON.parse(rawBookmarks) : [];
+        const count = Array.isArray(bList) ? bList.length : 0;
+        const bEl = document.getElementById("about-mobile-bookmark-badge");
+        if (bEl) bEl.textContent = count.toString();
+      } catch (e) {}
+
       // Toast notification helper
       function showToast(message, type = "info") {
         const container = document.getElementById("toast-container");
