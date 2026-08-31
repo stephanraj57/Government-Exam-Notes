@@ -116,6 +116,14 @@ async function seedMongoIfEmpty() {
         console.log(`🌱 [Database] Seeded ${diskNotes.length} notes to MongoDB Atlas collection "notes"`);
       }
     }
+    const usersCount = await mongoDb.collection("users").countDocuments();
+    if (usersCount === 0) {
+      const diskUsers = await fs.readFile(USERS_FILE, "utf8").then(JSON.parse).catch(() => []);
+      if (diskUsers.length > 0) {
+        await mongoDb.collection("users").insertMany(diskUsers.map(u => ({ ...u })));
+        console.log(`🌱 [Database] Seeded ${diskUsers.length} student users to MongoDB Atlas collection "users"`);
+      }
+    }
     const profileDoc = await mongoDb.collection("profile").findOne({ type: "admin_profile" });
     if (!profileDoc) {
       const diskProfile = await fs.readFile(PROFILE_FILE, "utf8").then(JSON.parse).catch(() => ({ ...DEFAULT_PROFILE }));
@@ -189,10 +197,30 @@ async function readJson(filePath) {
   if (isMongoConnected && mongoDb) {
     try {
       if (filePath === NOTES_FILE) {
-        return await mongoDb.collection("notes").find({}, { projection: { _id: 0 } }).sort({ createdAt: -1 }).toArray();
+        const dbNotes = await mongoDb.collection("notes").find({}, { projection: { _id: 0 } }).sort({ createdAt: -1 }).toArray();
+        if (Array.isArray(dbNotes) && dbNotes.length > 0) {
+          return dbNotes;
+        }
+        // Auto-heal fallback to local disk
+        const diskNotes = await fs.readFile(NOTES_FILE, "utf8").then(JSON.parse).catch(() => []);
+        if (Array.isArray(diskNotes) && diskNotes.length > 0) {
+          await mongoDb.collection("notes").insertMany(diskNotes.map(n => ({ ...n }))).catch(() => {});
+          return diskNotes;
+        }
+        return [];
       }
       if (filePath === USERS_FILE) {
-        return await mongoDb.collection("users").find({}, { projection: { _id: 0 } }).toArray();
+        const dbUsers = await mongoDb.collection("users").find({}, { projection: { _id: 0 } }).toArray();
+        if (Array.isArray(dbUsers) && dbUsers.length > 0) {
+          return dbUsers;
+        }
+        // Auto-heal fallback to local disk if MongoDB collection is temporarily empty
+        const diskUsers = await fs.readFile(USERS_FILE, "utf8").then(JSON.parse).catch(() => []);
+        if (Array.isArray(diskUsers) && diskUsers.length > 0) {
+          await mongoDb.collection("users").insertMany(diskUsers.map(u => ({ ...u }))).catch(() => {});
+          return diskUsers;
+        }
+        return [];
       }
       if (filePath === PROFILE_FILE) {
         const doc = await mongoDb.collection("profile").findOne({ type: "admin_profile" }, { projection: { _id: 0 } });
@@ -229,6 +257,30 @@ async function readJson(filePath) {
   return JSON.parse(await fs.readFile(filePath, "utf8"));
 }
 
+function cleanseForMongo(data) {
+  if (data === null || data === undefined) return data;
+  if (typeof data === "string") {
+    if (data.startsWith("data:image/") || (data.length > 5000 && /^[a-zA-Z0-9+/=\r\n\s]+$/.test(data.slice(0, 100)))) {
+      return ""; // Never store base64 binary payload in MongoDB
+    }
+    return data;
+  }
+  if (Array.isArray(data)) {
+    return data.map(item => cleanseForMongo(item));
+  }
+  if (typeof data === "object") {
+    const clean = {};
+    for (const [key, val] of Object.entries(data)) {
+      if (key === "avatarData" || key === "logoData" || key === "instagramQrData" || key === "imageData" || key === "imageBuffer") {
+        continue; // Skip raw base64 buffer fields
+      }
+      clean[key] = cleanseForMongo(val);
+    }
+    return clean;
+  }
+  return data;
+}
+
 async function writeJson(filePath, value) {
   try {
     await fs.writeFile(filePath, JSON.stringify(value, null, 2), "utf8");
@@ -238,47 +290,76 @@ async function writeJson(filePath, value) {
 
   if (isMongoConnected && mongoDb) {
     try {
+      const sanitizedValue = cleanseForMongo(value);
       if (filePath === NOTES_FILE) {
         const col = mongoDb.collection("notes");
-        await col.deleteMany({});
-        if (Array.isArray(value) && value.length > 0) {
-          await col.insertMany(value.map(item => ({ ...item })));
+        if (Array.isArray(sanitizedValue)) {
+          if (sanitizedValue.length === 0) {
+            await col.deleteMany({});
+          } else {
+            const ops = sanitizedValue.map(n => ({
+              updateOne: {
+                filter: { id: n.id },
+                update: { $set: { ...n } },
+                upsert: true
+              }
+            }));
+            await col.bulkWrite(ops, { ordered: false });
+            const validIds = sanitizedValue.map(n => n.id).filter(Boolean);
+            if (validIds.length > 0) {
+              await col.deleteMany({ id: { $nin: validIds } });
+            }
+          }
         }
         return;
       }
       if (filePath === USERS_FILE) {
         const col = mongoDb.collection("users");
-        await col.deleteMany({});
-        if (Array.isArray(value) && value.length > 0) {
-          await col.insertMany(value.map(item => ({ ...item })));
+        if (Array.isArray(sanitizedValue)) {
+          if (sanitizedValue.length === 0) {
+            await col.deleteMany({});
+          } else {
+            const ops = sanitizedValue.map(u => ({
+              updateOne: {
+                filter: { id: u.id },
+                update: { $set: { ...u } },
+                upsert: true
+              }
+            }));
+            await col.bulkWrite(ops, { ordered: false });
+            const validIds = sanitizedValue.map(u => u.id).filter(Boolean);
+            if (validIds.length > 0) {
+              await col.deleteMany({ id: { $nin: validIds } });
+            }
+          }
         }
         return;
       }
       if (filePath === PROFILE_FILE) {
         const col = mongoDb.collection("profile");
-        await col.updateOne({ type: "admin_profile" }, { $set: { ...value, type: "admin_profile" } }, { upsert: true });
+        await col.updateOne({ type: "admin_profile" }, { $set: { ...sanitizedValue, type: "admin_profile" } }, { upsert: true });
         return;
       }
       if (filePath === SECURITY_FILE) {
         const col = mongoDb.collection("security");
-        await col.updateOne({ type: "admin_security" }, { $set: { ...value, type: "admin_security" } }, { upsert: true });
+        await col.updateOne({ type: "admin_security" }, { $set: { ...sanitizedValue, type: "admin_security" } }, { upsert: true });
         return;
       }
       if (filePath === INTERACTIONS_FILE) {
         const col = mongoDb.collection("interactions");
-        await col.updateOne({ type: "global_interactions" }, { $set: { ...value, type: "global_interactions" } }, { upsert: true });
+        await col.updateOne({ type: "global_interactions" }, { $set: { ...sanitizedValue, type: "global_interactions" } }, { upsert: true });
         return;
       }
       if (filePath === VISITS_FILE) {
         const col = mongoDb.collection("visits");
-        await col.updateOne({ type: "global_visits" }, { $set: { ...value, type: "global_visits" } }, { upsert: true });
+        await col.updateOne({ type: "global_visits" }, { $set: { ...sanitizedValue, type: "global_visits" } }, { upsert: true });
         return;
       }
       if (filePath === SESSIONS_FILE) {
         const col = mongoDb.collection("sessions");
         await col.deleteMany({});
-        if (Array.isArray(value) && value.length > 0) {
-          await col.insertMany(value.map(token => ({ token, createdAt: new Date().toISOString() })));
+        if (Array.isArray(sanitizedValue) && sanitizedValue.length > 0) {
+          await col.insertMany(sanitizedValue.map(token => ({ token, createdAt: new Date().toISOString() })));
         }
         return;
       }
