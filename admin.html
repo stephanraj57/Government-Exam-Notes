@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=105.0">
+  <link rel="stylesheet" href="styles.css?v=109.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -26,6 +26,24 @@
     </a>
 
     <div class="header-actions">
+      <!-- Real-Time Clock & Date Widget (Header Right) -->
+      <button type="button" id="admin-calendar-clock-trigger" class="admin-sidebar-clock-widget admin-header-clock-widget" title="Click to open Full Academic & Exam Calendar">
+        <div class="clock-widget-left">
+          <div class="clock-time-row">
+            <span class="live-pulse-dot"></span>
+            <span id="admin-live-time" class="admin-live-time">--:--:--</span>
+          </div>
+          <div class="clock-date-row">
+            <span class="clock-cal-icon">📅</span>
+            <span id="admin-live-date" class="admin-live-date">--/--/----</span>
+            <span id="admin-live-day" class="admin-live-day">Today</span>
+          </div>
+        </div>
+        <span class="clock-widget-action" title="Open Calendar">
+          <span class="clock-widget-arrow">↗</span>
+        </span>
+      </button>
+
       <button id="theme-toggle" class="theme-button" type="button" title="Toggle Theme" aria-label="Toggle Dark Mode">
         <span class="theme-icon">🌙</span>
       </button>
@@ -167,24 +185,6 @@
         </div>
       </div>
 
-      <!-- Real-Time Clock & Date Widget (Click for Full Calendar Popup) -->
-      <button type="button" id="admin-calendar-clock-trigger" class="admin-sidebar-clock-widget" title="Click to open Full Academic & Exam Calendar">
-        <div class="clock-widget-left">
-          <div class="clock-time-row">
-            <span class="live-pulse-dot"></span>
-            <span id="admin-live-time" class="admin-live-time">--:--:--</span>
-          </div>
-          <div class="clock-date-row">
-            <span class="clock-cal-icon">📅</span>
-            <span id="admin-live-date" class="admin-live-date">--/--/----</span>
-            <span id="admin-live-day" class="admin-live-day">Today</span>
-          </div>
-        </div>
-        <span class="clock-widget-action" title="Open Calendar">
-          <span class="clock-widget-arrow">↗</span>
-        </span>
-      </button>
-
       <!-- Navigation Section: Core Tools -->
       <div class="sidebar-section">
         <div class="side-header">
@@ -218,14 +218,6 @@
             </div>
             <b id="users-nav-badge" class="cat-count badge-live">0</b>
           </button>
-          <button class="category admin-nav-card" data-admin-view="analysis">
-            <span class="nav-icon-box analysis-box">🥧</span>
-            <div class="nav-text-col">
-              <span class="cat-name">Category Analysis</span>
-              <small class="nav-sub-desc">Category Breakdown</small>
-            </div>
-            <b id="analysis-notes-badge" class="cat-count">8</b>
-          </button>
           <button class="category admin-nav-card" data-admin-view="tags">
             <span class="nav-icon-box tags-box">🏷️</span>
             <div class="nav-text-col">
@@ -258,40 +250,7 @@
             </div>
             <b id="modify-notes-badge" class="cat-count">0</b>
           </button>
-          <button class="category admin-nav-card" data-admin-view="backup">
-            <span class="nav-icon-box backup-box" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">💾</span>
-            <div class="nav-text-col">
-              <span class="cat-name">Backup & Restore</span>
-              <small class="nav-sub-desc">1-Click Full Snapshot</small>
-            </div>
-            <b id="backup-status-badge" class="cat-count badge-live">Safe</b>
-          </button>
-          <button class="category admin-nav-card" data-admin-view="profile">
-            <span class="nav-icon-box profile-box" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6;">👤</span>
-            <div class="nav-text-col">
-              <span class="cat-name">Admin Profile</span>
-              <small class="nav-sub-desc">Settings, Brand & Security</small>
-            </div>
-            <b id="profile-nav-badge" class="cat-count badge-live">Admin</b>
-          </button>
         </nav>
-      </div>
-
-      <!-- Quick Actions Section -->
-      <div class="sidebar-section quick-actions-section">
-        <p class="side-label">Quick Links</p>
-        <div class="sidebar-quick-links">
-          <a href="index.html" class="sidebar-quick-link" title="Open Public Student Portal" target="_blank" rel="noopener">
-            <span class="quick-link-icon">🌐</span>
-            <span class="quick-link-text">Public Portal</span>
-            <span class="quick-link-arrow">↗</span>
-          </a>
-          <button type="button" id="admin-clean-data-btn" class="sidebar-quick-link clean-data-link" title="Clear all notes, users, metrics & start fresh like a new website (Keeps admin profile & password)">
-            <span class="quick-link-icon">🧹</span>
-            <span class="quick-link-text">Clear All Data</span>
-            <span class="quick-link-arrow">↺</span>
-          </button>
-        </div>
       </div>
 
       <!-- Portal Footer Status -->
@@ -317,14 +276,6 @@
             </div>
             <h1 class="portal-greeting-title" id="portal-greeting-heading">Welcome back, Stephanraj 👋</h1>
           </div>
-        </div>
-        <div class="portal-top-right">
-          <button type="button" class="portal-top-profile-btn" data-admin-view="profile" title="Open Admin Profile & Platform Settings">
-            <img src="assets/admin.jpg" alt="Admin Avatar" class="portal-avatar-img top-bar-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
-            <div class="portal-avatar-fallback top-bar-avatar-fallback" style="display:none;">SR</div>
-            <span class="top-bar-admin-name portal-user-name">Stephanraj</span>
-            <span class="top-bar-badge">Admin 👤</span>
-          </button>
         </div>
       </div>
 
@@ -413,12 +364,9 @@
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- View: Analysis (Category Distribution Pie Chart & Deep Analytics) -->
-      <div id="admin-view-analysis" class="admin-view-pane" hidden>
-        <!-- Main Analysis Layout: Left Pie Chart + Right Category Breakdown Table -->
-        <div class="analysis-main-grid">
+        <!-- Bottom Section: Category Analysis (Interactive Pie Chart & Deep Share Breakdown) -->
+        <div class="analysis-main-grid dashboard-bottom-analysis" style="margin-top: 20px;">
           
           <!-- Category Pie Chart Card -->
           <div class="admin-card analysis-chart-card">
@@ -475,6 +423,7 @@
           </div>
 
         </div>
+
       </div>
 
       <!-- View: User Interactions (Likes, Downloads, Searches, Views Analytics) -->
@@ -544,19 +493,7 @@
 
             <div class="interaction-bars-container">
               
-              <!-- Bar 1: Views -->
-              <div class="interaction-bar-row clickable-interaction-row" id="interaction-row-views" role="button" tabindex="0" title="Click to view Total Views">
-                <div class="interaction-row-label">
-                  <span class="interaction-icon">👁️</span>
-                  <strong>Total Views</strong>
-                </div>
-                <div class="interaction-bar-track">
-                  <div id="bar-fill-views" class="interaction-bar-fill fill-views" style="width: 100%;"></div>
-                </div>
-                <span id="pct-val-views" class="interaction-count-badge">0</span>
-              </div>
-
-              <!-- Bar 2: Downloads -->
+              <!-- Bar 1: Downloads -->
               <div class="interaction-bar-row clickable-interaction-row" id="interaction-row-downloads" role="button" tabindex="0" title="Click to view Note Downloads">
                 <div class="interaction-row-label">
                   <span class="interaction-icon">⬇️</span>
@@ -568,7 +505,7 @@
                 <span id="pct-val-downloads" class="interaction-count-badge">0</span>
               </div>
 
-              <!-- Bar 3: Shares -->
+              <!-- Bar 2: Shares -->
               <div class="interaction-bar-row clickable-interaction-row" id="interaction-row-shares" role="button" tabindex="0" title="Click to view Notes Shared">
                 <div class="interaction-row-label">
                   <span class="interaction-icon">📤</span>
@@ -580,7 +517,7 @@
                 <span id="pct-val-shares" class="interaction-count-badge">0</span>
               </div>
 
-              <!-- Bar 4: Likes -->
+              <!-- Bar 3: Likes -->
               <div class="interaction-bar-row clickable-interaction-row" id="interaction-row-likes" role="button" tabindex="0" title="Click to view Likes & Saves breakdown">
                 <div class="interaction-row-label">
                   <span class="interaction-icon">❤️</span>
@@ -597,15 +534,15 @@
             <div class="interaction-summary-box">
               <div class="summary-metric">
                 <span class="summary-metric-val" id="summary-conversion-rate">0.0%</span>
-                <span class="summary-metric-lbl">Download Rate</span>
+                <span class="summary-metric-lbl">Download Share</span>
               </div>
               <div class="summary-metric">
                 <span class="summary-metric-val" id="summary-engagement-rate">0.0%</span>
-                <span class="summary-metric-lbl">Favorite Rate</span>
+                <span class="summary-metric-lbl">Like / Save Share</span>
               </div>
               <div class="summary-metric">
-                <span class="summary-metric-val" id="summary-avg-shares">0 Shares</span>
-                <span class="summary-metric-lbl">Total Shares</span>
+                <span class="summary-metric-val" id="summary-avg-shares">0.0%</span>
+                <span class="summary-metric-lbl">Social Share Rate</span>
               </div>
             </div>
           </div>
@@ -1468,186 +1405,195 @@
               <span class="p-card-icon">⚙️</span>
               <div>
                 <h3>System Environment</h3>
-                <p class="p-card-sub">Engine & hosting specifications</p>
+                <p class="p-card-sub">Engine & database specifications</p>
               </div>
             </div>
 
             <div class="profile-env-list">
               <div class="p-env-row">
                 <span class="p-env-key">Platform Engine:</span>
-                <span class="p-env-val">Node.js Zero-Dependency</span>
+                <span class="p-env-val">Node.js Express + MongoDB</span>
               </div>
               <div class="p-env-row">
                 <span class="p-env-key">Database Storage:</span>
-                <span class="p-env-val">JSON Disk (data/notes.json)</span>
+                <span class="p-env-val">MongoDB Atlas Cloud</span>
               </div>
               <div class="p-env-row">
-                <span class="p-env-key">Image Uploads:</span>
-                <span class="p-env-val">Persistent Local /uploads/</span>
+                <span class="p-env-key">Media Storage:</span>
+                <span class="p-env-val">Cloudinary CDN (Optimized)</span>
               </div>
               <div class="p-env-row">
-                <span class="p-env-key">Heartbeat Telemetry:</span>
-                <span class="p-env-val">Real-Time (Rolling 90s Window)</span>
+                <span class="p-env-key">Session Telemetry:</span>
+                <span class="p-env-val">Real-Time Active Tracking</span>
               </div>
             </div>
 
-            <div class="profile-footer-links" style="margin-top: 16px;">
-              <a href="index.html" class="outline-button" style="text-decoration: none; width: 100%; text-align: center; display: block; font-size: 0.82rem;">
-                🏠 Return to Public Website
-              </a>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-    </div>
-
-    <!-- Dedicated 1-Click Master Backup & Restore Center -->
-    <div id="admin-view-backup" class="admin-view-pane" hidden>
-      <div class="admin-profile-container" style="padding-top: 10px;">
-        <!-- Header Banner -->
-        <div class="dash-welcome-banner glass-card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(59, 130, 246, 0.05) 100%); border-left: 4px solid #10b981; margin-bottom: 20px;">
-          <div class="banner-left">
-            <div class="banner-title-row">
-              <span class="banner-emoji">💾</span>
-              <h2>1-Click Master Backup & Instant Restore Center</h2>
-              <span class="badge-role" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">v4.0 Unified Engine</span>
-            </div>
-            <p class="banner-sub" style="margin-top: 4px;">
-              Export, preserve, and restore all revision notes, diagram images, student accounts, target exam goals, live analytics, and branding assets with 100% portable safety.
-            </p>
-          </div>
-          <div class="banner-right" style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button type="button" id="backup-center-refresh-btn" class="profile-act-btn secondary" style="font-size: 0.8rem; padding: 8px 14px;">
-              <span>🔄</span> Refresh Stats
-            </button>
-          </div>
-        </div>
-
-        <!-- 4-Tile Live Data KPI Grid -->
-        <div class="user-quick-stats-grid four-col" style="margin-bottom: 24px;">
-          <div class="stat-summary-card" style="border-top: 3px solid #3b82f6;">
-            <div class="stat-icon-wrap" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6;">📚</div>
-            <div class="stat-info-col">
-              <span class="stat-kpi-label">Revision Notes & Diagrams</span>
-              <strong id="backup-kpi-notes" class="stat-kpi-val">0</strong>
-              <small class="stat-kpi-sub">Portable Base64 Bundled</small>
-            </div>
-          </div>
-
-          <div class="stat-summary-card" style="border-top: 3px solid #10b981;">
-            <div class="stat-icon-wrap" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">👥</div>
-            <div class="stat-info-col">
-              <span class="stat-kpi-label">Student User Profiles</span>
-              <strong id="backup-kpi-users" class="stat-kpi-val">0</strong>
-              <small class="stat-kpi-sub">Google Auth & Target Goals</small>
-            </div>
-          </div>
-
-          <div class="stat-summary-card" style="border-top: 3px solid #f59e0b;">
-            <div class="stat-icon-wrap" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b;">📊</div>
-            <div class="stat-info-col">
-              <span class="stat-kpi-label">Live Telemetry & Demands</span>
-              <strong id="backup-kpi-interactions" class="stat-kpi-val">0</strong>
-              <small class="stat-kpi-sub">Views, Likes & Searches</small>
-            </div>
-          </div>
-
-          <div class="stat-summary-card" style="border-top: 3px solid #8b5cf6;">
-            <div class="stat-icon-wrap" style="background: rgba(139, 92, 246, 0.12); color: #8b5cf6;">🎨</div>
-            <div class="stat-info-col">
-              <span class="stat-kpi-label">Branding & Media Assets</span>
-              <strong id="backup-kpi-assets" class="stat-kpi-val">Ready</strong>
-              <small class="stat-kpi-sub">Photo, Logo & QR Code</small>
-            </div>
-          </div>
-        </div>
-
-        <!-- Master Backup Action Cards (Export & Restore) -->
-        <div class="backup-actions-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
-          
-          <!-- 1. Export Action Card -->
-          <div class="profile-card" style="padding: 22px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); display: flex; flex-direction: column; justify-content: space-between; gap: 16px; box-shadow: var(--shadow-sm);">
-            <div>
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                  <span style="font-size: 1.4rem; padding: 8px; background: rgba(59, 130, 246, 0.1); border-radius: 10px; color: #3b82f6;">📥</span>
-                  <div>
-                    <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--ink);">Download Master Backup (.json)</h3>
-                    <span style="font-size: 0.76rem; color: var(--ink-muted);">Comprehensive single-file archive</span>
-                  </div>
-                </div>
-                <span class="badge-role" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">1-Click</span>
+            <!-- Clear All Data Management Box -->
+            <div class="profile-clean-data-box" style="margin-top: 14px; padding: 12px; border-radius: var(--radius-md); background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.22);">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <span style="font-size: 0.78rem; font-weight: 700; color: #dc2626; display: flex; align-items: center; gap: 5px;">
+                  <span>🧹</span> Data Reset Maintenance
+                </span>
+                <span style="font-size: 0.68rem; font-weight: 700; color: #dc2626; background: rgba(239, 68, 68, 0.12); padding: 1px 6px; border-radius: 4px;">Protected</span>
               </div>
-              <p style="font-size: 0.84rem; color: var(--ink-sub); line-height: 1.55; margin: 0 0 12px;">
-                Generates a completely standalone <code>.json</code> snapshot containing all revision notes, diagram images encoded in base64, registered student profiles with target goals, telemetry statistics, missing search demands, administrator avatar, website logo, and Instagram QR barcode.
+              <p style="font-size: 0.74rem; color: var(--ink-muted); margin: 0 0 10px; line-height: 1.45;">
+                Clear all notes, users & metrics to start fresh like a new website. Keeps admin profile, password & branding.
               </p>
-              <div style="background: var(--surface-subtle); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px dashed var(--border); font-size: 0.78rem; color: var(--ink-muted); display: flex; flex-direction: column; gap: 4px;">
-                <div><strong>Format:</strong> ExamAlertIndiaMasterBackup v4.0</div>
-                <div><strong>Portability:</strong> Safe across Render redeployments, cloud restarts & server migrations.</div>
-              </div>
-            </div>
-
-            <button type="button" id="backup-page-export-btn" class="profile-act-btn primary" style="width: 100%; font-size: 0.92rem; padding: 12px 20px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radius-md);">
-              <span>💾</span> Export Master Backup File (.json)
-            </button>
-          </div>
-
-          <!-- 2. Restore Action Card -->
-          <div class="profile-card" style="padding: 22px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); display: flex; flex-direction: column; justify-content: space-between; gap: 16px; box-shadow: var(--shadow-sm);">
-            <div>
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                  <span style="font-size: 1.4rem; padding: 8px; background: rgba(16, 185, 129, 0.1); border-radius: 10px; color: #10b981;">📤</span>
-                  <div>
-                    <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--ink);">Restore Website from Backup</h3>
-                    <span style="font-size: 0.76rem; color: var(--ink-muted);">Ultra-Glassmorphic Windows Transfer Engine</span>
-                  </div>
-                </div>
-                <span class="badge-role" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">Auto-Sync</span>
-              </div>
-              <p style="font-size: 0.84rem; color: var(--ink-sub); line-height: 1.55; margin: 0 0 12px;">
-                Select or drag-and-drop any backup JSON file to immediately populate notes, restore diagram images into local disk cache, reload student users with their target goals, and sync all administrator branding.
-              </p>
-              <div style="background: rgba(16, 185, 129, 0.05); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.78rem; color: var(--ink-muted); display: flex; flex-direction: column; gap: 4px;">
-                <div><strong style="color: #10b981;">🛡️ Pre-Restore Safety Guard:</strong> Server automatically makes a safety snapshot before applying new files.</div>
-              </div>
-            </div>
-
-            <div>
-              <input type="file" id="backup-page-restore-file-input" accept=".json,application/json" style="display:none;">
-              <button type="button" id="backup-page-restore-trigger-btn" class="profile-act-btn secondary" style="width: 100%; font-size: 0.92rem; padding: 12px 20px; border-color: var(--primary); color: var(--primary); font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radius-md);">
-                <span>🔄</span> Select Backup File to Restore
+              <button type="button" id="admin-clean-data-btn" class="profile-act-btn danger" style="width: 100%; font-size: 0.80rem; padding: 8px 12px; justify-content: center;">
+                <span>🧹</span> Clear All Data (Reset Website)
               </button>
             </div>
           </div>
 
         </div>
 
-        <!-- Master Backup Specification Card -->
-        <div class="profile-card" style="padding: 20px 24px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface);">
-          <h4 style="margin: 0 0 12px; font-size: 0.95rem; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 8px;">
-            <span>📋</span> What is Included in the v4.0 Master Backup Snapshot?
-          </h4>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; font-size: 0.8rem; color: var(--ink-sub);">
-            <div style="padding: 10px 14px; background: var(--surface-subtle); border-radius: var(--radius-md); border: 1px solid var(--border);">
-              <strong style="color: var(--ink); display: block; margin-bottom: 2px;">📚 Study Notes & Media</strong>
-              Titles, subjects, category tags, rich markdown overviews, and base64 diagram buffers.
+        <!-- 1-Click Master Backup & Restore Center (Integrated into Admin Profile) -->
+        <div class="profile-backup-section" style="margin-top: 10px;">
+          
+          <!-- Header Banner -->
+          <div class="dash-welcome-banner glass-card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(59, 130, 246, 0.05) 100%); border-left: 4px solid #10b981; margin-bottom: 16px;">
+            <div class="banner-left">
+              <div class="banner-title-row">
+                <span class="banner-emoji">💾</span>
+                <h2 style="font-size: 1.15rem;">1-Click Master Backup & Instant Restore Center</h2>
+                <span class="badge-role" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">v4.0 Unified Engine</span>
+              </div>
+              <p class="banner-sub" style="margin-top: 4px; font-size: 0.82rem;">
+                Export, preserve, and restore all revision notes, diagram images, student accounts, target exam goals, live analytics, and branding assets with 100% portable safety.
+              </p>
             </div>
-            <div style="padding: 10px 14px; background: var(--surface-subtle); border-radius: var(--radius-md); border: 1px solid var(--border);">
-              <strong style="color: var(--ink); display: block; margin-bottom: 2px;">👥 Student User Accounts</strong>
-              Google profiles, target examination goals (UPSC, SSC, etc.), likes, and study telemetry.
-            </div>
-            <div style="padding: 10px 14px; background: var(--surface-subtle); border-radius: var(--radius-md); border: 1px solid var(--border);">
-              <strong style="color: var(--ink); display: block; margin-bottom: 2px;">📈 Real-Time Analytics</strong>
-              Live visitor counters, daily trends, note views, downloads, likes, and unfulfilled search requests.
-            </div>
-            <div style="padding: 10px 14px; background: var(--surface-subtle); border-radius: var(--radius-md); border: 1px solid var(--border);">
-              <strong style="color: var(--ink); display: block; margin-bottom: 2px;">🎨 Brand & Platform Assets</strong>
-              Admin profile avatar photo, official website logo, and Instagram QR barcode.
+            <div class="banner-right" style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" id="backup-center-refresh-btn" class="profile-act-btn secondary" style="font-size: 0.8rem; padding: 8px 14px;">
+                <span>🔄</span> Refresh Stats
+              </button>
             </div>
           </div>
+
+          <!-- 4-Tile Live Data KPI Grid -->
+          <div class="user-quick-stats-grid four-col" style="margin-bottom: 20px;">
+            <div class="stat-summary-card" style="border-top: 3px solid #3b82f6;">
+              <div class="stat-icon-wrap" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6;">📚</div>
+              <div class="stat-info-col">
+                <span class="stat-kpi-label">Revision Notes & Diagrams</span>
+                <strong id="backup-kpi-notes" class="stat-kpi-val">0</strong>
+                <small class="stat-kpi-sub">Portable Base64 Bundled</small>
+              </div>
+            </div>
+
+            <div class="stat-summary-card" style="border-top: 3px solid #10b981;">
+              <div class="stat-icon-wrap" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">👥</div>
+              <div class="stat-info-col">
+                <span class="stat-kpi-label">Student User Profiles</span>
+                <strong id="backup-kpi-users" class="stat-kpi-val">0</strong>
+                <small class="stat-kpi-sub">Google Auth & Target Goals</small>
+              </div>
+            </div>
+
+            <div class="stat-summary-card" style="border-top: 3px solid #f59e0b;">
+              <div class="stat-icon-wrap" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b;">📊</div>
+              <div class="stat-info-col">
+                <span class="stat-kpi-label">Live Telemetry & Demands</span>
+                <strong id="backup-kpi-interactions" class="stat-kpi-val">0</strong>
+                <small class="stat-kpi-sub">Views, Likes & Searches</small>
+              </div>
+            </div>
+
+            <div class="stat-summary-card" style="border-top: 3px solid #8b5cf6;">
+              <div class="stat-icon-wrap" style="background: rgba(139, 92, 246, 0.12); color: #8b5cf6;">🎨</div>
+              <div class="stat-info-col">
+                <span class="stat-kpi-label">Branding & Media Assets</span>
+                <strong id="backup-kpi-assets" class="stat-kpi-val">Ready</strong>
+                <small class="stat-kpi-sub">Photo, Logo & QR Code</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Master Backup Action Cards (Export & Restore) -->
+          <div class="backup-actions-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            
+            <!-- 1. Export Action Card -->
+            <div class="profile-card" style="padding: 22px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); display: flex; flex-direction: column; justify-content: space-between; gap: 16px; box-shadow: var(--shadow-sm);">
+              <div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.4rem; padding: 8px; background: rgba(59, 130, 246, 0.1); border-radius: 10px; color: #3b82f6;">📥</span>
+                    <div>
+                      <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--ink);">Download Master Backup (.json)</h3>
+                      <span style="font-size: 0.76rem; color: var(--ink-muted);">Comprehensive single-file archive</span>
+                    </div>
+                  </div>
+                  <span class="badge-role" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">1-Click</span>
+                </div>
+                <p style="font-size: 0.84rem; color: var(--ink-sub); line-height: 1.55; margin: 0 0 12px;">
+                  Generates a completely standalone <code>.json</code> snapshot containing all revision notes, diagram images encoded in base64, registered student profiles with target goals, telemetry statistics, missing search demands, administrator avatar, website logo, and Instagram QR barcode.
+                </p>
+                <div style="background: var(--surface-subtle); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px dashed var(--border); font-size: 0.78rem; color: var(--ink-muted); display: flex; flex-direction: column; gap: 4px;">
+                  <div><strong>Format:</strong> ExamAlertIndiaMasterBackup v4.0</div>
+                  <div><strong>Portability:</strong> Safe across cloud redeployments & database migrations.</div>
+                </div>
+              </div>
+
+              <button type="button" id="backup-page-export-btn" class="profile-act-btn primary" style="width: 100%; font-size: 0.92rem; padding: 12px 20px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radius-md);">
+                <span>💾</span> Export Master Backup File (.json)
+              </button>
+            </div>
+
+            <!-- 2. Restore Action Card -->
+            <div class="profile-card" style="padding: 22px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); display: flex; flex-direction: column; justify-content: space-between; gap: 16px; box-shadow: var(--shadow-sm);">
+              <div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.4rem; padding: 8px; background: rgba(16, 185, 129, 0.1); border-radius: 10px; color: #10b981;">📤</span>
+                    <div>
+                      <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--ink);">Restore Website from Backup</h3>
+                      <span style="font-size: 0.76rem; color: var(--ink-muted);">Ultra-Glassmorphic Windows Transfer Engine</span>
+                    </div>
+                  </div>
+                  <span class="badge-role" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">Auto-Sync</span>
+                </div>
+                <p style="font-size: 0.84rem; color: var(--ink-sub); line-height: 1.55; margin: 0 0 12px;">
+                  Select or drag-and-drop any backup JSON file to immediately populate notes, restore diagram images into local disk cache, reload student users with their target goals, and sync all administrator branding.
+                </p>
+                <div style="background: rgba(16, 185, 129, 0.05); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.78rem; color: var(--ink-muted); display: flex; flex-direction: column; gap: 4px;">
+                  <div><strong style="color: #10b981;">🛡️ Pre-Restore Safety Guard:</strong> Server automatically makes a safety snapshot before applying new files.</div>
+                </div>
+              </div>
+
+              <div>
+                <input type="file" id="backup-page-restore-file-input" accept=".json,application/json" style="display:none;">
+                <button type="button" id="backup-page-restore-trigger-btn" class="profile-act-btn secondary" style="width: 100%; font-size: 0.92rem; padding: 12px 20px; border-color: var(--primary); color: var(--primary); font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radius-md);">
+                  <span>🔄</span> Select Backup File to Restore
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Master Backup Specification Card -->
+          <div class="profile-card" style="padding: 20px 24px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface);">
+            <h4 style="margin: 0 0 12px; font-size: 0.95rem; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 8px;">
+              <span>📋</span> What is Included in the v4.0 Master Backup Snapshot?
+            </h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; font-size: 0.8rem; color: var(--ink-sub);">
+              <div style="padding: 10px 14px; background: var(--surface-subtle); border-radius: var(--radius-md); border: 1px solid var(--border);">
+                <strong style="color: var(--ink); display: block; margin-bottom: 2px;">📚 Study Notes & Media</strong>
+                Titles, subjects, category tags, rich markdown overviews, and base64 diagram buffers.
+              </div>
+              <div style="padding: 10px 14px; background: var(--surface-subtle); border-radius: var(--radius-md); border: 1px solid var(--border);">
+                <strong style="color: var(--ink); display: block; margin-bottom: 2px;">👥 Student User Accounts</strong>
+                Google profiles, target examination goals (UPSC, SSC, etc.), likes, and study telemetry.
+              </div>
+              <div style="padding: 10px 14px; background: var(--surface-subtle); border-radius: var(--radius-md); border: 1px solid var(--border);">
+                <strong style="color: var(--ink); display: block; margin-bottom: 2px;">📈 Real-Time Analytics</strong>
+                Live visitor counters, daily trends, note views, downloads, likes, and unfulfilled search requests.
+              </div>
+              <div style="padding: 10px 14px; background: var(--surface-subtle); border-radius: var(--radius-md); border: 1px solid var(--border);">
+                <strong style="color: var(--ink); display: block; margin-bottom: 2px;">🎨 Brand & Platform Assets</strong>
+                Admin profile avatar photo, official website logo, and Instagram QR barcode.
+              </div>
+            </div>
+          </div>
+
         </div>
 
       </div>
@@ -3407,6 +3353,6 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=84.0"></script>
+  <script src="admin.js?v=88.0"></script>
 </body>
 </html>

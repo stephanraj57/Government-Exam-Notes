@@ -500,10 +500,10 @@ function showDashboard() {
   }
 
   // Restore user's current view from URL hash, sessionStorage or localStorage
-  const validViews = ["dashboard", "analysis", "interactions", "users", "tags", "missing-searches", "publish", "modify", "profile"];
+  const validViews = ["dashboard", "interactions", "users", "tags", "missing-searches", "publish", "modify", "profile"];
   const hash = window.location.hash.replace(/^#/, "");
   const savedView = sessionStorage.getItem("exam_admin_active_view") || localStorage.getItem("exam_admin_active_view") || "dashboard";
-  const targetView = validViews.includes(hash) ? hash : (validViews.includes(savedView) ? savedView : "dashboard");
+  const targetView = (hash === "analysis" ? "dashboard" : (validViews.includes(hash) ? hash : (validViews.includes(savedView) ? savedView : "dashboard")));
 
   // Switch immediately so page reload renders the exact active view with zero delay
   switchAdminView(targetView, true);
@@ -1149,7 +1149,7 @@ function renderInteractionsView() {
   const viewsEl = $("#interaction-total-views");
   const interBadge = $("#interactions-badge");
 
-  // Read ACTUAL telemetry values
+  // Read ACTUAL telemetry values (Active engagements exclude passive views)
   const realLikes = Number(liveInteractions.totalLikes) || 0;
   const realDownloads = Number(liveInteractions.totalDownloads) || 0;
   const realShares = Number(liveInteractions.totalShares) || 0;
@@ -1160,52 +1160,51 @@ function renderInteractionsView() {
   animateNumberCounter(sharesEl, realShares, 800);
   animateNumberCounter(viewsEl, realViews, 800);
 
+  const totalActiveEngagements = realLikes + realDownloads + realShares;
+
   if (interBadge) {
-    interBadge.textContent = realViews > 999 ? `${(realViews / 1000).toFixed(1)}k` : String(realViews);
+    interBadge.textContent = totalActiveEngagements > 999 ? `${(totalActiveEngagements / 1000).toFixed(1)}k` : String(totalActiveEngagements);
   }
 
-  // Update Summary Metrics
+  // Update Summary Metrics (Calculated strictly across active engagements, excluding total views)
   const convRateEl = $("#summary-conversion-rate");
   const engRateEl = $("#summary-engagement-rate");
   const sharesAvgEl = $("#summary-avg-shares");
-  const convRate = realViews > 0 ? ((realDownloads / realViews) * 100).toFixed(1) + "%" : "0.0%";
-  const engRate = realViews > 0 ? ((realLikes / realViews) * 100).toFixed(1) + "%" : "0.0%";
-  if (convRateEl) convRateEl.textContent = convRate;
-  if (engRateEl) engRateEl.textContent = engRate;
-  if (sharesAvgEl) sharesAvgEl.textContent = `${realShares} Shares`;
+  
+  const downloadShare = totalActiveEngagements > 0 ? ((realDownloads / totalActiveEngagements) * 100).toFixed(1) + "%" : "0.0%";
+  const likeShare = totalActiveEngagements > 0 ? ((realLikes / totalActiveEngagements) * 100).toFixed(1) + "%" : "0.0%";
+  const shareRate = totalActiveEngagements > 0 ? ((realShares / totalActiveEngagements) * 100).toFixed(1) + "%" : "0.0%";
 
-  // Update Progress Bars & Values with animated fill
-  const pctViews = $("#pct-val-views");
+  if (convRateEl) convRateEl.textContent = downloadShare;
+  if (engRateEl) engRateEl.textContent = likeShare;
+  if (sharesAvgEl) sharesAvgEl.textContent = shareRate;
+
+  // Update Progress Bars & Values (Calculated relative to total active engagements)
   const pctDownloads = $("#pct-val-downloads");
   const pctShares = $("#pct-val-shares");
   const pctLikes = $("#pct-val-likes");
 
-  const barViews = $("#bar-fill-views");
   const barDownloads = $("#bar-fill-downloads");
   const barShares = $("#bar-fill-shares");
   const barLikes = $("#bar-fill-likes");
 
-  const barViewsPct = realViews > 0 ? 100 : 0;
-  const barDownloadsPct = realViews > 0 ? Math.min(100, Math.round((realDownloads / realViews) * 100)) : 0;
-  const barSharesPct = realViews > 0 ? Math.min(100, Math.round((realShares / realViews) * 100)) : (realShares > 0 ? 50 : 0);
-  const barLikesPct = realViews > 0 ? Math.min(100, Math.round((realLikes / realViews) * 100)) : 0;
+  const barDownloadsPct = totalActiveEngagements > 0 ? Math.min(100, Math.round((realDownloads / totalActiveEngagements) * 100)) : 0;
+  const barSharesPct = totalActiveEngagements > 0 ? Math.min(100, Math.round((realShares / totalActiveEngagements) * 100)) : 0;
+  const barLikesPct = totalActiveEngagements > 0 ? Math.min(100, Math.round((realLikes / totalActiveEngagements) * 100)) : 0;
 
-  if (barViews) barViews.style.width = "0%";
   if (barDownloads) barDownloads.style.width = "0%";
   if (barShares) barShares.style.width = "0%";
   if (barLikes) barLikes.style.width = "0%";
 
   setTimeout(() => {
-    if (barViews) barViews.style.width = `${barViewsPct}%`;
     if (barDownloads) barDownloads.style.width = `${barDownloadsPct}%`;
     if (barShares) barShares.style.width = `${barSharesPct}%`;
     if (barLikes) barLikes.style.width = `${barLikesPct}%`;
   }, 50);
 
-  if (pctViews) pctViews.textContent = realViews.toLocaleString();
-  if (pctDownloads) pctDownloads.textContent = realDownloads.toLocaleString();
-  if (pctShares) pctShares.textContent = realShares.toLocaleString();
-  if (pctLikes) pctLikes.textContent = realLikes.toLocaleString();
+  if (pctDownloads) pctDownloads.textContent = `${realDownloads.toLocaleString()} (${barDownloadsPct}%)`;
+  if (pctShares) pctShares.textContent = `${realShares.toLocaleString()} (${barSharesPct}%)`;
+  if (pctLikes) pctLikes.textContent = `${realLikes.toLocaleString()} (${barLikesPct}%)`;
 
   // Render Top Notes Table with Sort
   renderTopNotesTable();
@@ -5018,8 +5017,8 @@ function attachSpellChecker(inputEl, alertContainerEl, onFixedCallback = null) {
 let currentAdminView = "dashboard";
 
 function switchAdminView(viewName, updateHash = true) {
-  const validViews = ["dashboard", "analysis", "interactions", "users", "tags", "missing-searches", "publish", "modify", "profile", "backup"];
-  if (!validViews.includes(viewName)) {
+  const validViews = ["dashboard", "interactions", "users", "tags", "missing-searches", "publish", "modify", "profile"];
+  if (viewName === "analysis" || !validViews.includes(viewName)) {
     viewName = "dashboard";
   }
 
@@ -5103,7 +5102,6 @@ function switchAdminView(viewName, updateHash = true) {
   if (viewName === "dashboard") {
     renderCategoryChart();
     renderRecentNotes();
-  } else if (viewName === "analysis") {
     renderAnalysisView();
   } else if (viewName === "interactions") {
     renderInteractionsView();
@@ -5166,6 +5164,9 @@ function renderProfileView() {
   if (typeof adminProfileState !== "undefined") {
     applyAdminProfileUI(adminProfileState);
   }
+
+  // Refresh integrated Backup Center KPIs
+  refreshBackupCenterKpis();
 }
 
 // ==========================================

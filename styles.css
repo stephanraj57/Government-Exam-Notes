@@ -10687,7 +10687,7 @@ dialog:not([open]) {
 }
 
 /* ==========================================================================
-   Real-Time Clock Widget & Full Calendar Modal
+   Real-Time Clock Widget & Full Calendar Modal (Header Right)
    ========================================================================== */
 .admin-sidebar-clock-widget {
   width: 100%;
@@ -10705,6 +10705,96 @@ dialog:not([open]) {
   box-sizing: border-box;
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.admin-header-clock-widget {
+  width: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 5px 12px !important;
+  background: var(--surface-subtle) !important;
+  border: 1.5px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  color: var(--ink) !important;
+  cursor: pointer !important;
+  margin-bottom: 0 !important;
+  box-sizing: border-box !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+[data-theme="dark"] .admin-header-clock-widget,
+.dark-theme .admin-header-clock-widget {
+  background: rgba(15, 23, 42, 0.6) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.admin-header-clock-widget:hover {
+  background: var(--surface) !important;
+  border-color: var(--primary) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.18) !important;
+}
+
+.admin-header-clock-widget .clock-widget-left {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.admin-header-clock-widget .clock-time-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+
+.admin-header-clock-widget .admin-live-time {
+  font-size: 0.82rem !important;
+  font-weight: 800 !important;
+}
+
+.admin-header-clock-widget .clock-date-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding-left: 8px !important;
+  border-left: 1px solid var(--border) !important;
+}
+
+.admin-header-clock-widget .admin-live-date {
+  font-size: 0.76rem !important;
+  font-weight: 700 !important;
+  color: var(--ink-sub) !important;
+}
+
+.admin-header-clock-widget .admin-live-day {
+  font-size: 0.70rem !important;
+  font-weight: 700 !important;
+  padding: 1px 6px !important;
+  border-radius: 4px !important;
+  background: var(--primary-subtle) !important;
+  color: var(--primary) !important;
+}
+
+.admin-header-clock-widget .clock-widget-action {
+  font-size: 0.75rem !important;
+  padding: 2px 5px !important;
+  border-radius: 4px !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--ink-muted) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+@media (max-width: 680px) {
+  .admin-header-clock-widget .clock-date-row,
+  .admin-header-clock-widget .clock-widget-action {
+    display: none !important;
+  }
 }
 
 .admin-sidebar-clock-widget:hover {
