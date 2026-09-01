@@ -222,7 +222,11 @@ function setTheme(theme, save = true) {
 // 4. Data Loading & Persistence
 // ==========================================
 async function loadNotes() {
+  const loadStartTime = Date.now();
   let serverNotes = [];
+  if ((!notes || notes.length === 0) && $("#notes-grid")) {
+    renderSkeletonGrid(6);
+  }
   try {
     let notesData = null;
     try {
@@ -316,6 +320,12 @@ async function loadNotes() {
     })
     .catch(() => {});
 
+  // Ensure a smooth minimum window (400ms) on initial load so the luminous wave effect is clearly perceptible
+  const loadElapsed = Date.now() - loadStartTime;
+  if (loadElapsed < 400) {
+    await new Promise(resolve => setTimeout(resolve, 400 - loadElapsed));
+  }
+
   updateAdminState();
   updatePopularTags();
   handleUrlHash();
@@ -360,12 +370,29 @@ function updatePopularTags() {
   ).join("");
 }
 
+function renderSkeletonGrid(count = 6) {
+  const notesGrid = $("#notes-grid");
+  if (!notesGrid) return;
+  notesGrid.className = `notes-grid ${viewMode === "list" ? "list-view" : ""}`;
+  notesGrid.innerHTML = Array.from({ length: count }, (_, i) => `
+    <article class="note-card skeleton-card" style="--card-index: ${i};" aria-hidden="true">
+      <div class="card-media skeleton-shimmer"></div>
+      <div class="note-content">
+        <div class="skeleton-chip skeleton-shimmer"></div>
+        <div class="skeleton-title skeleton-shimmer"></div>
+        <div class="skeleton-title skeleton-title-short skeleton-shimmer"></div>
+        <div class="skeleton-meta skeleton-shimmer"></div>
+      </div>
+    </article>
+  `).join("");
+}
+
 function renderCardMedia(note, pIndex = 0) {
   if (note.imageUrl) {
     const priorityAttr = pIndex < 2 ? 'fetchpriority="high"' : 'fetchpriority="low"';
     return `
-      <div class="card-media">
-        <img class="note-image" src="${note.imageUrl}" alt="${escapeHtml(note.title)}" loading="lazy" decoding="async" ${priorityAttr} onerror="handleNoteImageError(this, '${note.id}', '${note.imageUrl}', '${escapeHtml(note.title)}', '${escapeHtml(note.subject)}')">
+      <div class="card-media skeleton-shimmer">
+        <img class="note-image is-loading" src="${note.imageUrl}" alt="${escapeHtml(note.title)}" loading="lazy" decoding="async" ${priorityAttr} onload="this.classList.remove('is-loading'); this.parentElement?.classList.remove('skeleton-shimmer');" onerror="this.parentElement?.classList.remove('skeleton-shimmer'); handleNoteImageError(this, '${note.id}', '${note.imageUrl}', '${escapeHtml(note.title)}', '${escapeHtml(note.subject)}')">
       </div>
     `;
   }
@@ -415,17 +442,17 @@ function render() {
     if (activeTag) {
       const tagLower = activeTag.toLowerCase();
       const matchTag = (n.tags || []).some(t => t.toLowerCase() === tagLower) ||
-        (`${n.title} ${n.subject}`).toLowerCase().includes(tagLower);
+        (n.title || "").toLowerCase().includes(tagLower);
       if (!matchTag) return false;
     }
 
-    // Search query filter (handles #tag and text keywords)
+    // Search query filter: search ONLY based on title and tags (not subject)
     if (searchTerm) {
       const cleanSearch = searchTerm.startsWith("#") ? searchTerm.slice(1).trim() : searchTerm;
       if (cleanSearch) {
-        const allText = `${n.title} ${n.subject} ${(n.categories || []).join(" ")} ${(n.tags || []).join(" ")}`.toLowerCase();
-        const matchesTags = (n.tags || []).some(t => t.toLowerCase().includes(cleanSearch));
-        if (!allText.includes(cleanSearch) && !matchesTags) return false;
+        const titleMatch = (n.title || "").toLowerCase().includes(cleanSearch);
+        const tagsMatch = (n.tags || []).some(t => t.toLowerCase().includes(cleanSearch));
+        if (!titleMatch && !tagsMatch) return false;
       }
     }
 
@@ -437,6 +464,12 @@ function render() {
     list.sort((a, b) => a.title.localeCompare(b.title));
   } else if (sortOption === "oldest") {
     list.sort((a, b) => (new Date(a.createdAt || a.date || 0)) - (new Date(b.createdAt || b.date || 0)));
+  } else if (sortOption === "views" || sortOption === "most-viewed") {
+    list.sort((a, b) => {
+      const diff = getNoteViews(b.id) - getNoteViews(a.id);
+      if (diff !== 0) return diff;
+      return (new Date(b.createdAt || b.date || 0)) - (new Date(a.createdAt || a.date || 0));
+    });
   } else {
     list.sort((a, b) => (new Date(b.createdAt || b.date || 0)) - (new Date(a.createdAt || a.date || 0)));
   }
@@ -481,7 +514,7 @@ function render() {
         const tagsHtml = tagsList ? `<div class="note-tags-row">${tagsList}</div>` : '';
 
         return `
-          <article class="note-card" data-note-id="${n.id}" data-index="${fullIndex}" tabindex="0" role="button" aria-label="${escapeHtml(n.title)}">
+          <article class="note-card" style="--card-index: ${pIndex};" data-note-id="${n.id}" data-index="${fullIndex}" tabindex="0" role="button" aria-label="${escapeHtml(n.title)}">
             <button class="card-bookmark-btn ${isBookmarked ? "bookmarked" : ""}" data-bookmark="${n.id}" type="button" title="${isBookmarked ? "Remove from Saved" : "Like & Save Note"}" aria-label="Like Note">
               ${isBookmarked ? "❤️" : "🤍"}
             </button>
@@ -878,6 +911,32 @@ function triggerNoteDownload(note) {
   showToast("Downloading revision note diagram... 📥", "success");
 }
 
+function updateBookmarkButtonsInPlace(noteId) {
+  const isLiked = bookmarks.has(noteId);
+  // 1. Update all card bookmark buttons in grid
+  document.querySelectorAll(`[data-bookmark="${noteId}"]`).forEach(btn => {
+    btn.classList.toggle("bookmarked", isLiked);
+    btn.textContent = isLiked ? "❤️" : "🤍";
+    btn.title = isLiked ? "Remove from Saved" : "Like & Save Note";
+    btn.setAttribute("aria-label", isLiked ? "Remove from Saved" : "Like Note");
+  });
+
+  // 2. Update lightbox bookmark button if open for this note
+  const currentLightboxNote = currentFilteredList && currentFilteredList[currentLightboxIndex];
+  if (currentLightboxNote && currentLightboxNote.id === noteId) {
+    const bookmarkBtn = $("#lightbox-bookmark-btn");
+    const bookmarkLabel = $("#lightbox-bookmark-label");
+    if (bookmarkBtn) {
+      bookmarkBtn.classList.toggle("active", isLiked);
+      const iconSpan = bookmarkBtn.querySelector(".btn-icon");
+      if (iconSpan) iconSpan.textContent = isLiked ? "❤️" : "🤍";
+    }
+    if (bookmarkLabel) {
+      bookmarkLabel.textContent = isLiked ? "Liked / Saved" : "Bookmark Note";
+    }
+  }
+}
+
 function toggleBookmark(noteId, e) {
   if (e) {
     e.stopPropagation();
@@ -899,17 +958,58 @@ function toggleBookmark(noteId, e) {
     trackInteraction("unlike", { noteId });
     sendStudentTelemetry("unlike", { noteId });
     showToast("Removed from Saved notes.", "info");
+
+    localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
+    updateBookmarkBadges(bookmarks.size);
+    updateBookmarkButtonsInPlace(noteId);
+
+    // If viewing the Saved Bookmarks page, animate out ONLY the unliked card
+    if (currentView === "bookmarks") {
+      const cardEl = document.querySelector(`.note-card[data-note-id="${noteId}"]`);
+      if (cardEl) {
+        cardEl.classList.add("card-exiting");
+        setTimeout(() => {
+          const notesGrid = $("#notes-grid");
+          if (notesGrid) {
+            notesGrid.classList.add("no-entrance-anim");
+          }
+          render();
+          setTimeout(() => {
+            notesGrid?.classList.remove("no-entrance-anim");
+          }, 60);
+        }, 240);
+      } else {
+        render();
+      }
+      return;
+    }
   } else {
     bookmarks.add(noteId);
     trackInteraction("like", { noteId });
     sendStudentTelemetry("like", { noteId });
     showToast("Saved to your Liked Notes! ❤️", "success");
+
+    localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
+    updateBookmarkBadges(bookmarks.size);
+    updateBookmarkButtonsInPlace(noteId);
+
+    // If on Saved page and liking (e.g. from lightbox)
+    if (currentView === "bookmarks") {
+      const notesGrid = $("#notes-grid");
+      if (notesGrid) {
+        notesGrid.classList.add("no-entrance-anim");
+      }
+      render();
+      setTimeout(() => {
+        notesGrid?.classList.remove("no-entrance-anim");
+      }, 60);
+      return;
+    }
   }
 
-  localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
-  updateBookmarkBadges(bookmarks.size);
-
-  render();
+  // NOTE: On regular "notes" page, we do NOT call render().
+  // updateBookmarkButtonsInPlace(noteId) already updated the heart icon in-place with zero re-rendering,
+  // preventing all other cards on the page from re-triggering entrance animations!
 }
 
 function updateBookmarkBadges(customCount = null) {
@@ -1658,34 +1758,14 @@ function setupEventListeners() {
     render();
   });
 
-  // Sidebar Collapse / Hide Toggle
+  // Ensure categories sidebar is permanently visible
   const appShell = $(".app-shell");
-  const hideSidebarBtn = $("#hide-categories-btn");
-  const showSidebarBtn = $("#show-categories-btn");
-
-  const isSidebarHidden = localStorage.getItem("exam_sidebar_hidden") === "true";
-  if (isSidebarHidden && appShell) {
-    appShell.classList.add("sidebar-hidden");
-    if (showSidebarBtn) showSidebarBtn.hidden = false;
+  if (appShell) {
+    appShell.classList.remove("sidebar-hidden");
   }
-
-  hideSidebarBtn?.addEventListener("click", () => {
-    if (appShell) {
-      appShell.classList.add("sidebar-hidden");
-      if (showSidebarBtn) showSidebarBtn.hidden = false;
-      localStorage.setItem("exam_sidebar_hidden", "true");
-      showToast("Categories sidebar hidden. Tap '📂 Categories ▸' to restore.", "info");
-    }
-  });
-
-  showSidebarBtn?.addEventListener("click", () => {
-    if (appShell) {
-      appShell.classList.remove("sidebar-hidden");
-      if (showSidebarBtn) showSidebarBtn.hidden = true;
-      localStorage.setItem("exam_sidebar_hidden", "false");
-      showToast("Categories sidebar restored.", "info");
-    }
-  });
+  try {
+    localStorage.removeItem("exam_sidebar_hidden");
+  } catch {}
 
   // Pagination Clicks Delegation
   $("#pagination-controls")?.addEventListener("click", e => {
@@ -2267,6 +2347,7 @@ async function handleStudentGoogleLogin(responsePayload) {
         trackInteraction("like", { noteId: noteToLike });
         sendStudentTelemetry("like", { noteId: noteToLike });
         updateBookmarkBadges(bookmarks.size);
+        updateBookmarkButtonsInPlace(noteToLike);
         showToast("Note saved to your account! ❤️", "success");
       }
 

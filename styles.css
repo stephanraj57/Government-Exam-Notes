@@ -364,6 +364,22 @@ a.nav-link.active {
   text-decoration: none !important;
 }
 
+.nav-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav-link:hover .nav-icon,
+.nav-link.active .nav-icon,
+a.nav-link:hover .nav-icon,
+a.nav-link.active .nav-icon {
+  transform: scale(1.15);
+}
+
 .badge {
   font-size: 0.68rem;
   padding: 2px 7px;
@@ -1624,8 +1640,41 @@ a.nav-link.active {
               inset 0 1px 0 rgba(255, 255, 255, 0.95);
   display: flex;
   flex-direction: column;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s ease;
   cursor: pointer;
+
+  /* Smooth interactive physics & GPU optimization */
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.25s ease;
+  will-change: transform, box-shadow;
+
+  /* Staggered silky-smooth entrance cascade */
+  animation: noteCardEntrance 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--card-index, 0) * 45ms);
+}
+
+@keyframes noteCardEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.975);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.notes-grid.no-entrance-anim .note-card {
+  animation: none !important;
+}
+
+/* Card Smooth Exit Animation (e.g. Un-saving from Saved bookmarks page) */
+.note-card.card-exiting {
+  opacity: 0 !important;
+  transform: scale(0.88) translateY(12px) !important;
+  filter: blur(3px);
+  pointer-events: none;
+  transition: all 0.24s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 [data-theme="dark"] .note-card {
@@ -1636,17 +1685,26 @@ a.nav-link.active {
               inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
+/* Fluid Hover Lift with Glow & Elevation */
 .note-card:hover {
-  transform: translateY(-5px) scale(1.01);
-  border-color: rgba(59, 130, 246, 0.4);
-  box-shadow: 0 20px 45px -10px rgba(37, 99, 235, 0.18),
-              0 0 0 1px rgba(59, 130, 246, 0.3);
+  transform: translateY(-6px) scale(1.012);
+  border-color: rgba(59, 130, 246, 0.45);
+  box-shadow: 0 22px 45px -10px rgba(37, 99, 235, 0.18),
+              0 0 0 1px rgba(59, 130, 246, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 [data-theme="dark"] .note-card:hover {
-  border-color: rgba(96, 165, 250, 0.45);
-  box-shadow: 0 24px 50px -10px rgba(37, 99, 235, 0.3),
-              0 0 0 1px rgba(96, 165, 250, 0.35);
+  border-color: rgba(96, 165, 250, 0.48);
+  box-shadow: 0 24px 50px -10px rgba(37, 99, 235, 0.35),
+              0 0 0 1px rgba(96, 165, 250, 0.35),
+              inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Tactile Spring Press Physics on Active Click / Tap */
+.note-card:active {
+  transform: translateY(-2px) scale(0.985);
+  transition-duration: 0.1s;
 }
 
 .card-media {
@@ -1663,11 +1721,198 @@ a.nav-link.active {
   object-fit: cover;
   object-position: top center !important;
   display: block;
-  transition: transform var(--transition-normal);
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), filter 0.35s ease;
+  will-change: transform;
 }
 
 .note-card:hover .note-image {
-  transform: scale(1.06);
+  transform: scale(1.055);
+  filter: brightness(1.02);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note-card {
+    animation: none !important;
+    transition: opacity 0.15s ease !important;
+    transform: none !important;
+  }
+  .note-card:hover,
+  .note-card:active {
+    transform: none !important;
+  }
+  .note-image,
+  .note-card:hover .note-image {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* ==========================================================================
+   Shimmer Skeleton Loading System for Note Cards (Luminous Wave Effect)
+   ========================================================================== */
+@keyframes skeletonWaveSweep {
+  0% {
+    transform: translateX(-120%);
+  }
+  60% {
+    transform: translateX(120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+/* Skeleton Card Container with Card-Level Ripple Wave */
+.note-card.skeleton-card {
+  position: relative !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  cursor: default !important;
+  border-color: var(--border-subtle) !important;
+  background: var(--surface) !important;
+  animation: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Diagonal sweeping luminous wave across the entire skeleton card */
+.note-card.skeleton-card::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  transform: rotate(25deg) translateX(-150%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 20%,
+    rgba(255, 255, 255, 0.82) 50%,
+    rgba(255, 255, 255, 0.05) 80%,
+    transparent 100%
+  );
+  animation: skeletonWaveSweep 1.6s infinite cubic-bezier(0.4, 0, 0.2, 1);
+  animation-delay: calc(var(--card-index, 0) * 110ms);
+  will-change: transform;
+  pointer-events: none;
+  z-index: 8;
+}
+
+[data-theme="dark"] .note-card.skeleton-card::after,
+.dark-theme .note-card.skeleton-card::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.02) 20%,
+    rgba(255, 255, 255, 0.26) 50%,
+    rgba(255, 255, 255, 0.02) 80%,
+    transparent 100%
+  );
+}
+
+/* Individual Placeholder Blocks with High-Contrast Base */
+.note-card.skeleton-card .card-media {
+  width: 100%;
+  height: 180px;
+  background-color: #e2e8f0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.skeleton-chip {
+  width: 72px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  background-color: #cbd5e1;
+  margin-bottom: 10px;
+}
+
+.skeleton-title {
+  width: 90%;
+  height: 16px;
+  border-radius: 4px;
+  background-color: #cbd5e1;
+  margin-bottom: 8px;
+}
+
+.skeleton-title.skeleton-title-short {
+  width: 58%;
+  margin-bottom: 14px;
+}
+
+.skeleton-meta {
+  width: 100%;
+  height: 22px;
+  border-radius: 6px;
+  background-color: #cbd5e1;
+  margin-top: auto;
+}
+
+[data-theme="dark"] .note-card.skeleton-card .card-media,
+.dark-theme .note-card.skeleton-card .card-media {
+  background-color: #1e293b;
+}
+
+[data-theme="dark"] .skeleton-chip,
+[data-theme="dark"] .skeleton-title,
+[data-theme="dark"] .skeleton-meta,
+.dark-theme .skeleton-chip,
+.dark-theme .skeleton-title,
+.dark-theme .skeleton-meta {
+  background-color: #334155;
+}
+
+/* Card-media Wave when loading real image */
+.card-media.skeleton-shimmer {
+  position: relative !important;
+  overflow: hidden !important;
+  background-color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .card-media.skeleton-shimmer,
+.dark-theme .card-media.skeleton-shimmer {
+  background-color: #1e293b !important;
+}
+
+.card-media.skeleton-shimmer::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 20%,
+    rgba(255, 255, 255, 0.85) 50%,
+    rgba(255, 255, 255, 0.15) 80%,
+    transparent 100%
+  ) !important;
+  animation: skeletonWaveSweep 1.5s infinite cubic-bezier(0.4, 0, 0.2, 1) !important;
+  will-change: transform;
+  pointer-events: none;
+  z-index: 5;
+}
+
+[data-theme="dark"] .card-media.skeleton-shimmer::after,
+.dark-theme .card-media.skeleton-shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.02) 20%,
+    rgba(255, 255, 255, 0.28) 50%,
+    rgba(255, 255, 255, 0.02) 80%,
+    transparent 100%
+  ) !important;
+}
+
+/* Media Image Loading Opacity Transition */
+.note-image.is-loading {
+  opacity: 0;
+}
+
+.note-image {
+  opacity: 1;
+  transition: opacity 0.35s ease, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), filter 0.35s ease;
 }
 
 .preview {
@@ -1731,6 +1976,11 @@ a.nav-link.active {
   transform: scale(1.18);
   border-color: #f43f5e;
   box-shadow: 0 6px 16px rgba(225, 29, 72, 0.2);
+}
+
+.card-bookmark-btn:active {
+  transform: scale(0.9);
+  transition-duration: 0.1s;
 }
 
 .card-bookmark-btn.bookmarked {
@@ -2296,6 +2546,15 @@ a.nav-link.active {
 .mob-icon {
   font-size: 1.25rem;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.mobile-nav-btn.active .mob-icon,
+a.mobile-nav-btn.active .mob-icon {
+  transform: scale(1.15);
 }
 
 .mob-badge {

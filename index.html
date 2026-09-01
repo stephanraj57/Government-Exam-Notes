@@ -14,7 +14,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="favicon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=98.0">
+  <link rel="stylesheet" href="styles.css?v=117.0">
   <script>
     fetch("/api/auth/google/config")
       .then(r => r.json())
@@ -44,13 +44,13 @@
 
     <nav class="main-nav" aria-label="Main Navigation">
       <button type="button" class="nav-link active" data-view="notes">
-        <span class="nav-icon">▣</span> Notes
+        <span class="nav-icon">📝</span> Notes
       </button>
       <button type="button" class="nav-link" data-view="bookmarks" title="View your liked and saved revision notes">
         <span class="nav-icon">❤️</span> Saved <span id="bookmark-badge" class="badge">0</span>
       </button>
       <button type="button" class="nav-link" data-view="about" title="About Free AI Govt Exam Notes">
-        <span class="nav-icon">ⓘ</span> About
+        <span class="nav-icon">ℹ️</span> About
       </button>
     </nav>
 
@@ -137,9 +137,6 @@
       <div class="sidebar-section">
         <div class="side-header">
           <p class="side-label">Categories</p>
-          <button id="hide-categories-btn" class="toggle-sidebar-btn" type="button" title="Hide Categories Sidebar">
-            <span>Hide</span> ◂
-          </button>
         </div>
         <nav id="category-nav" class="category-nav" aria-label="Categories">
           <button class="category active" data-category="All Notes">
@@ -202,12 +199,9 @@
 
       <!-- Search & Controls Toolbar -->
       <div class="toolbar">
-        <button id="show-categories-btn" class="show-sidebar-btn" type="button" title="Show Categories Sidebar" hidden>
-          📂 Categories ▸
-        </button>
         <div class="search-box">
           <span class="search-icon">⌕</span>
-          <input id="note-search" type="search" placeholder="Search by topic, subject, or keyword (e.g. Polity, 1857, Maths, English)..." aria-label="Search notes">
+          <input id="note-search" type="search" placeholder="Search by title or #tag (e.g. 1857, #preamble)..." aria-label="Search notes">
           <button id="clear-search" class="clear-search-btn" type="button" title="Clear search" hidden>×</button>
         </div>
 
@@ -217,6 +211,7 @@
             <select id="sort-notes" aria-label="Sort notes">
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
+              <option value="views">Most Viewed</option>
               <option value="title">Title A–Z</option>
             </select>
           </label>
@@ -229,7 +224,62 @@
       </div>
 
       <!-- Notes Grid / List Container (6 per page) -->
-      <div id="notes-grid" class="notes-grid" aria-live="polite"></div>
+      <div id="notes-grid" class="notes-grid" aria-live="polite">
+        <article class="note-card skeleton-card" style="--card-index: 0;" aria-hidden="true">
+          <div class="card-media skeleton-shimmer"></div>
+          <div class="note-content">
+            <div class="skeleton-chip skeleton-shimmer"></div>
+            <div class="skeleton-title skeleton-shimmer"></div>
+            <div class="skeleton-title skeleton-title-short skeleton-shimmer"></div>
+            <div class="skeleton-meta skeleton-shimmer"></div>
+          </div>
+        </article>
+        <article class="note-card skeleton-card" style="--card-index: 1;" aria-hidden="true">
+          <div class="card-media skeleton-shimmer"></div>
+          <div class="note-content">
+            <div class="skeleton-chip skeleton-shimmer"></div>
+            <div class="skeleton-title skeleton-shimmer"></div>
+            <div class="skeleton-title skeleton-title-short skeleton-shimmer"></div>
+            <div class="skeleton-meta skeleton-shimmer"></div>
+          </div>
+        </article>
+        <article class="note-card skeleton-card" style="--card-index: 2;" aria-hidden="true">
+          <div class="card-media skeleton-shimmer"></div>
+          <div class="note-content">
+            <div class="skeleton-chip skeleton-shimmer"></div>
+            <div class="skeleton-title skeleton-shimmer"></div>
+            <div class="skeleton-title skeleton-title-short skeleton-shimmer"></div>
+            <div class="skeleton-meta skeleton-shimmer"></div>
+          </div>
+        </article>
+        <article class="note-card skeleton-card" style="--card-index: 3;" aria-hidden="true">
+          <div class="card-media skeleton-shimmer"></div>
+          <div class="note-content">
+            <div class="skeleton-chip skeleton-shimmer"></div>
+            <div class="skeleton-title skeleton-shimmer"></div>
+            <div class="skeleton-title skeleton-title-short skeleton-shimmer"></div>
+            <div class="skeleton-meta skeleton-shimmer"></div>
+          </div>
+        </article>
+        <article class="note-card skeleton-card" style="--card-index: 4;" aria-hidden="true">
+          <div class="card-media skeleton-shimmer"></div>
+          <div class="note-content">
+            <div class="skeleton-chip skeleton-shimmer"></div>
+            <div class="skeleton-title skeleton-shimmer"></div>
+            <div class="skeleton-title skeleton-title-short skeleton-shimmer"></div>
+            <div class="skeleton-meta skeleton-shimmer"></div>
+          </div>
+        </article>
+        <article class="note-card skeleton-card" style="--card-index: 5;" aria-hidden="true">
+          <div class="card-media skeleton-shimmer"></div>
+          <div class="note-content">
+            <div class="skeleton-chip skeleton-shimmer"></div>
+            <div class="skeleton-title skeleton-shimmer"></div>
+            <div class="skeleton-title skeleton-title-short skeleton-shimmer"></div>
+            <div class="skeleton-meta skeleton-shimmer"></div>
+          </div>
+        </article>
+      </div>
 
       <!-- Empty State -->
       <div id="empty-notes" class="empty-state" hidden>
@@ -623,20 +673,20 @@
   <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
     <button type="button" class="mobile-nav-btn active" data-view="notes" title="Notes Revision Library">
       <span class="mob-icon-wrap">
-        <span class="mob-icon">▣</span>
+        <span class="mob-icon">📝</span>
       </span>
       <span>Notes</span>
     </button>
     <button type="button" class="mobile-nav-btn" data-view="bookmarks" title="View your liked and saved revision notes">
       <span class="mob-icon-wrap">
-        <span class="mob-icon">♡</span>
+        <span class="mob-icon">❤️</span>
         <span id="mobile-bookmark-badge" class="mob-badge">0</span>
       </span>
       <span>Saved</span>
     </button>
     <button type="button" class="mobile-nav-btn" data-view="about" title="About Free AI Govt Exam Notes">
       <span class="mob-icon-wrap">
-        <span class="mob-icon">ⓘ</span>
+        <span class="mob-icon">ℹ️</span>
       </span>
       <span>About</span>
     </button>
@@ -955,6 +1005,6 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="app.js?v=68.0"></script>
+  <script src="app.js?v=73.0"></script>
 </body>
 </html>
