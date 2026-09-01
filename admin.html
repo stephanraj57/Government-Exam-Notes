@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=109.0">
+  <link rel="stylesheet" href="styles.css?v=111.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -26,24 +26,6 @@
     </a>
 
     <div class="header-actions">
-      <!-- Real-Time Clock & Date Widget (Header Right) -->
-      <button type="button" id="admin-calendar-clock-trigger" class="admin-sidebar-clock-widget admin-header-clock-widget" title="Click to open Full Academic & Exam Calendar">
-        <div class="clock-widget-left">
-          <div class="clock-time-row">
-            <span class="live-pulse-dot"></span>
-            <span id="admin-live-time" class="admin-live-time">--:--:--</span>
-          </div>
-          <div class="clock-date-row">
-            <span class="clock-cal-icon">📅</span>
-            <span id="admin-live-date" class="admin-live-date">--/--/----</span>
-            <span id="admin-live-day" class="admin-live-day">Today</span>
-          </div>
-        </div>
-        <span class="clock-widget-action" title="Open Calendar">
-          <span class="clock-widget-arrow">↗</span>
-        </span>
-      </button>
-
       <button id="theme-toggle" class="theme-button" type="button" title="Toggle Theme" aria-label="Toggle Dark Mode">
         <span class="theme-icon">🌙</span>
       </button>
@@ -166,7 +148,13 @@
   <main id="admin-dashboard-section" class="app-shell" hidden>
     <!-- Left Sidebar: Dashboard Portal Navigation -->
     <aside id="portal-sidebar" class="sidebar portal-sidebar">
-      <!-- Admin Profile Card (Top of Sidebar) - Clickable to open Admin Profile -->
+      <!-- Live Online Active User Status Badge (Top of Sidebar, Above Admin Profile) -->
+      <div class="portal-sidebar-top-status portal-system-status" id="portal-system-status" title="Real-Time Active Visitors & Server Engine">
+        <span class="pulse-dot"></span>
+        <span class="status-text" id="admin-server-status-text">Online · 1 Active User</span>
+      </div>
+
+      <!-- Admin Profile Card (Clickable to open Admin Profile) -->
       <div class="portal-profile-card" data-admin-view="profile" role="button" tabindex="0" title="Click to view Admin Profile & Platform Settings">
         <div class="portal-avatar-wrap">
           <img src="assets/admin.jpg" alt="Stephanraj" class="portal-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
@@ -184,6 +172,24 @@
           <span>›</span>
         </div>
       </div>
+
+      <!-- Real-Time Clock & Date Widget (Just Below Admin Profile) -->
+      <button type="button" id="admin-calendar-clock-trigger" class="admin-sidebar-clock-widget" title="Click to open Full Academic & Exam Calendar">
+        <div class="clock-widget-left">
+          <div class="clock-time-row">
+            <span class="live-pulse-dot"></span>
+            <span id="admin-live-time" class="admin-live-time">--:--:--</span>
+          </div>
+          <div class="clock-date-row">
+            <span class="clock-cal-icon">📅</span>
+            <span id="admin-live-date" class="admin-live-date">--/--/----</span>
+            <span id="admin-live-day" class="admin-live-day">Today</span>
+          </div>
+        </div>
+        <span class="clock-widget-action" title="Open Calendar">
+          <span class="clock-widget-arrow">↗</span>
+        </span>
+      </button>
 
       <!-- Navigation Section: Core Tools -->
       <div class="sidebar-section">
@@ -251,14 +257,6 @@
             <b id="modify-notes-badge" class="cat-count">0</b>
           </button>
         </nav>
-      </div>
-
-      <!-- Portal Footer Status -->
-      <div class="portal-sidebar-footer">
-        <div class="portal-system-status" id="portal-system-status" title="Real-Time Active Visitors & Server Engine">
-          <span class="pulse-dot"></span>
-          <span class="status-text" id="admin-server-status-text">Online · 1 Active User</span>
-        </div>
       </div>
     </aside>
 
@@ -2380,7 +2378,7 @@
           <button type="button" id="cal-jump-today-btn" class="cal-action-pill" title="Jump to Today's Date">
             ● Today
           </button>
-          <button type="button" id="admin-calendar-close-btn" class="edit-modal-close" aria-label="Close Calendar" title="Close Calendar (Esc)">
+          <button type="button" id="admin-calendar-close-btn" class="calendar-modal-close-btn" aria-label="Close Calendar" title="Close Calendar (Esc)">
             ✕
           </button>
         </div>
@@ -3353,6 +3351,6 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=88.0"></script>
+  <script src="admin.js?v=90.0"></script>
 </body>
 </html>
