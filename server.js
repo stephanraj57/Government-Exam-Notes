@@ -706,10 +706,28 @@ async function handleApi(request, response, url) {
         interactions.notes[noteId].likes = Math.max(0, (interactions.notes[noteId].likes || 0) - 1);
       }
     } else if (type === "download") {
+      const studentUser = await getStudentUser(request);
+      if (!studentUser) {
+        sendJson(response, 401, { error: "Authentication required to download notes.", requiresAuth: true });
+        return true;
+      }
       interactions.totalDownloads = (interactions.totalDownloads || 0) + 1;
       if (noteId) {
         if (!interactions.notes[noteId]) interactions.notes[noteId] = { likes: 0, downloads: 0, impressions: 0, shares: 0 };
         interactions.notes[noteId].downloads = (interactions.notes[noteId].downloads || 0) + 1;
+      }
+      if (studentUser && noteId) {
+        if (!Array.isArray(studentUser.downloads)) studentUser.downloads = [];
+        const exists = studentUser.downloads.some(d => (typeof d === "object" && d ? d.noteId : d) === noteId);
+        if (!exists) {
+          studentUser.downloads.push({ noteId, timestamp: new Date().toISOString() });
+        }
+        let users = await readJson(USERS_FILE).catch(() => []);
+        const idx = users.findIndex(u => u.id === studentUser.id);
+        if (idx >= 0) {
+          users[idx] = studentUser;
+          await writeJson(USERS_FILE, users);
+        }
       }
     } else if (type === "share") {
       interactions.totalShares = (interactions.totalShares || 0) + 1;
@@ -1813,6 +1831,21 @@ function unmaskExamKeywords(text, map) {
       percent: Math.round((count / totalEngagements) * 100)
     })).sort((a, b) => b.count - a.count);
 
+    // Enrich downloaded notes history
+    const downloadedNotes = (user.downloads || []).map(d => {
+      const nId = typeof d === "object" && d ? d.noteId : d;
+      const note = notesMap.get(nId);
+      const ts = typeof d === "object" && d ? d.timestamp : null;
+      return {
+        id: nId,
+        noteId: nId,
+        title: note ? note.title : "Visual Revision Note",
+        subject: note ? note.subject : "General",
+        imageUrl: note ? note.imageUrl : null,
+        timestamp: ts
+      };
+    }).reverse();
+
     sendJson(response, 200, {
       success: true,
       user: {
@@ -1828,6 +1861,7 @@ function unmaskExamKeywords(text, map) {
         loginCount: user.loginCount || 1,
         likedNotes,
         bookmarkedNotes: likedNotes,
+        downloadedNotes,
         recentViews,
         likesCount: uniqueLikedIds.length,
         bookmarksCount: uniqueLikedIds.length,
@@ -2200,10 +2234,10 @@ function unmaskExamKeywords(text, map) {
     const token = parseCookies(request).examAdminSession || crypto.randomBytes(32).toString("hex");
     sessions.set(token, Date.now());
 
-    // Wipe all registered student users, visits, interactions & telemetry, and active student sessions
-    // STRICTLY PRESERVE: NOTES_FILE (Uploaded Notes), UPLOAD_DIR (Note diagram images), and PROFILE_FILE (Admin profile)
-    await writeJson(USERS_FILE, []);
+    // 1. Wipe global visits & traffic logs
     await writeJson(VISITS_FILE, { count: 0, daily: {} });
+
+    // 2. Wipe global interactions & search query telemetry
     await writeJson(INTERACTIONS_FILE, {
       totalLikes: 0,
       totalDownloads: 0,
@@ -2215,12 +2249,32 @@ function unmaskExamKeywords(text, map) {
       searches: {},
       missingSearches: {}
     });
+
+    // 3. Clear each registered student's interactions (likes, bookmarks, history, telemetry),
+    // while STRICTLY PRESERVING student accounts, profiles, emails, and exam targets
+    let users = await readJson(USERS_FILE).catch(() => []);
+    if (Array.isArray(users)) {
+      const sanitizedUsers = users.map(u => ({
+        ...u,
+        likes: [],
+        bookmarks: [],
+        shares: [],
+        views: [],
+        downloads: [],
+        searches: [],
+        history: [],
+        activity: []
+      }));
+      await writeJson(USERS_FILE, sanitizedUsers);
+    }
+
+    // 4. Wipe active temporary student sessions
     await writeJson(SESSIONS_FILE, []);
     studentSessions.clear();
 
     sendJson(response, 200, {
       reset: true,
-      message: "Platform telemetry and student data cleared successfully. Uploaded notes and admin profile have been preserved."
+      message: "Visitor traffic logs, search queries, interaction telemetry, and user interaction histories cleared successfully. Admin profile, published notes, and registered student accounts are safely preserved."
     }, {
       "Set-Cookie": `examAdminSession=${token}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax`
     });

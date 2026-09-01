@@ -766,8 +766,8 @@ function selectCategory(catName) {
 // 8.1 Real-Time Interaction Telemetry Tracker
 // ==========================================
 async function trackInteraction(type, payload = {}) {
-  // Likes and unlikes are strictly restricted to Google authenticated users
-  if ((type === "like" || type === "unlike") && !currentStudentUser) {
+  // Likes, unlikes, and downloads are strictly restricted to Google authenticated users
+  if ((type === "like" || type === "unlike" || type === "download") && !currentStudentUser) {
     return;
   }
 
@@ -860,6 +860,23 @@ async function trackInteraction(type, payload = {}) {
 }
 
 let pendingLikeNoteId = null;
+let pendingDownloadNote = null;
+
+function triggerNoteDownload(note) {
+  if (!note || !note.imageUrl) return;
+  const link = document.createElement("a");
+  link.href = note.imageUrl;
+  link.download = `${(note.title || "exam-note").replace(/[^a-zA-Z0-9_-]/g, "_")}.jpg`;
+  link.target = "_blank";
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  trackInteraction("download", { noteId: note.id });
+  sendStudentTelemetry("download", { noteId: note.id });
+  showToast("Downloading revision note diagram... 📥", "success");
+}
 
 function toggleBookmark(noteId, e) {
   if (e) {
@@ -1772,10 +1789,17 @@ function setupEventListeners() {
     $("#share-dialog")?.close();
   });
 
-  $("#lightbox-download-btn")?.addEventListener("click", () => {
+  $("#lightbox-download-btn")?.addEventListener("click", (e) => {
+    e.preventDefault();
     if (currentLightboxIndex >= 0 && currentLightboxIndex < currentFilteredList.length) {
       const note = currentFilteredList[currentLightboxIndex];
-      trackInteraction("download", { noteId: note.id });
+      if (!currentStudentUser) {
+        pendingDownloadNote = note;
+        showToast("Please sign in with Google to download revision notes! 📥", "info");
+        openStudentAuthModal();
+        return;
+      }
+      triggerNoteDownload(note);
     }
   });
 
@@ -2090,11 +2114,39 @@ function updateStudentAuthUi(user, syncBookmarksFromUser = true) {
   }
 }
 
-function renderGoogleGsiButton() {
+let isGsiInitialized = false;
+
+async function fetchGoogleClientId() {
+  if (window.__GOOGLE_CLIENT_ID) return window.__GOOGLE_CLIENT_ID;
+  try {
+    const res = await fetch("/api/auth/google/config");
+    if (res.ok) {
+      const cfg = await res.json();
+      if (cfg && cfg.clientId) {
+        window.__GOOGLE_CLIENT_ID = cfg.clientId;
+        return cfg.clientId;
+      }
+    }
+  } catch (err) {
+    console.warn("[Google Auth] Failed to fetch client ID:", err);
+  }
+  return "";
+}
+
+async function renderGoogleGsiButton() {
   const btnContainer = $("#google-gsi-btn-container");
-  if (!btnContainer || !window.google?.accounts?.id) return;
-  btnContainer.innerHTML = "";
+  if (!btnContainer) return;
   
+  if (!isGsiInitialized) {
+    await tryInitGsi();
+  }
+
+  if (!window.google?.accounts?.id || !isGsiInitialized) {
+    btnContainer.innerHTML = `<div style="text-align:center; padding:8px 0; font-size:0.82rem; color:var(--ink-muted);">Loading Google Sign-In...</div>`;
+    return;
+  }
+  
+  btnContainer.innerHTML = "";
   const targetWidth = Math.min(Math.max(window.innerWidth - 64, 220), 280);
   try {
     window.google.accounts.id.renderButton(btnContainer, {
@@ -2110,7 +2162,7 @@ function renderGoogleGsiButton() {
   }
 }
 
-function openStudentAuthModal() {
+async function openStudentAuthModal() {
   const dialog = $("#student-auth-dialog");
   if (!dialog) return;
   try {
@@ -2119,16 +2171,10 @@ function openStudentAuthModal() {
     dialog.setAttribute("open", "");
   }
   
-  setTimeout(() => {
-    if (window.google?.accounts?.id) {
-      renderGoogleGsiButton();
-      if (!currentStudentUser) {
-        try { window.google.accounts.id.prompt(); } catch {}
-      }
-    } else {
-      tryInitGsi().then(() => renderGoogleGsiButton());
-    }
-  }, 60);
+  await renderGoogleGsiButton();
+  if (!currentStudentUser && isGsiInitialized && window.google?.accounts?.id) {
+    try { window.google.accounts.id.prompt(); } catch {}
+  }
 }
 
 function openExamGoalModal(user = currentStudentUser) {
@@ -2224,6 +2270,14 @@ async function handleStudentGoogleLogin(responsePayload) {
         showToast("Note saved to your account! ❤️", "success");
       }
 
+      if (pendingDownloadNote) {
+        const noteToDownload = pendingDownloadNote;
+        pendingDownloadNote = null;
+        setTimeout(() => {
+          triggerNoteDownload(noteToDownload);
+        }, 500);
+      }
+
       showToast(`Welcome, ${data.user.name || "Student"}! Cloud sync active.`, "success");
 
       if (!data.user.targetExam) {
@@ -2242,26 +2296,27 @@ async function handleStudentGoogleLogin(responsePayload) {
 }
 
 async function tryInitGsi() {
-  if (window.google?.accounts?.id) {
-    try {
-      let clientId = window.__GOOGLE_CLIENT_ID;
-      if (!clientId) {
-        const cfg = await api("/api/auth/google/config").catch(() => ({}));
-        clientId = cfg.clientId;
-      }
-      if (!clientId) return;
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: handleStudentGoogleLogin,
-        auto_select: false,
-        cancel_on_tap_outside: true
-      });
-      if (!currentStudentUser) {
-        try { window.google.accounts.id.prompt(); } catch {}
-      }
-    } catch (e) {
-      console.warn("[Google Auth] Init error:", e);
+  if (!window.google?.accounts?.id) return;
+  if (isGsiInitialized) return;
+
+  try {
+    const clientId = await fetchGoogleClientId();
+    if (!clientId) {
+      console.warn("[Google Auth] Missing Client ID from backend configuration.");
+      return;
     }
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: handleStudentGoogleLogin,
+      auto_select: false,
+      cancel_on_tap_outside: true
+    });
+    isGsiInitialized = true;
+    if (!currentStudentUser) {
+      try { window.google.accounts.id.prompt(); } catch {}
+    }
+  } catch (e) {
+    console.warn("[Google Auth] Init error:", e);
   }
 };
 

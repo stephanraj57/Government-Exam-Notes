@@ -2839,6 +2839,8 @@ async function openUserDetailsModal(userId) {
     const sharesStat = $("#user-detail-shares-stat");
     const bookmarksPill = $("#user-bookmarks-count-pill");
     const bookmarksList = $("#user-bookmarks-list");
+    const downloadsPill = $("#user-downloads-count-pill");
+    const downloadsList = $("#user-downloads-list");
     const subjectBars = $("#user-subject-bars-container");
     const activityTimeline = $("#user-activity-timeline");
 
@@ -2855,11 +2857,13 @@ async function openUserDetailsModal(userId) {
     if (sessionEl) sessionEl.textContent = `${u.loginCount || 1} Session${u.loginCount === 1 ? '' : 's'}`;
 
     const likedNotesList = u.likedNotes || u.bookmarkedNotes || [];
+    const downloadedNotesList = u.downloadedNotes || [];
     if (viewsStat) viewsStat.textContent = (u.viewsCount || (u.views || []).length).toLocaleString();
     if (likesStat) likesStat.textContent = (u.likesCount || likedNotesList.length).toLocaleString();
-    if (downloadsStat) downloadsStat.textContent = (u.downloadsCount || (u.downloads || []).length).toLocaleString();
+    if (downloadsStat) downloadsStat.textContent = (u.downloadsCount || downloadedNotesList.length).toLocaleString();
     if (sharesStat) sharesStat.textContent = (u.sharesCount || (u.shares || []).length).toLocaleString();
     if (bookmarksPill) bookmarksPill.textContent = `${likedNotesList.length} Note${likedNotesList.length === 1 ? '' : 's'}`;
+    if (downloadsPill) downloadsPill.textContent = `${downloadedNotesList.length} Note${downloadedNotesList.length === 1 ? '' : 's'}`;
 
     // Render Subject Distribution Bars
     if (subjectBars) {
@@ -2896,13 +2900,42 @@ async function openUserDetailsModal(userId) {
               <strong class="user-note-title">${escapeHtml(n.title)}</strong>
               <span class="subject-chip ${getSubjectKey(n.subject)}">${escapeHtml(n.subject || "General")}</span>
             </div>
-            <button type="button" class="likes-table-view-btn" data-view-note-id="${n.id}">
+            <button type="button" class="likes-table-view-btn" data-view-note-id="${n.id || n.noteId}">
               👁️ View
             </button>
           </div>
         `).join("");
 
         bookmarksList.querySelectorAll("[data-view-note-id]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            dialog.close();
+            openLightbox(btn.dataset.viewNoteId);
+          });
+        });
+      }
+    }
+
+    // Render Downloaded Notes
+    if (downloadsList) {
+      if (downloadedNotesList.length === 0) {
+        downloadsList.innerHTML = `<p class="user-empty-subtext">Student has not downloaded any notes yet.</p>`;
+      } else {
+        downloadsList.innerHTML = downloadedNotesList.map(n => `
+          <div class="user-note-item">
+            <div class="user-note-info">
+              <strong class="user-note-title">${escapeHtml(n.title)}</strong>
+              <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                <span class="subject-chip ${getSubjectKey(n.subject)}">${escapeHtml(n.subject || "General")}</span>
+                ${n.timestamp ? `<span style="font-size: 0.72rem; color: var(--ink-sub);">Downloaded ${formatRelativeOrExactTime(n.timestamp)}</span>` : ''}
+              </div>
+            </div>
+            <button type="button" class="likes-table-view-btn" data-view-note-id="${n.id || n.noteId}">
+              👁️ View
+            </button>
+          </div>
+        `).join("");
+
+        downloadsList.querySelectorAll("[data-view-note-id]").forEach(btn => {
           btn.addEventListener("click", () => {
             dialog.close();
             openLightbox(btn.dataset.viewNoteId);
@@ -6710,7 +6743,6 @@ function setupEventListeners() {
       localStorage.removeItem("exam_notes_favorites");
       localStorage.removeItem("exam_notes_offline_queue");
       localStorage.removeItem("exam_notes_interactions_data");
-      localStorage.removeItem("exam_users_data");
 
       liveInteractions = {
         totalLikes: 0,
@@ -6724,12 +6756,8 @@ function setupEventListeners() {
         missingSearches: {}
       };
 
-      adminUsersData = [];
-      usersMetricsData = {};
-      registeredUsers = [];
-
       if (cleanDialog) cleanDialog.close();
-      showToast("✓ All student users, telemetry, analytics & visitor caches have been cleared! Uploaded notes and admin profile remain intact.", "success");
+      showToast("✓ Visitor logs, search queries & interaction telemetry have been cleared! Admin profile, published notes, and registered users remain safe.", "success");
       await loadDashboardData();
       if (typeof renderUsersView === "function") renderUsersView();
       if (typeof renderInteractionsView === "function") renderInteractionsView();
