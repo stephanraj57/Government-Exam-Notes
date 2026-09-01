@@ -3543,6 +3543,9 @@ function setupRichTextEditor(wrapperId, editorId, hiddenTextareaId, charCountId,
     if (textarea) {
       textarea.value = editor.innerHTML;
     }
+    if (editorId === "#studio-note-overview-editor" && typeof updateLivePopupPreview === "function") {
+      updateLivePopupPreview();
+    }
   }
 
   editor.addEventListener("input", updateCharCount);
@@ -3705,6 +3708,7 @@ function setupFileDrop() {
           urlStatus.textContent = "✓ Image loaded successfully from Cloudinary!";
         }
         if (msg) msg.textContent = "";
+        if (typeof updateLivePopupPreview === "function") updateLivePopupPreview();
       };
       testImg.onerror = () => {
         if (urlStatus) {
@@ -3712,6 +3716,7 @@ function setupFileDrop() {
           urlStatus.className = "url-status-msg error";
           urlStatus.textContent = "⚠️ Unable to load image from this Cloudinary URL. Please verify the link.";
         }
+        if (typeof updateLivePopupPreview === "function") updateLivePopupPreview();
       };
       testImg.src = rawUrl;
     }, 300);
@@ -3732,6 +3737,7 @@ function setupFileDrop() {
     if (imgPreview) imgPreview.src = "";
     if (previewWrap) previewWrap.hidden = true;
     if (promptBox) promptBox.hidden = false;
+    if (typeof updateLivePopupPreview === "function") updateLivePopupPreview();
   }
 
   urlClearBtn?.addEventListener("click", clearPreview);
@@ -3772,16 +3778,17 @@ function setupFileDrop() {
       }
       selectedImageUrl = null;
 
-      nameLabel.textContent = file.name;
-      sizeLabel.textContent = "Optimizing note image…";
-      promptBox.hidden = true;
-      previewWrap.hidden = false;
+      if (nameLabel) nameLabel.textContent = file.name;
+      if (sizeLabel) sizeLabel.textContent = "Optimizing note image…";
+      if (promptBox) promptBox.hidden = true;
+      if (previewWrap) previewWrap.hidden = false;
 
       const dataUrl = await optimizeImageFile(file);
       selectedImageData = dataUrl;
-      imgPreview.src = selectedImageData;
-      sizeLabel.textContent = `${(file.size / 1024).toFixed(1)} KB (High-Res)`;
+      if (imgPreview) imgPreview.src = selectedImageData;
+      if (sizeLabel) sizeLabel.textContent = `${(file.size / 1024).toFixed(1)} KB (High-Res)`;
       if (msg) msg.textContent = "";
+      if (typeof updateLivePopupPreview === "function") updateLivePopupPreview();
     } catch (err) {
       showToast("Failed to process image file.", "error");
       clearPreview();
@@ -3912,16 +3919,169 @@ function renderPublishTagSuggestions(filterQuery = "") {
   });
 }
 
-function setupPublishStudio() {
-  const titleInput = $("#studio-note-title");
-  const charCount = $("#studio-title-char-count");
-  const subjectSelect = $("#studio-note-subject");
-  const categoryPills = $$(".pub-cat-pill");
-  const tagsInput = $("#studio-note-tags");
-  const simTitle = $("#sim-title-text");
-  const simBadge = $("#sim-subject-badge");
-  const simTagsRow = $("#sim-tags-row");
+// ==========================================
+// 5.15 Google Search-Style Real-Time Title Duplicate Detector
+// ==========================================
+function renderPublishTitleSuggestions(rawQuery) {
+  const dropdown = $("#studio-title-suggestions-dropdown");
+  const list = $("#studio-title-suggestions-list");
+  const countBadge = $("#suggestions-match-count");
+  const duplicateAlert = $("#studio-title-duplicate-alert");
+  if (!dropdown || !list) return;
 
+  const query = (rawQuery || "").trim().toLowerCase();
+  if (query.length < 2) {
+    dropdown.hidden = true;
+    if (duplicateAlert) {
+      duplicateAlert.hidden = true;
+      duplicateAlert.innerHTML = "";
+    }
+    list.innerHTML = "";
+    return;
+  }
+
+  // Tokenize query words
+  const queryTokens = query.split(/\s+/).filter(w => w.length >= 2);
+  const norm = s => (s || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  const normalizedQuery = norm(query);
+
+  let exactMatch = null;
+  const matches = [];
+
+  allNotes.forEach(note => {
+    const noteTitleNorm = norm(note.title);
+    if (!noteTitleNorm) return;
+
+    let score = 0;
+    const isExact = (noteTitleNorm === normalizedQuery);
+    if (isExact) {
+      score = 100;
+      exactMatch = note;
+    } else if (noteTitleNorm.startsWith(normalizedQuery)) {
+      score = 80;
+    } else if (noteTitleNorm.includes(normalizedQuery)) {
+      score = 60;
+    } else {
+      // Check token match
+      let matchedCount = 0;
+      queryTokens.forEach(t => {
+        if (noteTitleNorm.includes(t)) matchedCount++;
+      });
+      if (matchedCount > 0) {
+        score = 25 * (matchedCount / queryTokens.length);
+      }
+    }
+
+    if (score > 20) {
+      matches.push({ note, score, isExact });
+    }
+  });
+
+  // Sort by score descending
+  matches.sort((a, b) => b.score - a.score);
+  const topMatches = matches.slice(0, 6);
+
+  // Exact duplicate alert banner
+  if (duplicateAlert) {
+    if (exactMatch) {
+      duplicateAlert.hidden = false;
+      duplicateAlert.innerHTML = `
+        <div class="duplicate-alert-inner">
+          <span class="dup-alert-icon">⚠️</span>
+          <div class="dup-alert-text">
+            <strong>Duplicate Note Title Detected:</strong>
+            <span>A note titled <em>"${escapeHtml(exactMatch.title)}"</em> already exists in <strong>${escapeHtml(exactMatch.subject || "Library")}</strong>. Please make your title unique to avoid confusing students.</span>
+          </div>
+        </div>
+      `;
+    } else {
+      duplicateAlert.hidden = true;
+      duplicateAlert.innerHTML = "";
+    }
+  }
+
+  if (topMatches.length === 0) {
+    dropdown.hidden = true;
+    list.innerHTML = "";
+    return;
+  }
+
+  dropdown.hidden = false;
+  if (countBadge) {
+    countBadge.textContent = `${topMatches.length} existing match${topMatches.length > 1 ? 'es' : ''}`;
+  }
+
+  // Highlight matching query text
+  function highlightQueryText(text, q) {
+    if (!q) return escapeHtml(text);
+    try {
+      const tokens = q.split(/\s+/).filter(Boolean).map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+      if (tokens.length === 0) return escapeHtml(text);
+      const regex = new RegExp(`(${tokens.join("|")})`, "gi");
+      return escapeHtml(text).replace(regex, "<mark>$1</mark>");
+    } catch {
+      return escapeHtml(text);
+    }
+  }
+
+  list.innerHTML = topMatches.map(({ note, isExact }) => {
+    const chipKey = getSubjectKey(note.subject);
+    const highlightedTitle = highlightQueryText(note.title, query);
+    return `
+      <li class="suggestion-item ${isExact ? 'exact-dup' : ''}" data-note-id="${escapeHtml(note.id || '')}" data-note-title="${escapeHtml(note.title)}">
+        <div class="suggestion-item-left">
+          <span class="suggestion-match-icon">${isExact ? '⚠️' : '🔍'}</span>
+          <div class="suggestion-text-wrap">
+            <span class="suggestion-title">${highlightedTitle}</span>
+            <div class="suggestion-meta-row">
+              <span class="subject-chip ${chipKey}" style="font-size: 0.65rem; padding: 1px 5px;">${escapeHtml(note.subject || 'Note')}</span>
+              ${(note.tags || []).slice(0, 2).map(t => `<span class="table-tag" style="font-size: 0.65rem; padding: 1px 4px;">#${escapeHtml(t)}</span>`).join('')}
+            </div>
+          </div>
+        </div>
+        <div class="suggestion-item-right">
+          ${isExact 
+            ? '<span class="exact-duplicate-badge">⚠️ Exact Duplicate</span>' 
+            : '<span class="similar-match-badge">Similar Note</span>'}
+          <button type="button" class="suggestion-view-btn" data-preview-id="${escapeHtml(note.id || '')}" title="View note preview in popup">👁️ View</button>
+        </div>
+      </li>
+    `;
+  }).join("");
+
+  // Attach handlers for suggestion click / view
+  list.querySelectorAll(".suggestion-view-btn").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      const noteId = btn.dataset.previewId;
+      if (noteId) openLightbox(noteId);
+    });
+  });
+
+  list.querySelectorAll(".suggestion-item").forEach(item => {
+    item.addEventListener("click", () => {
+      const noteTitle = item.dataset.noteTitle;
+      const titleInput = $("#studio-note-title");
+      if (titleInput && noteTitle) {
+        titleInput.value = noteTitle;
+        const charCount = $("#studio-title-char-count");
+        if (charCount) charCount.textContent = `${noteTitle.length}/80`;
+        updateLivePopupPreview();
+      }
+      dropdown.hidden = true;
+    });
+  });
+}
+
+// ==========================================
+// 5.1 Real-Time Live Home Page Notes Popup Window Preview
+// ==========================================
+function updateLivePopupPreview() {
+  const titleInput = $("#studio-note-title");
+  const title = (titleInput?.value || "").trim() || "Indian Constitution – Fundamental Rights & Preamble";
+  const subjectSelect = $("#studio-note-subject");
+  const subject = subjectSelect ? subjectSelect.value : "Polity";
+  const subjectKey = getSubjectKey(subject);
   const catEmojiMap = {
     "History": "📜 History",
     "Polity": "⚖️ Polity",
@@ -3930,15 +4090,101 @@ function setupPublishStudio() {
     "Art and Culture": "🎨 Art and Culture",
     "Maths": "📐 Maths",
     "Science": "🔬 Science",
-    "English": "🔤 English"
+    "English": "🔤 English",
+    "Others": "📁 Others"
   };
 
-  // 1. Live Title input & character counter
+  const simBadge = $("#sim-popup-badge") || $("#sim-subject-badge");
+  if (simBadge) {
+    simBadge.textContent = catEmojiMap[subject] || `⚖️ ${subject}`;
+    simBadge.className = `subject-chip ${subjectKey}`;
+  }
+
+  const simTitle = $("#sim-popup-title") || $("#sim-title-text");
+  if (simTitle) {
+    simTitle.textContent = title;
+  }
+
+  const tagsInput = $("#studio-note-tags");
+  const tagsText = $("#sim-tags-preview-text");
+  const simTagsRow = $("#sim-tags-row");
+  if (tagsInput) {
+    const tags = tagsInput.value.split(",").map(t => t.trim().replace(/^#/, "")).filter(Boolean);
+    if (tagsText) {
+      if (tags.length === 0) {
+        tagsText.textContent = "#UPSC #Constitution";
+      } else {
+        tagsText.textContent = tags.map(t => `#${t}`).join(" ");
+      }
+    }
+    if (simTagsRow) {
+      if (tags.length === 0) {
+        simTagsRow.innerHTML = `<span class="sim-tag">#UPSC</span><span class="sim-tag">#Constitution</span>`;
+      } else {
+        simTagsRow.innerHTML = tags.map(t => `<span class="sim-tag">#${escapeHtml(t)}</span>`).join("");
+      }
+    }
+  }
+
+  const simImg = $("#sim-popup-image");
+  const simMediaEmpty = $("#sim-media-empty");
+  const rawUrl = selectedImageUrl || selectedImageData || ($("#studio-image-url")?.value || "").trim();
+  if (simImg) {
+    if (rawUrl && (rawUrl.startsWith("http://") || rawUrl.startsWith("https://") || rawUrl.startsWith("data:image/"))) {
+      simImg.src = rawUrl;
+      simImg.style.display = "block";
+      if (simMediaEmpty) simMediaEmpty.style.display = "none";
+    } else {
+      simImg.style.display = "none";
+      if (simMediaEmpty) simMediaEmpty.style.display = "flex";
+    }
+  }
+
+  const simOverview = $("#sim-popup-overview-text");
+  const editor = $("#studio-note-overview-editor");
+  const rawHtml = editor ? editor.innerHTML.trim() : "";
+  const rawText = editor ? editor.innerText.trim() : "";
+  if (simOverview) {
+    if (rawText.length > 0) {
+      simOverview.innerHTML = formatOverviewHtml(rawHtml);
+    } else {
+      simOverview.innerHTML = `<p class="sim-empty-overview-placeholder">Your formatted study notes, highlighted keywords, and exam explanations will appear here in real-time as you write in the editor.</p>`;
+    }
+  }
+}
+
+function setupPublishStudio() {
+  const titleInput = $("#studio-note-title");
+  const charCount = $("#studio-title-char-count");
+  const subjectSelect = $("#studio-note-subject");
+  const categoryPills = $$(".pub-cat-pill");
+  const tagsInput = $("#studio-note-tags");
+
+  // 1. Live Title input, duplicate suggestion detector & character counter
   titleInput?.addEventListener("input", () => {
     const val = titleInput.value;
     if (charCount) charCount.textContent = `${val.length}/80`;
-    if (simTitle) {
-      simTitle.textContent = val.trim() || "Indian Constitution – Fundamental Rights & Preamble";
+    renderPublishTitleSuggestions(val);
+    updateLivePopupPreview();
+  });
+
+  titleInput?.addEventListener("focus", () => {
+    renderPublishTitleSuggestions(titleInput.value);
+  });
+
+  // Close dropdown on click outside
+  document.addEventListener("click", e => {
+    if (!e.target.closest(".title-input-wrap-relative")) {
+      const dropdown = $("#studio-title-suggestions-dropdown");
+      if (dropdown) dropdown.hidden = true;
+    }
+  });
+
+  // Escape key closes dropdown
+  titleInput?.addEventListener("keydown", e => {
+    if (e.key === "Escape") {
+      const dropdown = $("#studio-title-suggestions-dropdown");
+      if (dropdown) dropdown.hidden = true;
     }
   });
 
@@ -3947,6 +4193,7 @@ function setupPublishStudio() {
   const overviewCharCount = $("#studio-overview-char-count");
   overviewInput?.addEventListener("input", () => {
     if (overviewCharCount) overviewCharCount.textContent = `${overviewInput.value.length}/2000`;
+    updateLivePopupPreview();
   });
 
   // 2. Category Pill click handler
@@ -3958,9 +4205,7 @@ function setupPublishStudio() {
       if (subjectSelect) {
         subjectSelect.value = catVal;
       }
-      if (simBadge) {
-        simBadge.textContent = catEmojiMap[catVal] || catVal;
-      }
+      updateLivePopupPreview();
     });
   });
 
@@ -3968,14 +4213,7 @@ function setupPublishStudio() {
   const handleTagsInput = () => {
     if (!tagsInput) return;
     const raw = tagsInput.value;
-    const tags = raw.split(",").map(t => t.trim().replace(/^#/, "")).filter(Boolean);
-    if (simTagsRow) {
-      if (tags.length === 0) {
-        simTagsRow.innerHTML = `<span class="sim-tag">#UPSC</span><span class="sim-tag">#Constitution</span>`;
-      } else {
-        simTagsRow.innerHTML = tags.map(t => `<span class="sim-tag">#${escapeHtml(t)}</span>`).join("");
-      }
-    }
+    updateLivePopupPreview();
 
     // Filter existing tag suggestions based on the last token being typed
     const currentToken = raw.split(",").pop().trim().replace(/^#/, "");
@@ -3988,8 +4226,9 @@ function setupPublishStudio() {
     renderPublishTagSuggestions(currentToken);
   });
 
-  // Initial tag render
+  // Initial tag render & preview initialization
   renderPublishTagSuggestions("");
+  updateLivePopupPreview();
 
   // 4. Verification Modal Zoom & Close Controls
   const verifyDialog = $("#admin-publish-verify-dialog");
@@ -4011,6 +4250,12 @@ function setupPublishStudio() {
   });
   $("#verify-cancel-btn")?.addEventListener("click", () => {
     verifyDialog?.close();
+  });
+
+  verifyDialog?.addEventListener("click", e => {
+    if (e.target === verifyDialog) {
+      verifyDialog.close();
+    }
   });
 
   // Direct Inspect Button on Card Simulator
@@ -4083,51 +4328,60 @@ function openPublishVerificationModal() {
     return;
   }
 
-  // Populate Verification Modal
+  // Populate Verification Lightbox Modal (Exact Home Page Notes View)
   const modalImg = $("#verify-modal-img");
   const modalTitle = $("#verify-meta-title");
   const modalSubj = $("#verify-meta-subject");
-  const modalTags = $("#verify-meta-tags");
-  const modalFileName = $("#verify-file-name");
-  const modalFileSize = $("#verify-file-size");
+  const modalTagsText = $("#verify-meta-tags-text");
+  const modalOverview = $("#verify-modal-overview-text");
 
-  if (modalImg) modalImg.src = activeImage;
-  if (modalTitle) modalTitle.textContent = title;
+  if (modalImg) {
+    modalImg.src = activeImage;
+    modalImg.style.display = "block";
+  }
+  if (modalTitle) {
+    modalTitle.textContent = title;
+  }
   
   const catEmojiMap = {
     "History": "📜 History",
     "Polity": "⚖️ Polity",
     "Economy": "📈 Economy",
     "Geography": "🌍 Geography",
-    "Art and Culture": "🎨 Art and Culture",
+    "Art and Culture": "🎨 Art & Culture",
     "Maths": "📐 Maths",
     "Science": "🔬 Science",
-    "English": "🔤 English"
+    "English": "🔤 English",
+    "Others": "📁 Others"
   };
 
   if (modalSubj) {
-    modalSubj.textContent = catEmojiMap[subject] || subject;
+    modalSubj.textContent = catEmojiMap[subject] || `⚖️ ${subject}`;
     modalSubj.className = `subject-chip ${getSubjectKey(subject)}`;
   }
 
-  if (modalTags) {
-    if (parsedTags.length === 0) {
-      modalTags.innerHTML = `<span class="text-muted" style="font-size: 0.72rem;">No tags specified</span>`;
-    } else {
-      modalTags.innerHTML = parsedTags.map(t => `<span class="table-tag">#${escapeHtml(t)}</span>`).join("");
-    }
+  if (modalTagsText) {
+    modalTagsText.textContent = parsedTags.map(t => `#${t}`).join(" ");
   }
 
-  const fileName = activeImage.includes("cloudinary.com") ? "Cloudinary Hosted Image" : "Cloud Hosted Image URL";
-  const fileSize = "Cloudinary CDN";
-  if (modalFileName) modalFileName.textContent = fileName;
-  if (modalFileSize) modalFileSize.textContent = fileSize;
+  const editor = $("#studio-note-overview-editor");
+  const rawHtml = editor ? editor.innerHTML.trim() : "";
+  const rawOverview = rawHtml || ($("#studio-note-overview")?.value || "").trim();
+  if (modalOverview) {
+    modalOverview.innerHTML = formatOverviewHtml(rawOverview);
+  }
 
-  // Reset zoom
+  // Reset zoom & level text
   currentVerifyZoom = 1;
   applyVerifyZoom();
 
-  if (dialog) dialog.showModal();
+  if (dialog) {
+    if (typeof dialog.showModal === "function") {
+      dialog.showModal();
+    } else {
+      dialog.setAttribute("open", "");
+    }
+  }
 }
 
 function applyVerifyZoom() {
@@ -4191,7 +4445,8 @@ async function executePublishNote() {
     if (verifyDialog) verifyDialog.close();
 
     // Reset Form & Preview on successful publish
-    $("#admin-upload-form").reset();
+    const uploadForm = $("#admin-upload-form");
+    if (uploadForm) uploadForm.reset();
     if (overviewEditor) overviewEditor.innerHTML = "";
     selectedImageData = null;
     selectedImageUrl = null;
@@ -4205,19 +4460,26 @@ async function executePublishNote() {
       urlStatus.textContent = "";
     }
 
-    $("#dropzone-prompt").hidden = false;
-    $("#dropzone-preview-wrap").hidden = true;
+    const dropzonePrompt = $("#dropzone-prompt");
+    if (dropzonePrompt) dropzonePrompt.hidden = false;
+    const dropzonePreviewWrap = $("#dropzone-preview-wrap");
+    if (dropzonePreviewWrap) dropzonePreviewWrap.hidden = true;
+    const dropzoneImgPreview = $("#dropzone-img-preview");
+    if (dropzoneImgPreview) dropzoneImgPreview.src = "";
+
     const charCount = $("#studio-title-char-count");
     if (charCount) charCount.textContent = "0/80";
     const ovCount = $("#studio-overview-char-count");
     if (ovCount) ovCount.textContent = "0/2000";
-    const simTitle = $("#sim-title-text");
-    if (simTitle) simTitle.textContent = "Indian Constitution – Fundamental Rights & Preamble";
-    const simTagsRow = $("#sim-tags-row");
-    if (simTagsRow) simTagsRow.innerHTML = `<span class="sim-tag">#UPSC</span><span class="sim-tag">#Constitution</span>`;
-    const simBadge = $("#sim-subject-badge");
-    if (simBadge) simBadge.textContent = "⚖️ Polity";
+    const titleDropdown = $("#studio-title-suggestions-dropdown");
+    if (titleDropdown) titleDropdown.hidden = true;
+    const titleDupAlert = $("#studio-title-duplicate-alert");
+    if (titleDupAlert) {
+      titleDupAlert.hidden = true;
+      titleDupAlert.innerHTML = "";
+    }
     $$(".pub-cat-pill").forEach(p => p.classList.toggle("active", p.dataset.catVal === "Polity"));
+    if (typeof updateLivePopupPreview === "function") updateLivePopupPreview();
 
     await loadDashboardData();
   } catch (err) {

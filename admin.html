@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=98.0">
+  <link rel="stylesheet" href="styles.css?v=103.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -973,7 +973,10 @@
               <h2>Publish Revision Note Image</h2>
             </div>
             <div class="publish-header-meta">
-              <span class="badge live-badge">● Live Public Pipeline</span>
+              <button id="studio-submit-btn" form="admin-upload-form" class="publish-action-button publish-header-action-btn" type="submit">
+                <span class="pub-btn-icon">👁️</span>
+                <span class="pub-btn-text">Preview Note Before Publish</span>
+              </button>
             </div>
           </div>
 
@@ -991,9 +994,21 @@
                     </label>
                     <span class="char-count" id="studio-title-char-count">0/80</span>
                   </div>
-                  <div class="publish-input-wrap">
+                  <div class="publish-input-wrap title-input-wrap-relative">
                     <input id="studio-note-title" class="publish-input" type="text" maxlength="80" placeholder="e.g. Fundamental Rights (Articles 12–35)" required autocomplete="off" spellcheck="true" lang="en">
+                    
+                    <!-- Google Search Style Existing Title Duplicate Matching Dropdown -->
+                    <div id="studio-title-suggestions-dropdown" class="title-suggestions-dropdown" hidden>
+                      <div class="suggestions-header">
+                        <span class="suggestions-title">🔍 Existing Matching Titles in Library:</span>
+                        <span id="suggestions-match-count" class="suggestions-count-badge">0 matches</span>
+                      </div>
+                      <div id="studio-title-suggestions-list" class="title-suggestions-list" role="listbox">
+                        <!-- Dynamically populated matched titles -->
+                      </div>
+                    </div>
                   </div>
+                  <div id="studio-title-duplicate-alert" class="title-duplicate-alert" hidden></div>
                   <div id="studio-title-spell-alert" class="spelling-alert-container" hidden></div>
                 </div>
 
@@ -1068,24 +1083,6 @@
                         <span id="preview-file-size" class="preview-size">Ready</span>
                       </div>
                       <button id="remove-preview-btn" type="button" class="text-btn danger">Clear URL</button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Live Card Preview Simulator -->
-                <div class="publish-live-card-sim">
-                  <div class="sim-header">
-                    <span class="sim-label">Live Public Card Preview</span>
-                    <div class="sim-header-right">
-                      <span class="sim-badge" id="sim-subject-badge">⚖️ Polity</span>
-                      <button type="button" id="open-verify-preview-btn" class="sim-inspect-btn" title="Inspect Full Note Preview in Popup">👁️ Inspect</button>
-                    </div>
-                  </div>
-                  <div class="sim-card-body">
-                    <h4 class="sim-title" id="sim-title-text">Indian Constitution – Fundamental Rights & Preamble</h4>
-                    <div class="sim-tags-row" id="sim-tags-row">
-                      <span class="sim-tag">#UPSC</span>
-                      <span class="sim-tag">#Constitution</span>
                     </div>
                   </div>
                 </div>
@@ -1173,18 +1170,9 @@
                   </div>
                 </div>
 
-              </div>
-
             </div>
 
             <p id="studio-upload-msg" class="form-message"></p>
-
-            <div class="publish-bottom-actions">
-              <button id="studio-submit-btn" class="publish-action-button" type="submit">
-                <span class="pub-btn-icon">🚀</span>
-                <span class="pub-btn-text">Publish Note to Public Website</span>
-              </button>
-            </div>
           </form>
         </div>
       </div>
@@ -2295,85 +2283,121 @@
     </form>
   </dialog>
 
-  <!-- Publish Note Image Verification Popup Window (Ultra-Glassmorphic) -->
-  <dialog id="admin-publish-verify-dialog" class="dialog publish-verify-dialog publish-verify-glass-dialog">
-    <div class="verify-dialog-content publish-verify-glass-content">
-      <!-- Header -->
-      <div class="verify-dialog-header publish-verify-glass-header">
-        <div class="verify-header-left">
-          <div class="verify-badge-icon">🔍</div>
-          <div>
-            <h3 class="edit-modal-title">Verify Note & Quality Inspection</h3>
-            <p class="edit-modal-sub">High-definition student view inspection before live public publishing</p>
-          </div>
+  <!-- Publish Note Confirmation Popup Window (Exact Home Page Notes Lightbox View) -->
+  <dialog id="admin-publish-verify-dialog" class="dialog blog-lightbox-dialog publish-confirm-popup-dialog" aria-labelledby="verify-modal-title">
+    <div class="blog-lightbox-content publish-confirm-lightbox-content">
+      
+      <!-- Top Blog Header: Category & Title Left, Close Right -->
+      <div class="blog-lightbox-header publish-confirm-header">
+        <div class="lightbox-title-wrap">
+          <span id="verify-meta-subject" class="subject-chip chip-polity">⚖️ Polity</span>
+          <h2 id="verify-meta-title" class="lightbox-blog-title">Indian Constitution – Fundamental Rights & Preamble</h2>
         </div>
-        <button id="verify-close-btn" class="edit-modal-close" type="button" title="Close & Cancel (Esc)">×</button>
+        <div class="lightbox-header-actions" style="display: flex; align-items: center; gap: 8px;">
+          <span class="preview-mode-tag" style="font-size: 0.72rem; font-weight: 700; background: var(--primary-subtle); color: var(--primary); padding: 3px 8px; border-radius: 6px;">👁️ Confirm Before Publish</span>
+          <button id="verify-close-btn" class="icon-action-btn close-btn" type="button" title="Close & Cancel (Esc)">×</button>
+        </div>
       </div>
 
-      <!-- Main Body: High-Res Image Viewport & Metadata Confirmation -->
-      <div class="verify-dialog-body publish-verify-glass-body">
+      <!-- Main 2-Column Split: Image Left, Overview Right (Exact Home Page Notes Lightbox Body) -->
+      <div class="lightbox-blog-body publish-confirm-body">
         
-        <!-- High-Res Image Viewport with interactive zoom (Deep Black Contrast Canvas) -->
-        <div class="verify-media-viewport publish-verify-deep-canvas">
-          <div class="verify-zoom-bar">
-            <button id="verify-zoom-out" class="verify-zoom-btn" type="button" title="Zoom Out (−)">−</button>
-            <span id="verify-zoom-level" class="verify-zoom-level">100%</span>
-            <button id="verify-zoom-in" class="verify-zoom-btn" type="button" title="Zoom In (+)">+</button>
-            <button id="verify-zoom-reset" class="verify-zoom-btn" type="button" title="Reset Zoom">↺</button>
+        <!-- Left Side: Interactive Image Diagram & Controls -->
+        <div class="lightbox-media-col">
+          <div class="lightbox-media-viewport">
+            <div class="lightbox-media" id="verify-image-container" style="background: #080c14; display: flex; align-items: center; justify-content: center; height: 100%; overflow: hidden;">
+              <img id="verify-modal-img" class="verify-high-res-img" src="" alt="High resolution note preview" style="width: 100%; height: 100%; object-fit: contain; transform-origin: center center; transition: transform 0.15s ease;">
+            </div>
           </div>
-          
-          <div class="verify-image-container" id="verify-image-container">
-            <img id="verify-modal-img" class="verify-high-res-img" src="" alt="High resolution note preview">
+
+          <!-- Bottom Image Toolbar (Zoom Controls & Quick Download) -->
+          <div class="lightbox-media-toolbar">
+            <div class="zoom-controls" role="group" aria-label="Image Zoom">
+              <button id="verify-zoom-out" class="icon-action-btn" type="button" title="Zoom Out (−)">−</button>
+              <span id="verify-zoom-level" class="zoom-level-text">100%</span>
+              <button id="verify-zoom-in" class="icon-action-btn" type="button" title="Zoom In (+)">+</button>
+              <button id="verify-zoom-reset" class="icon-action-btn" type="button" title="Reset Zoom (↺)">↺</button>
+            </div>
+            <span class="lightbox-dl-action-btn" style="cursor: default; pointer-events: none;">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Download Diagram</span>
+            </span>
           </div>
         </div>
 
-        <!-- Note Summary Card & Metadata Confirmation -->
-        <div class="verify-info-panel">
-          <div class="verify-info-card publish-verify-glass-card">
-            <span class="verify-info-heading">Public Note Specifications</span>
+        <!-- Right Side: Blog Overview & Study Notes Information -->
+        <div class="lightbox-overview-col">
+          <div class="lightbox-overview-card">
             
-            <div class="verify-meta-item">
-              <span class="verify-meta-label">Subject & Category:</span>
-              <span id="verify-meta-subject" class="subject-chip">⚖️ Polity</span>
+            <!-- Overview Header with Meta -->
+            <div class="lightbox-overview-head">
+              <div class="overview-head-left">
+                <span class="overview-head-icon">📖</span>
+                <div>
+                  <h3 class="overview-head-title">Study Notes & Overview</h3>
+                  <span class="overview-head-sub">High-yield revision summary & key exam concepts</span>
+                </div>
+              </div>
+              <span class="lightbox-meta-date">📅 Final Preview</span>
             </div>
 
-            <div class="verify-meta-item">
-              <span class="verify-meta-label">Topic Title:</span>
-              <h4 id="verify-meta-title" class="verify-topic-title">Fundamental Rights</h4>
-            </div>
-
-            <div class="verify-meta-item">
-              <span class="verify-meta-label">Keywords / Tags:</span>
-              <div id="verify-meta-tags" class="verify-tags-wrap">
-                <span class="table-tag">#UPSC</span>
+            <!-- Indian Regional Language Translation Strip -->
+            <div class="overview-translate-bar" aria-label="Regional Language Translation">
+              <div class="translate-bar-left">
+                <span class="translate-icon">🌐</span>
+                <span class="translate-label">Language:</span>
+              </div>
+              <div class="translate-lang-pills">
+                <button type="button" class="translate-lang-btn active" style="pointer-events: none;">English</button>
+                <button type="button" class="translate-lang-btn" style="pointer-events: none;">हिन्दी</button>
+                <button type="button" class="translate-lang-btn" style="pointer-events: none;">தமிழ்</button>
+                <button type="button" class="translate-lang-btn" style="pointer-events: none;">తెలుగు</button>
+                <button type="button" class="translate-lang-btn" style="pointer-events: none;">മലയാളം</button>
+                <button type="button" class="translate-lang-btn" style="pointer-events: none;">ಕನ್ನಡ</button>
               </div>
             </div>
 
-            <div class="verify-meta-item">
-              <span class="verify-meta-label">File Specs:</span>
-              <div class="verify-file-stats">
-                <span id="verify-file-name" class="verify-file-name">diagram.jpg</span>
-                <span id="verify-file-size" class="verify-file-badge">0 KB</span>
+            <!-- Scrollable Overview Text Body -->
+            <div class="lightbox-overview-scroll">
+              <div id="verify-modal-overview-text" class="lightbox-overview-text">
+                <!-- Dynamically populated formatted overview text -->
               </div>
             </div>
-          </div>
 
-          <div class="verify-tip-box publish-verify-glass-tip">
-            <span>💡 <strong>Live Rendering:</strong> This is the exact high-definition view students will inspect in the note lightbox.</span>
+            <!-- Student Action Bar (Like/Save, Share) -->
+            <div class="lightbox-overview-actions">
+              <button class="overview-action-btn like-btn" type="button" style="pointer-events: none;">
+                <span class="btn-icon">❤️</span> <span>Like Note</span>
+              </button>
+              <button class="overview-action-btn share-btn" type="button" style="pointer-events: none;">
+                <span class="btn-icon">📤</span> <span>Share Note</span>
+              </button>
+            </div>
+
           </div>
         </div>
 
       </div>
 
-      <!-- Action Footer -->
-      <div class="verify-dialog-footer publish-verify-glass-footer">
-        <button type="button" id="verify-cancel-btn" class="outline-button edit-glass-cancel-btn">
-          <span>←</span> Back to Edit
-        </button>
-        <button type="button" id="verify-confirm-btn" class="publish-confirm-action-btn edit-glass-submit-btn">
-          <span>🚀</span> Confirm & Publish to Live Website
-        </button>
+      <!-- Action Confirmation Footer Bar -->
+      <div class="publish-confirm-footer-bar">
+        <div class="publish-confirm-footer-left">
+          <span class="sim-tag-pill" id="verify-meta-tags-text">#UPSC #Constitution</span>
+        </div>
+        <div class="publish-confirm-footer-right">
+          <button type="button" id="verify-cancel-btn" class="outline-button edit-glass-cancel-btn">
+            <span>←</span> Back to Edit
+          </button>
+          <button type="button" id="verify-confirm-btn" class="publish-confirm-action-btn edit-glass-submit-btn">
+            <span>🚀</span> Confirm & Publish to Live Website
+          </button>
+        </div>
       </div>
+
     </div>
   </dialog>
 
@@ -3366,6 +3390,6 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=76.0"></script>
+  <script src="admin.js?v=82.0"></script>
 </body>
 </html>
