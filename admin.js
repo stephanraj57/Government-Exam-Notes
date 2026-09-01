@@ -5148,7 +5148,7 @@ function renderProfileView() {
   const interEl = $("#profile-stat-interactions");
   const demandsEl = $("#profile-stat-demands");
 
-  if (notesCountEl) notesCountEl.textContent = `${allNotes.length} Notes`;
+  if (notesCountEl) notesCountEl.textContent = `${(allNotes || []).length} Notes`;
   
   const visitsTotal = Number($("#metric-visitors-count")?.textContent?.replace(/,/g, "")) || 0;
   if (visitsEl) visitsEl.textContent = `${visitsTotal.toLocaleString("en-IN")} Total`;
@@ -5156,11 +5156,16 @@ function renderProfileView() {
   const todayTotal = Number($("#metric-visitors-today")?.textContent?.replace(/,/g, "")) || 0;
   if (todayEl) todayEl.textContent = `${todayTotal.toLocaleString("en-IN")} Today`;
 
-  const totalInteractions = (liveInteractions.totalLikes || 0) + (liveInteractions.totalDownloads || 0);
+  const totalInteractions = (liveInteractions?.totalLikes || 0) + (liveInteractions?.totalDownloads || 0);
   if (interEl) interEl.textContent = `${totalInteractions.toLocaleString("en-IN")} Actions`;
 
-  const missingKeys = Object.keys(liveInteractions.missingSearches || {});
+  const missingKeys = Object.keys(liveInteractions?.missingSearches || {});
   if (demandsEl) demandsEl.textContent = `${missingKeys.length} Topics`;
+
+  // Re-apply admin profile UI to guarantee all fields are populated
+  if (typeof adminProfileState !== "undefined") {
+    applyAdminProfileUI(adminProfileState);
+  }
 }
 
 // ==========================================

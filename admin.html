@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=103.0">
+  <link rel="stylesheet" href="styles.css?v=105.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -266,6 +266,14 @@
             </div>
             <b id="backup-status-badge" class="cat-count badge-live">Safe</b>
           </button>
+          <button class="category admin-nav-card" data-admin-view="profile">
+            <span class="nav-icon-box profile-box" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6;">👤</span>
+            <div class="nav-text-col">
+              <span class="cat-name">Admin Profile</span>
+              <small class="nav-sub-desc">Settings, Brand & Security</small>
+            </div>
+            <b id="profile-nav-badge" class="cat-count badge-live">Admin</b>
+          </button>
         </nav>
       </div>
 
@@ -309,6 +317,14 @@
             </div>
             <h1 class="portal-greeting-title" id="portal-greeting-heading">Welcome back, Stephanraj 👋</h1>
           </div>
+        </div>
+        <div class="portal-top-right">
+          <button type="button" class="portal-top-profile-btn" data-admin-view="profile" title="Open Admin Profile & Platform Settings">
+            <img src="assets/admin.jpg" alt="Admin Avatar" class="portal-avatar-img top-bar-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
+            <div class="portal-avatar-fallback top-bar-avatar-fallback" style="display:none;">SR</div>
+            <span class="top-bar-admin-name portal-user-name">Stephanraj</span>
+            <span class="top-bar-badge">Admin 👤</span>
+          </button>
         </div>
       </div>
 
@@ -1169,6 +1185,7 @@
                     <textarea id="studio-note-overview" hidden></textarea>
                   </div>
                 </div>
+              </div>
 
             </div>
 
@@ -3390,6 +3407,6 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=82.0"></script>
+  <script src="admin.js?v=84.0"></script>
 </body>
 </html>
