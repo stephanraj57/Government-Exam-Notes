@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=117.0">
+  <link rel="stylesheet" href="styles.css?v=119.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -936,6 +936,53 @@
               
               <!-- Left Column: Note Metadata & Tagging -->
               <div class="publish-meta-pane">
+
+                <!-- Cloudinary Image URL Input Box & Live Preview -->
+                <div class="publish-url-card cloudinary-only-card">
+                  <div class="publish-label-row">
+                    <div class="url-label-wrap">
+                      <label for="studio-image-url" class="publish-field-label">
+                        <span class="label-icon">☁️</span> Cloudinary Image URL <span class="req-star" title="Mandatory Field">*</span>
+                      </label>
+                      <span class="cloudinary-badge">⚡ Cloudinary Hosted</span>
+                    </div>
+                    <div class="url-card-ai-actions">
+                      <button id="studio-ai-autofill-btn" type="button" class="publish-action-button ai-autofill-header-btn" title="Auto-Fill Note Details from Diagram with Google Gemini AI">
+                        <span class="pub-btn-icon">✨</span>
+                        <span class="pub-btn-text">AI Auto-Fill</span>
+                      </button>
+                      <button id="studio-ai-config-btn" type="button" class="publish-action-button ai-config-header-btn" title="Configure Google Gemini API Key">
+                        <span class="pub-btn-icon">⚙️</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="publish-input-wrap url-input-wrap">
+                    <input id="studio-image-url" class="publish-input" type="url" placeholder="Paste Cloudinary URL (https://res.cloudinary.com/.../image.jpg)" autocomplete="off" spellcheck="false" required>
+                    <button type="button" id="studio-url-clear-btn" class="url-clear-btn" title="Clear URL" hidden>×</button>
+                  </div>
+                  <div id="studio-url-status" class="url-status-msg" hidden></div>
+
+                  <!-- Live AI Auto-Fill Status Banner -->
+                  <div id="studio-ai-banner" class="studio-ai-banner" hidden>
+                    <div class="ai-banner-spinner"></div>
+                    <div class="ai-banner-content">
+                      <strong id="studio-ai-banner-title">✨ Gemini AI is analyzing diagram...</strong>
+                      <p id="studio-ai-banner-sub">Reading diagram, extracting high-yield exam points, identifying subject, and generating search tags.</p>
+                    </div>
+                  </div>
+
+                  <!-- Live Cloudinary Preview Overlay Bar -->
+                  <div id="dropzone-preview-wrap" class="dropzone-preview-wrap" hidden>
+                    <img id="dropzone-img-preview" class="preview-img" alt="Cloudinary preview">
+                    <div class="preview-details">
+                      <div class="preview-details-left">
+                        <span id="preview-file-name" class="preview-name">Cloudinary Note Image</span>
+                        <span id="preview-file-size" class="preview-size">Ready</span>
+                      </div>
+                      <button id="remove-preview-btn" type="button" class="text-btn danger">Clear URL</button>
+                    </div>
+                  </div>
+                </div>
                 
                 <!-- Topic Title -->
                 <div class="publish-field-group">
@@ -1011,32 +1058,7 @@
                   </div>
                 </div>
 
-                <!-- Cloudinary Image URL Input Box & Live Preview -->
-                <div class="publish-url-card cloudinary-only-card">
-                  <div class="publish-label-row">
-                    <label for="studio-image-url" class="publish-field-label">
-                      <span class="label-icon">☁️</span> Cloudinary Image URL <span class="req-star" title="Mandatory Field">*</span>
-                    </label>
-                    <span class="cloudinary-badge">⚡ Cloudinary Hosted</span>
-                  </div>
-                  <div class="publish-input-wrap url-input-wrap">
-                    <input id="studio-image-url" class="publish-input" type="url" placeholder="Paste Cloudinary URL (https://res.cloudinary.com/.../image.jpg)" autocomplete="off" spellcheck="false" required>
-                    <button type="button" id="studio-url-clear-btn" class="url-clear-btn" title="Clear URL" hidden>×</button>
-                  </div>
-                  <div id="studio-url-status" class="url-status-msg" hidden></div>
 
-                  <!-- Live Cloudinary Preview Overlay Bar -->
-                  <div id="dropzone-preview-wrap" class="dropzone-preview-wrap" hidden>
-                    <img id="dropzone-img-preview" class="preview-img" alt="Cloudinary preview">
-                    <div class="preview-details">
-                      <div class="preview-details-left">
-                        <span id="preview-file-name" class="preview-name">Cloudinary Note Image</span>
-                        <span id="preview-file-size" class="preview-size">Ready</span>
-                      </div>
-                      <button id="remove-preview-btn" type="button" class="text-btn danger">Clear URL</button>
-                    </div>
-                  </div>
-                </div>
 
               </div>
 
@@ -2244,6 +2266,53 @@
     </form>
   </dialog>
 
+  <!-- Google Gemini AI Key Configuration Modal Dialog -->
+  <dialog id="admin-gemini-key-dialog" class="dialog edit-dialog gemini-config-dialog" aria-labelledby="gemini-modal-title">
+    <div class="edit-dialog-content gemini-config-content">
+      <div class="gemini-modal-header">
+        <div class="gemini-header-brand">
+          <span class="gemini-sparkle-icon">✨</span>
+          <div>
+            <h2 id="gemini-modal-title">Google Gemini AI Configuration</h2>
+            <p>100% Free Multimodal AI for Auto-Filling Exam Notes</p>
+          </div>
+        </div>
+        <button type="button" class="edit-modal-close" id="gemini-key-close-btn" aria-label="Close">✕</button>
+      </div>
+
+      <div class="gemini-modal-body">
+        <div class="gemini-info-callout">
+          <span class="callout-icon">💡</span>
+          <div>
+            <strong>Get your Free Gemini API Key (1,500 requests/day):</strong>
+            <p>Google AI Studio provides free Gemini 3.6 Flash keys without entering any credit card. Takes only 30 seconds.</p>
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" class="gemini-get-key-link">
+              <span>Get Free Key at Google AI Studio ↗</span>
+            </a>
+          </div>
+        </div>
+
+        <form id="gemini-key-form" class="gemini-key-form">
+          <div class="form-group">
+            <label for="gemini-api-key-input" class="form-label-title">
+              <span>🔑</span> Gemini API Key <span class="req-star">*</span>
+            </label>
+            <div class="gemini-input-wrap">
+              <input type="password" id="gemini-api-key-input" class="form-control" placeholder="Paste your API key here (AIzaSy...)" autocomplete="off" required>
+              <button type="button" id="gemini-key-toggle-vis" class="pwd-toggle-btn" title="Toggle visibility">👁️</button>
+            </div>
+            <p id="gemini-current-status" class="gemini-status-text">Checking status...</p>
+          </div>
+
+          <div class="gemini-modal-actions">
+            <button type="button" id="gemini-test-key-btn" class="gemini-btn-secondary">🧪 Test Connection</button>
+            <button type="submit" id="gemini-save-key-btn" class="gemini-btn-primary">💾 Save API Key</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </dialog>
+
   <!-- Publish Note Confirmation Popup Window (Exact Home Page Notes Lightbox View) -->
   <dialog id="admin-publish-verify-dialog" class="dialog blog-lightbox-dialog publish-confirm-popup-dialog" aria-labelledby="verify-modal-title">
     <div class="blog-lightbox-content publish-confirm-lightbox-content">
@@ -3351,6 +3420,6 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=90.0"></script>
+  <script src="admin.js?v=93.0"></script>
 </body>
 </html>

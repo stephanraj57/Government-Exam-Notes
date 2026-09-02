@@ -1623,6 +1623,237 @@ function unmaskExamKeywords(text, map) {
   }
 
   // ==========================================
+  // Google Gemini AI Services & Auto-Fill APIs
+  // ==========================================
+  const ALLOWED_EXAM_SUBJECTS = ["History", "Polity", "Economy", "Geography", "Art and Culture", "Maths", "Science", "Others"];
+
+  async function getGeminiApiKey() {
+    if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim()) {
+      return process.env.GEMINI_API_KEY.trim();
+    }
+    const profile = await readJson(PROFILE_FILE).catch(() => ({}));
+    return (profile.geminiApiKey || "").trim();
+  }
+
+  function normalizeExamSubject(raw) {
+    if (!raw) return "Others";
+    const clean = String(raw).trim().toLowerCase();
+    for (const s of ALLOWED_EXAM_SUBJECTS) {
+      if (s.toLowerCase() === clean) return s;
+    }
+    if (clean.includes("hist")) return "History";
+    if (clean.includes("polit") || clean.includes("constitut")) return "Polity";
+    if (clean.includes("econ")) return "Economy";
+    if (clean.includes("geog")) return "Geography";
+    if (clean.includes("art") || clean.includes("cultur")) return "Art and Culture";
+    if (clean.includes("math") || clean.includes("quant") || clean.includes("aptitud")) return "Maths";
+    if (clean.includes("scien") || clean.includes("phys") || clean.includes("chem") || clean.includes("bio")) return "Science";
+    return "Others";
+  }
+
+  // GET /api/admin/ai/status - check if Gemini API key is configured
+  if (request.method === "GET" && url.pathname === "/api/admin/ai/status") {
+    if (!isAdmin(request)) return sendUnauthorized(response), true;
+    const apiKey = await getGeminiApiKey();
+    const isConfigured = Boolean(apiKey && apiKey.length > 5);
+    const maskedKey = isConfigured ? `${apiKey.slice(0, 4)}••••••••${apiKey.slice(-4)}` : "";
+    sendJson(response, 200, { configured: isConfigured, maskedKey });
+    return true;
+  }
+
+  // POST /api/admin/ai/config - Save or update Gemini API key
+  if (request.method === "POST" && url.pathname === "/api/admin/ai/config") {
+    if (!isAdmin(request)) return sendUnauthorized(response), true;
+    const body = await readBody(request).catch(() => ({}));
+    const newKey = String(body.apiKey || "").trim();
+    if (!newKey) {
+      sendJson(response, 400, { error: "API key cannot be empty." });
+      return true;
+    }
+    let profile = await readJson(PROFILE_FILE).catch(() => ({ ...DEFAULT_PROFILE }));
+    if (!profile) profile = { ...DEFAULT_PROFILE };
+    profile.geminiApiKey = newKey;
+    profile.updatedAt = new Date().toISOString();
+    await writeJson(PROFILE_FILE, profile);
+    const maskedKey = `${newKey.slice(0, 4)}••••••••${newKey.slice(-4)}`;
+    sendJson(response, 200, { success: true, maskedKey, message: "Google Gemini API key saved successfully!" });
+    return true;
+  }
+
+  const GEMINI_MODELS = ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.5-flash"];
+
+  async function callGeminiGenerateContent(apiKey, payload) {
+    let lastError = null;
+    let lastStatus = 500;
+    for (const model of GEMINI_MODELS) {
+      try {
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const res = await fetch(geminiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          return { ok: true, data, model };
+        }
+        const msg = data.error?.message || `Status ${res.status}`;
+        lastStatus = res.status;
+        lastError = msg;
+        // If error is model availability / deprecation / not found, fall back to next model
+        if (msg.includes("not found") || msg.includes("no longer available") || msg.includes("deprecated") || res.status === 404) {
+          continue;
+        }
+        // If it's invalid key or auth error, return immediately
+        return { ok: false, error: msg, status: res.status };
+      } catch (err) {
+        lastError = err.message;
+      }
+    }
+    return { ok: false, error: lastError || "Failed to reach Gemini API.", status: lastStatus };
+  }
+
+  // POST /api/admin/ai/test-key - Test a Gemini API key
+  if (request.method === "POST" && url.pathname === "/api/admin/ai/test-key") {
+    if (!isAdmin(request)) return sendUnauthorized(response), true;
+    const body = await readBody(request).catch(() => ({}));
+    const testKey = String(body.apiKey || "").trim() || (await getGeminiApiKey());
+    if (!testKey) {
+      sendJson(response, 400, { error: "No Gemini API key provided to test." });
+      return true;
+    }
+    const result = await callGeminiGenerateContent(testKey, {
+      contents: [{ parts: [{ text: "Respond with the single word: OK" }] }]
+    });
+    if (!result.ok) {
+      sendJson(response, 400, { success: false, error: result.error });
+      return true;
+    }
+    sendJson(response, 200, {
+      success: true,
+      message: `Connected successfully with Google Gemini (${result.model})! ✨`
+    });
+    return true;
+  }
+
+  // POST /api/admin/ai/auto-fill - Analyze diagram and auto-generate Title, Subject, Tags, and Overview
+  if (request.method === "POST" && url.pathname === "/api/admin/ai/auto-fill") {
+    if (!isAdmin(request)) return sendUnauthorized(response), true;
+    const body = await readBody(request, 15 * 1024 * 1024).catch(() => ({}));
+    const imageUrl = String(body.imageUrl || "").trim();
+    const currentTitle = String(body.currentTitle || "").trim();
+
+    if (!imageUrl && !currentTitle) {
+      sendJson(response, 400, { error: "Please provide an image URL or a topic title to analyze." });
+      return true;
+    }
+
+    const apiKey = await getGeminiApiKey();
+    if (!apiKey) {
+      sendJson(response, 400, {
+        error: "Google Gemini API key is not configured yet. Please configure your free Gemini key in Admin Settings.",
+        needsKey: true
+      });
+      return true;
+    }
+
+    try {
+      let inlineData = null;
+      if (imageUrl) {
+        if (imageUrl.startsWith("data:")) {
+          const match = imageUrl.match(/^data:([^;]+);base64,(.+)$/);
+          if (match) {
+            inlineData = {
+              mime_type: match[1],
+              data: match[2].replace(/[\r\n\s]/g, "")
+            };
+          }
+        } else if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+          const imgFetch = await fetch(imageUrl);
+          if (imgFetch.ok) {
+            const mimeType = (imgFetch.headers.get("content-type") || "image/jpeg").split(";")[0].trim();
+            const arrayBuf = await imgFetch.arrayBuffer();
+            inlineData = {
+              mime_type: mimeType,
+              data: Buffer.from(arrayBuf).toString("base64")
+            };
+          }
+        }
+      }
+
+      const promptText = `You are an expert educator and curriculum specialist for Indian Government Examinations (UPSC Civil Services, SSC CGL, State PSCs, Banking, Railways, Defense).
+Analyze the provided study note diagram / topic.
+${currentTitle ? `Draft topic context: "${currentTitle}".` : ""}
+
+Generate an accurate, structured JSON object tailored for Indian government exam aspirants:
+1. "title": A crisp, high-impact topic title (maximum 75 characters) that accurately summarizes this revision note.
+2. "subject": Choose exactly ONE subject that best matches from this list: ["History", "Polity", "Economy", "Geography", "Art and Culture", "Maths", "Science", "Others"].
+3. "tags": An array of 4 to 7 high-yield search tags (e.g. ["UPSC", "Prelims", "Fundamental Rights", "Article 19", "Polity"]). Do not include hash (#) in the tag strings.
+4. "overview": A comprehensive, well-structured revision overview formatted with clean HTML or bullet points (•). Include:
+   • Core concept / historical background
+   • Key articles, dates, formulas, or constitutional provisions shown in the diagram
+   • High-yield exam memory points & tips
+   Keep the overview thorough, clear, and under 1600 characters.
+
+Return ONLY a valid JSON object matching this schema:
+{
+  "title": string,
+  "subject": string,
+  "tags": string[],
+  "overview": string
+}`;
+
+      const contentsParts = [{ text: promptText }];
+      if (inlineData) {
+        contentsParts.push({ inline_data: inlineData });
+      }
+
+      const geminiResult = await callGeminiGenerateContent(apiKey, {
+        contents: [{ parts: contentsParts }],
+        generationConfig: {
+          response_mime_type: "application/json",
+          temperature: 0.2
+        }
+      });
+
+      if (!geminiResult.ok) {
+        sendJson(response, 400, { error: geminiResult.error });
+        return true;
+      }
+
+      const geminiData = geminiResult.data;
+
+      const rawContent = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+      let parsed = {};
+      try {
+        parsed = JSON.parse(rawContent);
+      } catch {
+        const match = rawContent.match(/\{[\s\S]*\}/);
+        if (match) parsed = JSON.parse(match[0]);
+      }
+
+      const finalSubject = normalizeExamSubject(parsed.subject);
+      const finalTitle = String(parsed.title || currentTitle || "Revision Note").slice(0, 80);
+      const finalTags = Array.isArray(parsed.tags) ? parsed.tags.map(t => String(t).replace(/^#/, "").trim()).filter(Boolean) : [];
+      const finalOverview = String(parsed.overview || "").slice(0, 2000);
+
+      sendJson(response, 200, {
+        success: true,
+        data: {
+          title: finalTitle,
+          subject: finalSubject,
+          category: finalSubject,
+          tags: finalTags,
+          overview: finalOverview
+        }
+      });
+    } catch (err) {
+      sendJson(response, 500, { error: err.message || "Failed to analyze diagram with Gemini AI." });
+    }
+    return true;
+  }
+
+  // ==========================================
   // Admin Student Users & Analytics APIs
   // ==========================================
   if (request.method === "GET" && url.pathname === "/api/admin/users") {

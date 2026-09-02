@@ -8627,6 +8627,246 @@ dialog:not([open]) {
   margin-left: 6px;
 }
 
+/* ==========================================================================
+   Google Gemini AI Auto-Fill & Configuration Styles
+   ========================================================================== */
+.ai-autofill-header-btn {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35) !important;
+  white-space: nowrap;
+}
+
+.ai-autofill-header-btn:hover {
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.55) !important;
+  transform: translateY(-2px) scale(1.02);
+}
+
+.ai-config-header-btn {
+  background: var(--surface-subtle) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--ink-muted) !important;
+  box-shadow: none !important;
+  padding: 6px 10px !important;
+  width: auto !important;
+  height: 32px !important;
+  border-radius: var(--radius-sm) !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-config-header-btn:hover {
+  color: var(--primary) !important;
+  border-color: var(--border-focus) !important;
+  background: var(--surface-hover) !important;
+}
+
+.url-label-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.url-card-ai-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.url-card-ai-actions .ai-autofill-header-btn {
+  padding: 6px 13px !important;
+  font-size: 0.78rem !important;
+  width: auto !important;
+  height: 32px !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.studio-ai-banner {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, rgba(139, 92, 246, 0.12) 0%, rgba(99, 102, 241, 0.14) 50%, rgba(59, 130, 246, 0.12) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.12);
+  animation: aiBannerPulse 2s infinite ease-in-out;
+}
+
+@keyframes aiBannerPulse {
+  0%, 100% { border-color: rgba(139, 92, 246, 0.35); }
+  50% { border-color: rgba(139, 92, 246, 0.75); }
+}
+
+.ai-banner-spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgba(139, 92, 246, 0.25);
+  border-top-color: #8b5cf6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.ai-banner-content strong {
+  display: block;
+  font-size: 0.86rem;
+  color: #7c3aed;
+  font-weight: 700;
+}
+
+[data-theme="dark"] .ai-banner-content strong {
+  color: #a78bfa;
+}
+
+.ai-banner-content p {
+  margin: 2px 0 0;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.gemini-config-dialog {
+  max-width: 520px;
+  width: 92vw;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  padding: 0;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.gemini-config-content {
+  padding: 24px;
+}
+
+.gemini-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.gemini-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gemini-sparkle-icon {
+  font-size: 1.8rem;
+  background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gemini-header-brand h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.gemini-header-brand p {
+  margin: 2px 0 0;
+  font-size: 0.74rem;
+  color: var(--ink-muted);
+}
+
+.gemini-info-callout {
+  display: flex;
+  gap: 12px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 18px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.gemini-info-callout strong {
+  color: var(--primary);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.gemini-get-key-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-weight: 700;
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+[data-theme="dark"] .gemini-get-key-link {
+  color: #60a5fa;
+}
+
+.gemini-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.gemini-input-wrap input {
+  padding-right: 40px;
+}
+
+.gemini-status-text {
+  margin: 6px 0 0;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.gemini-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.gemini-btn-secondary {
+  padding: 9px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-subtle);
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gemini-btn-secondary:hover {
+  background: var(--surface-hover);
+}
+
+.gemini-btn-primary {
+  padding: 9px 20px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+}
+
+.gemini-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.45);
+}
+
 /* Table Tools Toolbar (Search + Subject Dropdown + Grid/Table Toggle in Same Straight Row) */
 .table-tools-wrap {
   display: flex;

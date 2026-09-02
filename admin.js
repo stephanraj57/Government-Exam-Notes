@@ -3520,6 +3520,263 @@ function optimizeImageFile(file, maxDimension = 2400, quality = 0.90) {
 // ==========================================
 // 5.9 Rich Text WYSIWYG Formatting Engine
 // ==========================================
+
+function unwrapElement(el) {
+  const parent = el.parentNode;
+  if (!parent) return;
+  while (el.firstChild) {
+    parent.insertBefore(el.firstChild, el);
+  }
+  parent.removeChild(el);
+}
+
+function getIntersectingBlocks(editor, range) {
+  const BLOCK_TAGS = ["P", "LI", "DIV", "BLOCKQUOTE", "H1", "H2", "H3", "H4", "H5", "H6"];
+  const blocks = [];
+
+  // Check if range is collapsed
+  if (range.collapsed) {
+    let node = range.startContainer;
+    while (node && node !== editor) {
+      if (node.nodeType === Node.ELEMENT_NODE && BLOCK_TAGS.includes(node.tagName)) {
+        blocks.push(node);
+        break;
+      }
+      node = node.parentNode;
+    }
+    return blocks;
+  }
+
+  // Find all block elements within editor that intersect the range
+  const allBlocks = editor.querySelectorAll("p, li, div, blockquote, h1, h2, h3, h4, h5, h6");
+  allBlocks.forEach(b => {
+    try {
+      if (range.intersectsNode(b)) {
+        blocks.push(b);
+      }
+    } catch {}
+  });
+
+  // If selection is inside a block that contains no sub-blocks
+  if (blocks.length === 0) {
+    let node = range.commonAncestorContainer;
+    while (node && node !== editor) {
+      if (node.nodeType === Node.ELEMENT_NODE && BLOCK_TAGS.includes(node.tagName)) {
+        blocks.push(node);
+        break;
+      }
+      node = node.parentNode;
+    }
+  }
+
+  return blocks;
+}
+
+function applyTextAlignment(editor, alignCmd) {
+  const alignMap = {
+    justifyLeft: "left",
+    justifyCenter: "center",
+    justifyRight: "right",
+    justifyFull: "justify"
+  };
+  const alignVal = alignMap[alignCmd] || "left";
+
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  const range = sel.getRangeAt(0);
+
+  // If editor has only plain text and no block tags, wrap lines into paragraphs safely
+  if (!editor.querySelector("p, ul, ol, div, blockquote, h1, h2, h3, h4, h5, h6")) {
+    const raw = editor.innerHTML.trim();
+    if (raw) {
+      editor.innerHTML = `<p>${raw}</p>`;
+    }
+  }
+
+  const blocks = getIntersectingBlocks(editor, range);
+  if (blocks.length > 0) {
+    blocks.forEach(b => {
+      b.style.textAlign = alignVal;
+    });
+  } else {
+    editor.style.textAlign = alignVal;
+  }
+}
+
+function clearHighlightFromSelection(editor) {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+
+  // 1. If cursor or anchor is inside a mark element, unwrap it
+  let node = sel.anchorNode;
+  while (node && node !== editor) {
+    if (node.nodeType === Node.ELEMENT_NODE && node.tagName.toLowerCase() === "mark") {
+      unwrapElement(node);
+      editor.normalize();
+      return;
+    }
+    node = node.parentNode;
+  }
+
+  // 2. Unwrap all mark elements intersecting selection
+  const marks = editor.querySelectorAll("mark, [class*='highlight-']");
+  marks.forEach(m => {
+    if (sel.isCollapsed) {
+      if (m.contains(sel.anchorNode)) {
+        unwrapElement(m);
+      }
+    } else if (sel.containsNode(m, true)) {
+      unwrapElement(m);
+    }
+  });
+
+  // 3. Remove inline background styles on spans
+  const spans = editor.querySelectorAll("span[style*='background']");
+  spans.forEach(span => {
+    if (sel.containsNode(span, true)) {
+      span.style.backgroundColor = "";
+      span.style.background = "";
+      if (!span.getAttribute("style")) {
+        unwrapElement(span);
+      }
+    }
+  });
+
+  editor.normalize();
+}
+
+function applyCustomHighlight(editor, hlType) {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+
+  if (hlType === "clear") {
+    clearHighlightFromSelection(editor);
+    return;
+  }
+
+  if (sel.isCollapsed) return;
+
+  const range = sel.getRangeAt(0);
+  if (!editor.contains(range.commonAncestorContainer)) return;
+
+  // Clear any existing highlights inside the selection first to prevent nesting
+  clearHighlightFromSelection(editor);
+
+  // Now create the new mark element
+  const mark = document.createElement("mark");
+  mark.className = `highlight-${hlType}`;
+
+  try {
+    range.surroundContents(mark);
+  } catch {
+    const fragment = range.extractContents();
+    mark.appendChild(fragment);
+    range.insertNode(mark);
+  }
+
+  sel.removeAllRanges();
+  const newRange = document.createRange();
+  newRange.selectNodeContents(mark);
+  sel.addRange(newRange);
+  editor.normalize();
+}
+
+function applyCustomRedUnderline(editor) {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+
+  // Toggle off if already inside red-underline
+  let node = sel.anchorNode;
+  while (node && node !== editor) {
+    if (node.nodeType === Node.ELEMENT_NODE && (node.classList?.contains("red-underline") || (node.tagName.toLowerCase() === "u" && node.style.textDecoration?.includes("wavy")))) {
+      unwrapElement(node);
+      editor.normalize();
+      return;
+    }
+    node = node.parentNode;
+  }
+
+  if (sel.isCollapsed) {
+    document.execCommand("underline", false, null);
+    return;
+  }
+
+  const range = sel.getRangeAt(0);
+  if (!editor.contains(range.commonAncestorContainer)) return;
+
+  // Remove existing red-underlines inside selection
+  const underlines = editor.querySelectorAll("u.red-underline, .red-underline");
+  underlines.forEach(u => {
+    if (sel.containsNode(u, true)) {
+      unwrapElement(u);
+    }
+  });
+
+  const uEl = document.createElement("u");
+  uEl.className = "red-underline";
+  uEl.style.textDecoration = "underline wavy #ef4444 2px";
+  uEl.style.textUnderlineOffset = "3px";
+
+  try {
+    range.surroundContents(uEl);
+  } catch {
+    const fragment = range.extractContents();
+    uEl.appendChild(fragment);
+    range.insertNode(uEl);
+  }
+
+  sel.removeAllRanges();
+  const newRange = document.createRange();
+  newRange.selectNodeContents(uEl);
+  sel.addRange(newRange);
+  editor.normalize();
+}
+
+function clearAllFormatting(editor) {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+
+  // 1. Native clear for bold, italic, links
+  document.execCommand("removeFormat", false, null);
+  document.execCommand("unlink", false, null);
+
+  // 2. Clear all highlights in selection
+  clearHighlightFromSelection(editor);
+
+  // 3. Clear all red underlines
+  const underlines = editor.querySelectorAll("u, .red-underline");
+  underlines.forEach(u => {
+    if (sel.isCollapsed) {
+      let node = sel.anchorNode;
+      while (node && node !== editor) {
+        if (node === u) { unwrapElement(u); break; }
+        node = node.parentNode;
+      }
+    } else if (sel.containsNode(u, true)) {
+      unwrapElement(u);
+    }
+  });
+
+  // 4. Strip inline style/color attributes from spans & fonts
+  const styledEls = editor.querySelectorAll("span[style], font");
+  styledEls.forEach(el => {
+    if (!sel.isCollapsed && sel.containsNode(el, true)) {
+      el.removeAttribute("style");
+      el.removeAttribute("color");
+      unwrapElement(el);
+    }
+  });
+
+  // 5. Reset text alignment on selected blocks
+  const range = sel.getRangeAt(0);
+  const blocks = getIntersectingBlocks(editor, range);
+  blocks.forEach(b => {
+    b.style.textAlign = "";
+  });
+
+  editor.normalize();
+}
+
 function setupRichTextEditor(wrapperId, editorId, hiddenTextareaId, charCountId, maxChars = 2000) {
   const wrapper = $(wrapperId);
   const editor = $(editorId);
@@ -3553,17 +3810,35 @@ function setupRichTextEditor(wrapperId, editorId, hiddenTextareaId, charCountId,
     setTimeout(updateCharCount, 10);
   });
 
-  // Handle standard toolbar formatting buttons (Bold, Italic, Lists, Clear)
+  // Keyboard shortcuts (Ctrl+U for Red Underline)
+  editor.addEventListener("keydown", e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "u") {
+      e.preventDefault();
+      applyCustomRedUnderline(editor);
+      updateCharCount();
+    }
+  });
+
+  // Prevent mousedown on all toolbar buttons to preserve text selection in editor
+  wrapper.querySelectorAll("button.rte-btn, button.rte-color-btn, button.rte-highlight-btn").forEach(btn => {
+    btn.addEventListener("mousedown", e => {
+      e.preventDefault();
+    });
+  });
+
+  // Handle standard toolbar formatting buttons
   wrapper.querySelectorAll(".rte-btn[data-command]").forEach(btn => {
     btn.addEventListener("click", e => {
       e.preventDefault();
       editor.focus();
       const cmd = btn.dataset.command;
+
       if (cmd === "red-underline") {
         applyCustomRedUnderline(editor);
       } else if (cmd === "removeFormat") {
-        document.execCommand("removeFormat", false, null);
-        document.execCommand("unlink", false, null);
+        clearAllFormatting(editor);
+      } else if (cmd.startsWith("justify")) {
+        applyTextAlignment(editor, cmd);
       } else {
         document.execCommand(cmd, false, null);
       }
@@ -3579,8 +3854,20 @@ function setupRichTextEditor(wrapperId, editorId, hiddenTextareaId, charCountId,
       const color = btn.dataset.color;
       wrapper.querySelectorAll(".rte-color-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
+
       if (color === "default") {
         document.execCommand("foreColor", false, "inherit");
+        // Also strip inline color styling on selection
+        const sel = window.getSelection();
+        if (sel && !sel.isCollapsed) {
+          editor.querySelectorAll("span[style*='color'], font[color]").forEach(el => {
+            if (sel.containsNode(el, true)) {
+              el.style.color = "";
+              if (el.tagName.toLowerCase() === "font") el.removeAttribute("color");
+              if (!el.getAttribute("style")) unwrapElement(el);
+            }
+          });
+        }
       } else {
         document.execCommand("foreColor", false, color);
       }
@@ -3594,55 +3881,10 @@ function setupRichTextEditor(wrapperId, editorId, hiddenTextareaId, charCountId,
       e.preventDefault();
       editor.focus();
       const hl = btn.dataset.highlight;
-      if (hl === "clear") {
-        document.execCommand("removeFormat", false, null);
-      } else {
-        applyCustomHighlight(editor, hl);
-      }
+      applyCustomHighlight(editor, hl);
       updateCharCount();
     });
   });
-}
-
-function applyCustomRedUnderline(editor) {
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-    document.execCommand("underline", false, null);
-    return;
-  }
-  const range = selection.getRangeAt(0);
-  const uEl = document.createElement("u");
-  uEl.className = "red-underline";
-  uEl.style.textDecoration = "underline wavy #ef4444 2px";
-  uEl.style.textUnderlineOffset = "3px";
-  try {
-    uEl.appendChild(range.extractContents());
-    range.insertNode(uEl);
-    selection.removeAllRanges();
-    const newRange = document.createRange();
-    newRange.selectNodeContents(uEl);
-    selection.addRange(newRange);
-  } catch {
-    document.execCommand("underline", false, null);
-  }
-}
-
-function applyCustomHighlight(editor, hlType) {
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
-  const range = selection.getRangeAt(0);
-  const mark = document.createElement("mark");
-  mark.className = `highlight-${hlType}`;
-  try {
-    mark.appendChild(range.extractContents());
-    range.insertNode(mark);
-    selection.removeAllRanges();
-    const newRange = document.createRange();
-    newRange.selectNodeContents(mark);
-    selection.addRange(newRange);
-  } catch {
-    document.execCommand("hiliteColor", false, hlType === "yellow" ? "#fef08a" : hlType === "green" ? "#bbf7d0" : "#bfdbfe");
-  }
 }
 
 function setupFileDrop() {
@@ -4269,6 +4511,266 @@ function setupPublishStudio() {
 }
 
 // ==========================================
+// Google Gemini AI 1-Click Auto-Fill System
+// ==========================================
+function formatAiOverviewHtml(raw) {
+  if (!raw) return "";
+  if (raw.includes("<p>") || raw.includes("<ul>") || raw.includes("<li>")) {
+    return raw;
+  }
+  const lines = raw.split("\n").map(l => l.trim()).filter(Boolean);
+  let html = "";
+  let inList = false;
+  for (const line of lines) {
+    if (line.startsWith("•") || line.startsWith("-") || line.startsWith("*")) {
+      if (!inList) { html += "<ul>"; inList = true; }
+      const bulletText = line.replace(/^[•\-\*]\s*/, "");
+      html += `<li>${bulletText.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")}</li>`;
+    } else {
+      if (inList) { html += "</ul>"; inList = false; }
+      html += `<p>${line.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")}</p>`;
+    }
+  }
+  if (inList) html += "</ul>";
+  return html;
+}
+
+function openGeminiConfigModal(optionalMsg) {
+  const dialog = $("#admin-gemini-key-dialog");
+  if (!dialog) return;
+  const statusText = $("#gemini-current-status");
+  if (statusText) {
+    statusText.textContent = optionalMsg || "Checking saved key...";
+    statusText.style.color = "var(--ink-muted)";
+  }
+  dialog.showModal();
+
+  fetch("/api/admin/ai/status")
+    .then(r => r.ok ? r.json() : { configured: false })
+    .then(data => {
+      if (statusText) {
+        if (data.configured) {
+          statusText.textContent = `🟢 Key Connected (${data.maskedKey})`;
+          statusText.style.color = "#10b981";
+        } else {
+          statusText.textContent = optionalMsg || "⚪ No API key configured yet. Free key from Google AI Studio works instantly.";
+          statusText.style.color = "#f59e0b";
+        }
+      }
+    })
+    .catch(() => {});
+}
+
+async function triggerGeminiAutoFill() {
+  const urlInput = $("#studio-image-url");
+  const titleInput = $("#studio-note-title");
+  const imageUrl = (urlInput?.value || "").trim();
+  const currentTitle = (titleInput?.value || "").trim();
+
+  if (!imageUrl && !currentTitle) {
+    showToast("Please paste a Cloudinary Image URL or enter a draft title first.", "info");
+    urlInput?.focus();
+    return;
+  }
+
+  // 1. Check API Key status
+  try {
+    const statusRes = await fetch("/api/admin/ai/status");
+    if (statusRes.ok) {
+      const statusData = await statusRes.json();
+      if (!statusData.configured) {
+        openGeminiConfigModal("Please configure your free Gemini API Key first to enable 1-click Auto-Fill.");
+        return;
+      }
+    }
+  } catch {}
+
+  // 2. Set UI loading state
+  const autofillBtn = $("#studio-ai-autofill-btn");
+  const urlAiBtn = $("#studio-url-ai-btn");
+  const banner = $("#studio-ai-banner");
+
+  if (autofillBtn) autofillBtn.disabled = true;
+  if (urlAiBtn) urlAiBtn.disabled = true;
+  if (banner) banner.hidden = false;
+
+  try {
+    const res = await fetch("/api/admin/ai/auto-fill", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageUrl, currentTitle })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      if (data.needsKey) {
+        openGeminiConfigModal("Please enter your free Google Gemini API Key.");
+        return;
+      }
+      showToast(data.error || "Failed to analyze diagram with Gemini AI.", "error");
+      return;
+    }
+
+    const { title, subject, tags, overview } = data.data;
+
+    // A. Auto-populate Title
+    if (title && titleInput) {
+      titleInput.value = title;
+      const charCount = $("#studio-title-char-count");
+      if (charCount) charCount.textContent = `${title.length}/80`;
+      renderPublishTitleSuggestions(title);
+    }
+
+    // B. Auto-select Subject & Category Pill
+    if (subject) {
+      const categoryPills = $$(".pub-cat-pill");
+      const subjectSelect = $("#studio-note-subject");
+      categoryPills.forEach(pill => {
+        const match = pill.dataset.catVal.toLowerCase() === subject.toLowerCase();
+        pill.classList.toggle("active", match);
+      });
+      if (subjectSelect) subjectSelect.value = subject;
+    }
+
+    // C. Auto-populate Tags
+    if (Array.isArray(tags) && tags.length > 0) {
+      const tagsInput = $("#studio-note-tags");
+      if (tagsInput) {
+        tagsInput.value = tags.join(", ");
+        renderPublishTagSuggestions("");
+      }
+    }
+
+    // D. Auto-populate Overview in Rich Text Editor
+    if (overview) {
+      const overviewEditor = $("#studio-note-overview-editor");
+      const hiddenOverview = $("#studio-note-overview");
+      const overviewCharCount = $("#studio-overview-char-count");
+      const formattedHtml = formatAiOverviewHtml(overview);
+      if (overviewEditor) {
+        overviewEditor.innerHTML = formattedHtml;
+        if (hiddenOverview) hiddenOverview.value = formattedHtml;
+        const plainLen = overviewEditor.innerText.length;
+        if (overviewCharCount) overviewCharCount.textContent = `${plainLen}/2000`;
+      }
+    }
+
+    updateLivePopupPreview();
+    showToast("✨ Diagram analyzed & note auto-filled by Gemini AI! Review and preview when ready.", "success");
+  } catch (err) {
+    showToast(err.message || "Failed to connect to Gemini AI.", "error");
+  } finally {
+    if (autofillBtn) autofillBtn.disabled = false;
+    if (urlAiBtn) urlAiBtn.disabled = false;
+    if (banner) banner.hidden = true;
+  }
+}
+
+function setupGeminiAiAutofill() {
+  // Triggers
+  $("#studio-ai-autofill-btn")?.addEventListener("click", () => {
+    triggerGeminiAutoFill();
+  });
+  $("#studio-url-ai-btn")?.addEventListener("click", () => {
+    triggerGeminiAutoFill();
+  });
+  $("#studio-ai-config-btn")?.addEventListener("click", () => {
+    openGeminiConfigModal();
+  });
+
+  // Modal close
+  const dialog = $("#admin-gemini-key-dialog");
+  $("#gemini-key-close-btn")?.addEventListener("click", () => {
+    dialog?.close();
+  });
+  dialog?.addEventListener("click", e => {
+    if (e.target === dialog) dialog.close();
+  });
+
+  // Toggle key visibility
+  const toggleBtn = $("#gemini-key-toggle-vis");
+  const keyInput = $("#gemini-api-key-input");
+  toggleBtn?.addEventListener("click", () => {
+    if (keyInput) {
+      keyInput.type = keyInput.type === "password" ? "text" : "password";
+      toggleBtn.textContent = keyInput.type === "password" ? "👁️" : "🙈";
+    }
+  });
+
+  // Test Key
+  $("#gemini-test-key-btn")?.addEventListener("click", async () => {
+    const key = (keyInput?.value || "").trim();
+    const statusText = $("#gemini-current-status");
+    if (!key) {
+      showToast("Please enter an API key to test.", "info");
+      keyInput?.focus();
+      return;
+    }
+    if (statusText) {
+      statusText.textContent = "⏳ Testing connection with Google Gemini...";
+      statusText.style.color = "var(--ink-muted)";
+    }
+    try {
+      const res = await fetch("/api/admin/ai/test-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: key })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (statusText) {
+          statusText.textContent = "🟢 Connection successful! Valid Gemini API Key.";
+          statusText.style.color = "#10b981";
+        }
+        showToast("Gemini API key is valid and connected!", "success");
+      } else {
+        if (statusText) {
+          statusText.textContent = `🔴 ${data.error || "Connection failed"}`;
+          statusText.style.color = "#ef4444";
+        }
+        showToast(data.error || "Test connection failed.", "error");
+      }
+    } catch (err) {
+      if (statusText) {
+        statusText.textContent = `🔴 ${err.message}`;
+        statusText.style.color = "#ef4444";
+      }
+    }
+  });
+
+  // Save Key Form Submit
+  $("#gemini-key-form")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const key = (keyInput?.value || "").trim();
+    const statusText = $("#gemini-current-status");
+    if (!key) return;
+
+    try {
+      const res = await fetch("/api/admin/ai/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: key })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast("Google Gemini API Key saved successfully! ✨", "success");
+        if (statusText) {
+          statusText.textContent = `🟢 Connected (${data.maskedKey})`;
+          statusText.style.color = "#10b981";
+        }
+        setTimeout(() => {
+          dialog?.close();
+        }, 600);
+      } else {
+        showToast(data.error || "Failed to save API key.", "error");
+      }
+    } catch (err) {
+      showToast(err.message || "Failed to save API key.", "error");
+    }
+  });
+}
+
+// ==========================================
 // 5.2 Publish Verification Modal Logic
 // ==========================================
 let currentVerifyZoom = 1;
@@ -4537,10 +5039,14 @@ function openEditModal(noteId) {
   const overviewCharCount = $("#edit-overview-char-count");
 
   if (overviewEditor) {
-    overviewEditor.innerHTML = rawOverview;
+    if (rawOverview.includes("<p>") || rawOverview.includes("<ul>") || rawOverview.includes("<div>")) {
+      overviewEditor.innerHTML = rawOverview;
+    } else {
+      overviewEditor.innerHTML = formatAiOverviewHtml(rawOverview);
+    }
   }
   if (overviewInput) {
-    overviewInput.value = rawOverview;
+    overviewInput.value = overviewEditor ? overviewEditor.innerHTML : rawOverview;
   }
   if (overviewCharCount) {
     const textLen = overviewEditor ? (overviewEditor.innerText || "").replace(/\n$/, "").length : rawOverview.length;
@@ -5356,6 +5862,7 @@ function setupEventListeners() {
   setupCalendarEvents();
   setupFileDrop();
   setupPublishStudio();
+  setupGeminiAiAutofill();
   setupRichTextEditor("#studio-rte-wrapper", "#studio-note-overview-editor", "#studio-note-overview", "#studio-overview-char-count");
   setupRichTextEditor("#edit-rte-wrapper", "#edit-note-overview-editor", "#edit-note-overview", "#edit-overview-char-count");
 
