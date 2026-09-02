@@ -1,4 +1,5 @@
 import http from "node:http";
+import zlib from "node:zlib";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import fsSync from "node:fs";
@@ -369,9 +370,29 @@ async function writeJson(filePath, value) {
   }
 }
 
-function sendJson(response, status, payload, headers = {}) {
-  response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...headers });
-  response.end(JSON.stringify(payload));
+function sendJson(response, status, payload, headers = {}, request = null) {
+  const req = request || response.req;
+  const jsonStr = JSON.stringify(payload);
+  const acceptEncoding = (req && req.headers && req.headers["accept-encoding"]) || "";
+  const finalHeaders = {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+    ...headers
+  };
+
+  if (jsonStr.length > 1024 && /\bgzip\b/i.test(acceptEncoding)) {
+    finalHeaders["Content-Encoding"] = "gzip";
+    finalHeaders["Vary"] = "Accept-Encoding";
+    try {
+      const gzipped = zlib.gzipSync(Buffer.from(jsonStr, "utf8"), { level: 6 });
+      response.writeHead(status, finalHeaders);
+      response.end(gzipped);
+      return;
+    } catch {}
+  }
+
+  response.writeHead(status, finalHeaders);
+  response.end(jsonStr);
 }
 
 function parseCookies(request) {
@@ -617,7 +638,9 @@ async function handleApi(request, response, url) {
 
   if (request.method === "GET" && url.pathname === "/api/notes") {
     registerSessionHeartbeat(request);
-    sendJson(response, 200, { notes: await readJson(NOTES_FILE) });
+    sendJson(response, 200, { notes: await readJson(NOTES_FILE) }, {
+      "Cache-Control": "public, max-age=10, stale-while-revalidate=60"
+    });
     return true;
   }
 
@@ -2658,6 +2681,8 @@ Return ONLY a valid JSON object matching this schema:
   return false;
 }
 
+const staticMemoryCache = new Map();
+
 async function serveStatic(request, response, pathname) {
   if (pathname === "/favicon.ico") {
     pathname = "/assets/ailogo.png";
@@ -2693,34 +2718,76 @@ async function serveStatic(request, response, pathname) {
     response.end("Forbidden");
     return;
   }
+
   try {
     const stats = await fs.stat(filePath);
     const etag = `"${stats.size.toString(16)}-${stats.mtimeMs.toString(16)}"`;
+    const isVersioned = Boolean(request.url && request.url.includes("?v="));
     
-    // Check conditional ETag for 304 Not Modified
+    let cacheControl = "no-cache, must-revalidate";
+    if (isPublicUpload || isPublicAsset || isVersioned) {
+      cacheControl = "public, max-age=31536000, immutable";
+    } else if (!requestedPath.endsWith(".html")) {
+      cacheControl = "public, max-age=3600, stale-while-revalidate=86400";
+    }
+
+    // Check conditional ETag for instant 304 Not Modified
     if (request.headers["if-none-match"] === etag) {
       response.writeHead(304, {
         "ETag": etag,
-        "Cache-Control": (isPublicUpload || isPublicAsset) ? "public, max-age=31536000, immutable" : "no-cache, must-revalidate"
+        "Cache-Control": cacheControl,
+        "Vary": "Accept-Encoding"
       });
       response.end();
       return;
     }
 
-    const content = await fs.readFile(filePath);
     const ext = path.extname(filePath);
     const contentType = mimeTypes[ext] || "application/octet-stream";
-    
+    const isCompressible = /^(text\/|application\/javascript|application\/json|image\/svg\+xml)/.test(contentType);
+    const acceptEncoding = request.headers["accept-encoding"] || "";
+    const canGzip = isCompressible && /\bgzip\b/i.test(acceptEncoding);
+
+    const cacheKey = `${filePath}:${canGzip ? "gzip" : "raw"}`;
+    let cached = staticMemoryCache.get(cacheKey);
+
+    if (!cached || cached.mtimeMs !== stats.mtimeMs) {
+      const rawContent = await fs.readFile(filePath);
+      let contentToSend = rawContent;
+      let isGzipped = false;
+
+      if (canGzip && rawContent.length > 512) {
+        try {
+          contentToSend = zlib.gzipSync(rawContent, { level: 6 });
+          isGzipped = true;
+        } catch {
+          contentToSend = rawContent;
+          isGzipped = false;
+        }
+      }
+
+      cached = {
+        mtimeMs: stats.mtimeMs,
+        etag,
+        content: contentToSend,
+        isGzipped
+      };
+      staticMemoryCache.set(cacheKey, cached);
+    }
+
     const headers = {
       "Content-Type": contentType,
       "ETag": etag,
-      "Cache-Control": (isPublicUpload || isPublicAsset)
-        ? "public, max-age=31536000, immutable"
-        : "no-cache, must-revalidate"
+      "Cache-Control": cacheControl,
+      "Vary": "Accept-Encoding"
     };
 
+    if (cached.isGzipped) {
+      headers["Content-Encoding"] = "gzip";
+    }
+
     response.writeHead(200, headers);
-    response.end(content);
+    response.end(cached.content);
   } catch {
     response.writeHead(404);
     response.end("Not found");
@@ -2730,6 +2797,7 @@ async function serveStatic(request, response, pathname) {
 async function start() {
   await ensureStorage();
   const server = http.createServer(async (request, response) => {
+    response.req = request;
     try {
       const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
       if (url.pathname.startsWith("/api/")) {

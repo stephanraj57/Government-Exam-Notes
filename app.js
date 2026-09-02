@@ -224,20 +224,38 @@ function setTheme(theme, save = true) {
 async function loadNotes() {
   const loadStartTime = Date.now();
   let serverNotes = [];
-  if ((!notes || notes.length === 0) && $("#notes-grid")) {
-    renderSkeletonGrid(6);
-  }
-  try {
-    let notesData = null;
-    try {
-      const res = await fetch(`/api/notes?_t=${Date.now()}`, { cache: "no-store" });
-      if (res.ok) notesData = await res.json();
-    } catch {}
 
-    // Fall back to static data/notes.json for mobile devices & static cloud hosting
+  // 1. Instant Cache-First Hydration (0ms instant render for returning students)
+  if (!notes || notes.length === 0) {
+    try {
+      const cachedNotes = JSON.parse(localStorage.getItem("exam_notes_cache_v2") || "[]");
+      if (Array.isArray(cachedNotes) && cachedNotes.length > 0) {
+        notes = cachedNotes;
+        if (typeof applyFiltersAndRender === "function") {
+          applyFiltersAndRender(false);
+        }
+      } else if ($("#notes-grid")) {
+        renderSkeletonGrid(6);
+      }
+    } catch {
+      if ($("#notes-grid")) renderSkeletonGrid(6);
+    }
+  }
+
+  // 2. High-Speed Concurrent Fetching (Parallel Network Requests)
+  try {
+    const [notesFetch, meFetch, interFetch] = await Promise.allSettled([
+      fetch(`/api/notes?_t=${Date.now()}`).then(r => r.ok ? r.json() : null),
+      fetch(`/api/admin/me?_t=${Date.now()}`).then(r => r.ok ? r.json() : { admin: false }),
+      fetch(`/api/interactions?_t=${Date.now()}`).then(r => r.ok ? r.json() : null)
+    ]);
+
+    let notesData = notesFetch.status === "fulfilled" ? notesFetch.value : null;
+
+    // Fall back to static data/notes.json for mobile devices & static cloud hosting if API is unreachable
     if (!notesData || !Array.isArray(notesData.notes) || notesData.notes.length === 0) {
       try {
-        const staticRes = await fetch(`data/notes.json?_t=${Date.now()}`, { cache: "no-store" });
+        const staticRes = await fetch(`data/notes.json?_t=${Date.now()}`);
         if (staticRes.ok) {
           const raw = await staticRes.json();
           notesData = { notes: Array.isArray(raw) ? raw : (raw.notes || []) };
@@ -246,18 +264,17 @@ async function loadNotes() {
     }
 
     serverNotes = (notesData && notesData.notes) || [];
-    isAdmin = false;
-    try {
-      const meRes = await fetch(`/api/admin/me?_t=${Date.now()}`, { cache: "no-store" }).then(r => r.ok ? r.json() : { admin: false });
-      isAdmin = Boolean(meRes.admin);
-    } catch {}
+    isAdmin = Boolean(meFetch.status === "fulfilled" && meFetch.value && meFetch.value.admin);
+    if (interFetch.status === "fulfilled" && interFetch.value) {
+      noteInteractions = interFetch.value;
+    }
 
-    try {
-      const interRes = await fetch(`/api/interactions?_t=${Date.now()}`, { cache: "no-store" });
-      if (interRes.ok) {
-        noteInteractions = await interRes.json();
-      }
-    } catch {}
+    // Cache latest notes for instant 0ms retrieval on future page loads
+    if (serverNotes.length > 0) {
+      try {
+        localStorage.setItem("exam_notes_cache_v2", JSON.stringify(serverNotes));
+      } catch {}
+    }
   } catch {
     serverNotes = [];
     isAdmin = false;
@@ -389,10 +406,12 @@ function renderSkeletonGrid(count = 6) {
 
 function renderCardMedia(note, pIndex = 0) {
   if (note.imageUrl) {
-    const priorityAttr = pIndex < 2 ? 'fetchpriority="high"' : 'fetchpriority="low"';
+    const isLcp = pIndex < 2;
+    const loadingAttr = isLcp ? 'loading="eager"' : 'loading="lazy"';
+    const priorityAttr = isLcp ? 'fetchpriority="high"' : '';
     return `
       <div class="card-media skeleton-shimmer">
-        <img class="note-image is-loading" src="${note.imageUrl}" alt="${escapeHtml(note.title)}" loading="lazy" decoding="async" ${priorityAttr} onload="this.classList.remove('is-loading'); this.parentElement?.classList.remove('skeleton-shimmer');" onerror="this.parentElement?.classList.remove('skeleton-shimmer'); handleNoteImageError(this, '${note.id}', '${note.imageUrl}', '${escapeHtml(note.title)}', '${escapeHtml(note.subject)}')">
+        <img class="note-image is-loading" src="${note.imageUrl}" alt="${escapeHtml(note.title)}" ${loadingAttr} decoding="async" ${priorityAttr} onload="this.classList.remove('is-loading'); this.parentElement?.classList.remove('skeleton-shimmer');" onerror="this.parentElement?.classList.remove('skeleton-shimmer'); handleNoteImageError(this, '${note.id}', '${note.imageUrl}', '${escapeHtml(note.title)}', '${escapeHtml(note.subject)}')">
       </div>
     `;
   }
@@ -1131,8 +1150,12 @@ function openLightbox(index) {
   updateNoteUrlParam(note.id);
 
   const dialog = $("#lightbox-dialog");
-  if (dialog && !dialog.open) {
-    try { dialog.showModal(); } catch { dialog.setAttribute("open", ""); }
+  if (dialog) {
+    const bodyScroll = dialog.querySelector(".lightbox-blog-body");
+    if (bodyScroll) bodyScroll.scrollTop = 0;
+    if (!dialog.open) {
+      try { dialog.showModal(); } catch { dialog.setAttribute("open", ""); }
+    }
   }
 }
 
@@ -1421,6 +1444,8 @@ let isSpeechPlaying = false;
 let isSpeechPaused = false;
 let speechPlaybackRate = 1.0;
 let speechKeepAliveTimer = null;
+let speechChunks = [];
+let currentSpeechChunkIndex = 0;
 
 const LANG_VOICE_MAP = {
   en: ["en-IN", "en-GB", "en-US", "en"],
@@ -1475,6 +1500,41 @@ function extractCleanSpeechText(title, overviewEl) {
     .trim();
 }
 
+// Mobile-Safe Sentence & Natural Clause Chunking (Prevents Android / iOS 15-second speech buffer cutoffs)
+function splitSpeechIntoChunks(text, maxLen = 130) {
+  if (!text) return [];
+  const rawSentences = text.split(/([.!?;:\n।]+)/).filter(Boolean);
+  const chunks = [];
+  let current = "";
+
+  for (let i = 0; i < rawSentences.length; i++) {
+    const piece = rawSentences[i].trim();
+    if (!piece) continue;
+    if ((current + " " + piece).length > maxLen) {
+      if (current.trim()) chunks.push(current.trim());
+      if (piece.length > maxLen) {
+        const words = piece.split(/\s+/);
+        let sub = "";
+        for (const w of words) {
+          if ((sub + " " + w).length > maxLen) {
+            if (sub.trim()) chunks.push(sub.trim());
+            sub = w;
+          } else {
+            sub = sub ? (sub + " " + w) : w;
+          }
+        }
+        current = sub.trim();
+      } else {
+        current = piece;
+      }
+    } else {
+      current = current ? (current + " " + piece) : piece;
+    }
+  }
+  if (current.trim()) chunks.push(current.trim());
+  return chunks.length > 0 ? chunks : [text];
+}
+
 function stopAudioNarration() {
   if (speechKeepAliveTimer) {
     clearInterval(speechKeepAliveTimer);
@@ -1493,6 +1553,9 @@ function stopAudioNarration() {
   isSpeechPlaying = false;
   isSpeechPaused = false;
   activeSpeechUtterance = null;
+  window.__activeUtterance = null;
+  speechChunks = [];
+  currentSpeechChunkIndex = 0;
   updateTTSControlsUI();
 }
 
@@ -1502,7 +1565,7 @@ function toggleAudioNarration() {
     if (activeAudioElement) {
       activeAudioElement.pause();
     } else if ("speechSynthesis" in window) {
-      window.speechSynthesis.pause();
+      try { window.speechSynthesis.cancel(); } catch {}
     }
     isSpeechPaused = true;
     updateTTSControlsUI();
@@ -1513,8 +1576,11 @@ function toggleAudioNarration() {
     // Resume active audio
     if (activeAudioElement) {
       activeAudioElement.play().catch(() => {});
-    } else if ("speechSynthesis" in window) {
-      window.speechSynthesis.resume();
+    } else if ("speechSynthesis" in window && speechChunks.length > 0) {
+      isSpeechPaused = false;
+      speakCurrentSpeechChunk();
+      updateTTSControlsUI();
+      return;
     }
     isSpeechPaused = false;
     updateTTSControlsUI();
@@ -1548,7 +1614,6 @@ function toggleAudioNarration() {
     audio.playbackRate = speechPlaybackRate;
     activeAudioElement = audio;
 
-    // Show loading status in UI while buffering
     isSpeechPlaying = true;
     isSpeechPaused = false;
     updateTTSControlsUI();
@@ -1575,8 +1640,35 @@ function toggleAudioNarration() {
     return;
   }
 
-  // Fallback to native Web Speech API for English & Hindi where native OS voices are present
-  const utterance = new SpeechSynthesisUtterance(speechText);
+  // Use mobile-safe sentence chunking for native Web Speech API (English & Hindi)
+  speechChunks = splitSpeechIntoChunks(speechText);
+  currentSpeechChunkIndex = 0;
+  isSpeechPlaying = true;
+  isSpeechPaused = false;
+  updateTTSControlsUI();
+  speakCurrentSpeechChunk();
+}
+
+function speakCurrentSpeechChunk() {
+  if (!("speechSynthesis" in window)) {
+    stopAudioNarration();
+    return;
+  }
+
+  if (currentSpeechChunkIndex >= speechChunks.length) {
+    // Finished all chunks completely!
+    stopAudioNarration();
+    return;
+  }
+
+  const chunkText = speechChunks[currentSpeechChunkIndex];
+  const targetLang = typeof currentTranslationLang !== "undefined" ? currentTranslationLang : "en";
+
+  try {
+    window.speechSynthesis.cancel();
+  } catch {}
+
+  const utterance = new SpeechSynthesisUtterance(chunkText);
   utterance.rate = speechPlaybackRate;
   utterance.pitch = 1.0;
 
@@ -1595,29 +1687,28 @@ function toggleAudioNarration() {
   };
 
   utterance.onend = () => {
-    stopAudioNarration();
+    if (isSpeechPlaying && !isSpeechPaused) {
+      currentSpeechChunkIndex++;
+      speakCurrentSpeechChunk();
+    }
   };
 
   utterance.onerror = (e) => {
-    if (e.error !== "canceled" && e.error !== "interrupted") {
-      console.warn("Speech synthesis notice:", e);
+    if (e.error === "canceled" || e.error === "interrupted") {
+      return;
     }
-    stopAudioNarration();
+    console.warn("Speech chunk notice:", e);
+    if (isSpeechPlaying && !isSpeechPaused) {
+      currentSpeechChunkIndex++;
+      speakCurrentSpeechChunk();
+    } else {
+      stopAudioNarration();
+    }
   };
 
   activeSpeechUtterance = utterance;
+  window.__activeUtterance = utterance;
   window.speechSynthesis.speak(utterance);
-
-  if (speechKeepAliveTimer) clearInterval(speechKeepAliveTimer);
-  speechKeepAliveTimer = setInterval(() => {
-    if (!window.speechSynthesis.speaking) {
-      clearInterval(speechKeepAliveTimer);
-      speechKeepAliveTimer = null;
-    } else if (!isSpeechPaused) {
-      window.speechSynthesis.pause();
-      window.speechSynthesis.resume();
-    }
-  }, 10000);
 }
 
 function updateTTSControlsUI() {
@@ -1670,9 +1761,9 @@ function setTTSSpeed(rate) {
   if (activeAudioElement) {
     activeAudioElement.playbackRate = rate;
     updateTTSControlsUI();
-  } else if (isSpeechPlaying && !isSpeechPaused) {
-    stopAudioNarration();
-    toggleAudioNarration();
+  } else if (isSpeechPlaying && !isSpeechPaused && speechChunks.length > 0) {
+    speakCurrentSpeechChunk();
+    updateTTSControlsUI();
   } else {
     updateTTSControlsUI();
   }

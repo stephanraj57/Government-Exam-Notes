@@ -6,6 +6,9 @@
   <title>Free AI Govt Exam Notes | Smart Revision Notes</title>
   <meta name="description" content="Free AI Govt Exam Notes - High-yield image-based revision notes for History, Polity, Economy, Geography, Art and Culture, Maths and Science.">
   <meta name="google-site-verification" content="BeeK7bcxLpKC2WZ1siKjTpM0z1bjoDItVqKUkgt2d8Q">
+  <!-- High-Performance Preconnect & DNS-Prefetch for Image CDN & Fonts -->
+  <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
+  <link rel="dns-prefetch" href="https://res.cloudinary.com">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
@@ -14,7 +17,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="favicon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=121.0">
+  <link rel="stylesheet" href="styles.css?v=129.0">
   <script>
     fetch("/api/auth/google/config")
       .then(r => r.json())
@@ -35,7 +38,7 @@
   <!-- Header -->
   <header class="site-header">
     <a class="brand" href="#top" id="brand-link">
-      <img class="brand-logo" src="assets/ailogo.png" alt="Free AI Govt Exam Notes logo" onerror="this.onerror=null; this.src='favicon.png';">
+      <img class="brand-logo" src="assets/ailogo.png" alt="Free AI Govt Exam Notes logo" width="38" height="38" fetchpriority="high" decoding="async" onerror="this.onerror=null; this.src='favicon.png';">
       <span class="brand-text">
         <strong>Free AI</strong> Govt Exam Notes
         <small>Smart Notes · Clear Concepts · Better Revision</small>
@@ -720,7 +723,7 @@
             <button id="lightbox-next-btn" class="lightbox-nav-btn next" type="button" aria-label="Next Note" title="Next Note">›</button>
           </div>
 
-          <!-- Bottom Image Toolbar (Zoom Controls & Quick Download) -->
+          <!-- Bottom Image Toolbar (Zoom Controls, Bookmark, Share & Download) -->
           <div class="lightbox-media-toolbar">
             <div class="zoom-controls" role="group" aria-label="Image Zoom">
               <button id="lightbox-zoom-out" class="icon-action-btn" type="button" title="Zoom Out (-)">−</button>
@@ -728,14 +731,23 @@
               <button id="lightbox-zoom-in" class="icon-action-btn" type="button" title="Zoom In (+)">+</button>
               <button id="lightbox-zoom-reset" class="icon-action-btn" type="button" title="Reset Zoom (0)">↺</button>
             </div>
-            <a id="lightbox-download-btn" class="lightbox-dl-action-btn" download="exam-note.jpg" title="Download High-Res Diagram" target="_blank" rel="noopener" aria-label="Download High-Res Note">
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-              <span>Download Diagram</span>
-            </a>
+
+            <div class="lightbox-toolbar-actions">
+              <button id="lightbox-bookmark-btn" class="icon-action-btn lightbox-action-icon-btn like-btn" type="button" title="Like / Save Note" aria-label="Like Note">
+                <span class="btn-icon">🤍</span>
+                <span id="lightbox-bookmark-label" style="display:none;">Like Note</span>
+              </button>
+              <button id="lightbox-share-btn" class="icon-action-btn lightbox-action-icon-btn share-btn" type="button" title="Share Note" aria-label="Share Note">
+                <span class="btn-icon">📤</span>
+              </button>
+              <a id="lightbox-download-btn" class="lightbox-dl-action-btn" download="exam-note.jpg" title="Download High-Res Diagram" target="_blank" rel="noopener" aria-label="Download High-Res Diagram">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+              </a>
+            </div>
           </div>
         </div>
 
@@ -758,10 +770,7 @@
 
             <!-- Indian Regional Language Translation Strip -->
             <div class="overview-translate-bar" aria-label="Regional Language Translation">
-              <div class="translate-bar-left">
-                <span class="translate-icon">🌐</span>
-                <span class="translate-label">Language:</span>
-              </div>
+              <span class="translate-icon" title="Select Translation Language">🌐</span>
               <div class="translate-lang-pills" id="overview-translate-pills" role="radiogroup" aria-label="Select Study Notes Language">
                 <button type="button" class="translate-lang-btn active" data-lang="en" title="English (Original)">English</button>
                 <button type="button" class="translate-lang-btn" data-lang="hi" title="हिन्दी (Hindi)">हिन्दी</button>
@@ -813,15 +822,6 @@
               </div>
             </div>
 
-            <!-- Student Action Bar (Like/Save, Share) -->
-            <div class="lightbox-overview-actions">
-              <button id="lightbox-bookmark-btn" class="overview-action-btn like-btn" type="button" title="Like / Save Note">
-                <span class="btn-icon">❤️</span> <span id="lightbox-bookmark-label">Like Note</span>
-              </button>
-              <button id="lightbox-share-btn" class="overview-action-btn share-btn" type="button" title="Share with Study Groups">
-                <span class="btn-icon">📤</span> <span>Share Note</span>
-              </button>
-            </div>
 
           </div>
 
@@ -1039,6 +1039,6 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="app.js?v=75.0"></script>
+  <script src="app.js?v=80.0"></script>
 </body>
 </html>
