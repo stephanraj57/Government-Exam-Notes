@@ -7972,8 +7972,19 @@ function setupEventListeners() {
 
   $("#lightbox-prev-btn")?.addEventListener("click", prevLightbox);
   $("#lightbox-next-btn")?.addEventListener("click", nextLightbox);
+  setupLightboxTTS();
+
   $("#lightbox-close-btn")?.addEventListener("click", () => {
+    stopAudioNarration();
     $("#lightbox-dialog")?.close();
+  });
+
+  const adminLightboxDialog = $("#lightbox-dialog");
+  adminLightboxDialog?.addEventListener("close", () => {
+    stopAudioNarration();
+  });
+  adminLightboxDialog?.addEventListener("cancel", () => {
+    stopAudioNarration();
   });
 
   // Regional Translation Pills in Admin Lightbox
@@ -8215,7 +8226,292 @@ function formatInlineText(text) {
   return content;
 }
 
+// ==========================================
+// Web Speech API & Regional Audio Engine (Admin Preview)
+// ==========================================
+let activeSpeechUtterance = null;
+let activeAudioElement = null;
+let isSpeechPlaying = false;
+let isSpeechPaused = false;
+let speechPlaybackRate = 1.0;
+let speechKeepAliveTimer = null;
+
+const LANG_VOICE_MAP = {
+  en: ["en-IN", "en-GB", "en-US", "en"],
+  hi: ["hi-IN", "hi"],
+  ta: ["ta-IN", "ta"],
+  te: ["te-IN", "te"],
+  ml: ["ml-IN", "ml"],
+  kn: ["kn-IN", "kn"]
+};
+
+function hasNativeBrowserVoice(langCode) {
+  if (!("speechSynthesis" in window)) return false;
+  const voices = window.speechSynthesis.getVoices() || [];
+  const targetPrefixes = LANG_VOICE_MAP[langCode] || [langCode];
+  return voices.some(v => v.lang && targetPrefixes.some(p => v.lang.toLowerCase().replace("_", "-").startsWith(p.toLowerCase())));
+}
+
+function getBestVoiceForLang(langCode) {
+  if (!("speechSynthesis" in window)) return null;
+  const voices = window.speechSynthesis.getVoices() || [];
+  const targetPrefixes = LANG_VOICE_MAP[langCode] || [langCode];
+
+  for (const prefix of targetPrefixes) {
+    const matched = voices.find(v => v.lang && v.lang.toLowerCase().replace("_", "-").startsWith(prefix.toLowerCase()));
+    if (matched) return matched;
+  }
+  return null;
+}
+
+function extractCleanSpeechText(title, overviewEl) {
+  let text = "";
+  if (title) {
+    text += title.trim() + ". ";
+  }
+
+  if (overviewEl) {
+    const clone = overviewEl.cloneNode(true);
+    clone.querySelectorAll("script, style, noscript").forEach(el => el.remove());
+    clone.querySelectorAll("li").forEach(li => {
+      li.textContent = " " + li.textContent.trim() + ". ";
+    });
+    clone.querySelectorAll("p").forEach(p => {
+      p.textContent = " " + p.textContent.trim() + ". ";
+    });
+    text += " " + (clone.textContent || clone.innerText || "");
+  }
+
+  return text
+    .replace(/[•\-\*]/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/([.!?])\s*(?=[.!?])/g, "")
+    .trim();
+}
+
+function stopAudioNarration() {
+  if (speechKeepAliveTimer) {
+    clearInterval(speechKeepAliveTimer);
+    speechKeepAliveTimer = null;
+  }
+  if (activeAudioElement) {
+    try {
+      activeAudioElement.pause();
+      activeAudioElement.currentTime = 0;
+    } catch {}
+    activeAudioElement = null;
+  }
+  if ("speechSynthesis" in window) {
+    try { window.speechSynthesis.cancel(); } catch {}
+  }
+  isSpeechPlaying = false;
+  isSpeechPaused = false;
+  activeSpeechUtterance = null;
+  updateTTSControlsUI();
+}
+
+function toggleAudioNarration() {
+  if (isSpeechPlaying && !isSpeechPaused) {
+    if (activeAudioElement) {
+      activeAudioElement.pause();
+    } else if ("speechSynthesis" in window) {
+      window.speechSynthesis.pause();
+    }
+    isSpeechPaused = true;
+    updateTTSControlsUI();
+    return;
+  }
+
+  if (isSpeechPlaying && isSpeechPaused) {
+    if (activeAudioElement) {
+      activeAudioElement.play().catch(() => {});
+    } else if ("speechSynthesis" in window) {
+      window.speechSynthesis.resume();
+    }
+    isSpeechPaused = false;
+    updateTTSControlsUI();
+    return;
+  }
+
+  const title = $("#lightbox-title")?.textContent || "";
+  const overviewEl = $("#lightbox-overview-text");
+  const speechText = extractCleanSpeechText(title, overviewEl);
+
+  if (!speechText) {
+    alert("No text available to read.");
+    return;
+  }
+
+  stopAudioNarration();
+
+  const targetLang = typeof currentTranslationLang !== "undefined" ? currentTranslationLang : "en";
+  const hasNativeVoice = (targetLang === "en" || targetLang === "hi") && hasNativeBrowserVoice(targetLang);
+
+  if (!hasNativeVoice) {
+    const audio = new Audio();
+    audio.src = `/api/tts?lang=${encodeURIComponent(targetLang)}&text=${encodeURIComponent(speechText)}`;
+    audio.playbackRate = speechPlaybackRate;
+    activeAudioElement = audio;
+
+    isSpeechPlaying = true;
+    isSpeechPaused = false;
+    updateTTSControlsUI();
+
+    audio.onplay = () => {
+      isSpeechPlaying = true;
+      isSpeechPaused = false;
+      updateTTSControlsUI();
+    };
+
+    audio.onended = () => {
+      stopAudioNarration();
+    };
+
+    audio.onerror = (e) => {
+      console.warn("Audio stream notice:", e);
+      stopAudioNarration();
+    };
+
+    audio.play().catch(err => {
+      console.warn("Audio play notice:", err);
+      stopAudioNarration();
+    });
+    return;
+  }
+
+  const utterance = new SpeechSynthesisUtterance(speechText);
+  utterance.rate = speechPlaybackRate;
+  utterance.pitch = 1.0;
+
+  const voice = getBestVoiceForLang(targetLang);
+  if (voice) {
+    utterance.voice = voice;
+    utterance.lang = voice.lang;
+  } else {
+    utterance.lang = (LANG_VOICE_MAP[targetLang] && LANG_VOICE_MAP[targetLang][0]) || "en-IN";
+  }
+
+  utterance.onstart = () => {
+    isSpeechPlaying = true;
+    isSpeechPaused = false;
+    updateTTSControlsUI();
+  };
+
+  utterance.onend = () => {
+    stopAudioNarration();
+  };
+
+  utterance.onerror = (e) => {
+    if (e.error !== "canceled" && e.error !== "interrupted") {
+      console.warn("Speech synthesis notice:", e);
+    }
+    stopAudioNarration();
+  };
+
+  activeSpeechUtterance = utterance;
+  window.speechSynthesis.speak(utterance);
+
+  if (speechKeepAliveTimer) clearInterval(speechKeepAliveTimer);
+  speechKeepAliveTimer = setInterval(() => {
+    if (!window.speechSynthesis.speaking) {
+      clearInterval(speechKeepAliveTimer);
+      speechKeepAliveTimer = null;
+    } else if (!isSpeechPaused) {
+      window.speechSynthesis.pause();
+      window.speechSynthesis.resume();
+    }
+  }, 10000);
+}
+
+function updateTTSControlsUI() {
+  const btn = $("#lightbox-tts-btn");
+  const label = $("#lightbox-tts-btn-label");
+  const waves = $("#tts-audio-waves");
+  const controls = $("#lightbox-tts-controls");
+  const pauseIcon = $("#tts-pause-icon");
+  const statusPill = $("#tts-status-pill");
+  const statusText = $("#tts-status-text");
+
+  if (!btn) return;
+
+  if (isSpeechPlaying) {
+    btn.classList.add("playing");
+    if (controls) controls.hidden = false;
+    if (statusPill) statusPill.hidden = false;
+
+    if (isSpeechPaused) {
+      btn.classList.add("paused");
+      if (label) label.textContent = "Resume Narration";
+      if (waves) waves.hidden = true;
+      if (pauseIcon) pauseIcon.textContent = "▶️";
+      if (statusText) statusText.textContent = "Audio paused. Click Resume to continue.";
+    } else {
+      btn.classList.remove("paused");
+      if (label) label.textContent = "Playing Audio";
+      if (waves) waves.hidden = false;
+      if (pauseIcon) pauseIcon.textContent = "⏸️";
+      const targetLang = typeof currentTranslationLang !== "undefined" ? currentTranslationLang : "en";
+      const langName = (typeof INDIAN_LANGUAGES !== "undefined" && INDIAN_LANGUAGES[targetLang]) || "English";
+      if (statusText) statusText.textContent = `Listening in ${langName} (${speechPlaybackRate}x)...`;
+    }
+  } else {
+    btn.classList.remove("playing", "paused");
+    if (label) label.textContent = "Listen to Notes";
+    if (waves) waves.hidden = true;
+    if (controls) controls.hidden = true;
+    if (statusPill) statusPill.hidden = true;
+    if (pauseIcon) pauseIcon.textContent = "⏸️";
+  }
+}
+
+function setTTSSpeed(rate) {
+  speechPlaybackRate = rate;
+  document.querySelectorAll(".tts-speed-btn").forEach(b => {
+    b.classList.toggle("active", parseFloat(b.dataset.rate) === rate);
+  });
+
+  if (activeAudioElement) {
+    activeAudioElement.playbackRate = rate;
+    updateTTSControlsUI();
+  } else if (isSpeechPlaying && !isSpeechPaused) {
+    stopAudioNarration();
+    toggleAudioNarration();
+  } else {
+    updateTTSControlsUI();
+  }
+}
+
+function setupLightboxTTS() {
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.onvoiceschanged = () => {};
+  }
+
+  $("#lightbox-tts-btn")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    toggleAudioNarration();
+  });
+
+  $("#tts-pause-btn")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    toggleAudioNarration();
+  });
+
+  $("#tts-stop-btn")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    stopAudioNarration();
+  });
+
+  document.querySelectorAll(".tts-speed-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const rate = parseFloat(btn.dataset.rate) || 1.0;
+      setTTSSpeed(rate);
+    });
+  });
+}
+
 async function renderNoteOverview(note, targetLang = "en") {
+  stopAudioNarration();
   if (!note) return;
   const overviewEl = $("#lightbox-overview-text");
   if (!overviewEl) return;
@@ -8316,6 +8612,7 @@ function resetZoom() {
 }
 
 function openLightbox(noteIdOrIdx) {
+  stopAudioNarration();
   let idx = -1;
   if (typeof noteIdOrIdx === "string") {
     idx = allNotes.findIndex(n => n.id === noteIdOrIdx);

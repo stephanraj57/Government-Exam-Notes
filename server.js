@@ -1493,48 +1493,117 @@ function getUniqueLikedNoteIds(user) {
   }
 
 // ==========================================
-// Exam Study Notes Keyword & HTML Tag Preservation
-// Protects HTML formatting (<mark>, <span class="highlight-*">, styles), articles, acts, acronyms, and figures
+// Indian Regional Language Academic Translation Engine
+// Supports Hindi (hi), Tamil (ta), Telugu (te), Malayalam (ml), Kannada (kn)
+// Combines Gemini 3.6 Flash (state-of-the-art context-aware academic translation)
+// with Tag-Safe DOM Tokenizer fallback (100% tag-preserving, zero ZTAG corruptions)
 // ==========================================
-function maskExamKeywords(text) {
-  const map = new Map();
-  let counter = 0;
 
-  // 1. Protect all HTML tags first so machine translation never alters tags or attributes
-  let masked = text.replace(/<[^>]+>/g, (match) => {
-    const ph = `ZTAG${counter++}Z`;
-    map.set(ph, match);
-    return ph;
-  });
+const INDIAN_LANG_NAMES = {
+  hi: "Hindi (हिन्दी)",
+  ta: "Tamil (தமிழ்)",
+  te: "Telugu (తెలుగు)",
+  ml: "Malayalam (മലയാളം)",
+  kn: "Kannada (ಕನ್ನಡ)"
+};
 
-  // 2. Protect proper nouns, articles, acronyms, historical figures in remaining text
-  const patterns = [
-    /\b(?:Article|Art\.?|Part|Schedule|Section|Clause|Amendment Act|Schedule)\s+[0-9IVXLCDMA-Za-z\-]+/gi,
-    /\b[A-Z]{2,8}\b/g,
-    /\b(?:Supreme Court|High Court|Parliament|Lok Sabha|Rajya Sabha|Constituent Assembly|Preamble|Fundamental Rights|Directive Principles|Fundamental Duties|Cabinet Mission|Simon Commission|Government of India Act|Charter Act|Regulating Act|Indian Independence Act|Kesavananda Bharati|Minerva Mills|Maneka Gandhi|Berubari|Golaknath|Habeas Corpus|Mandamus|Quo Warranto|Certiorari|Prohibition|Ultra Vires|De Jure|De Facto|Basic Structure|Panchayati Raj|Comptroller and Auditor General|Election Commission|Finance Commission|Union Public Service Commission|Staff Selection Commission)\b/gi,
-    /\b(?:Dr\.?\s+B\.?\s*R\.?\s*Ambedkar|B\.?\s*R\.?\s*Ambedkar|Mahatma Gandhi|Jawaharlal Nehru|Sardar Patel|Sardar Vallabhbhai Patel|Lord Mountbatten|Lord Curzon|Lord Canning|Warren Hastings|Lord Dalhousie|Lord Ripon|Lord William Bentinck|Subhas Chandra Bose|Bhagat Singh|Dr\.?\s+Rajendra Prasad|Dadabhai Naoroji|Bal Gangadhar Tilak|Gopal Krishna Gokhale|Lala Lajpat Rai|Rabindranath Tagore|A\.?\s*P\.?\s*J\.?\s*Abdul Kalam|APJ Abdul Kalam|Indira Gandhi|Atal Bihari Vajpayee|Narendra Modi)\b/gi
-  ];
+async function translateChunkWithGoogle(chunk, targetLang) {
+  const trimmed = chunk.trim();
+  if (!trimmed) return chunk;
 
-  for (const pat of patterns) {
-    masked = masked.replace(pat, (match) => {
-      if (match.startsWith("ZTAG") && match.endsWith("Z")) return match;
-      if (match.startsWith("ZTRM") && match.endsWith("Z")) return match;
-      const ph = `ZTRM${counter++}Z`;
-      map.set(ph, match);
-      return ph;
+  // Try clients5 endpoint
+  try {
+    const url = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=${encodeURIComponent(targetLang)}&q=${encodeURIComponent(trimmed)}`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
     });
-  }
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data[0] && typeof data[0][0] === "string") {
+        return data[0][0];
+      }
+    }
+  } catch {}
 
-  return { masked, map };
+  // Fallback to gtx endpoint
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(trimmed)}`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data?.[0])) {
+        return data[0].map(item => item?.[0] || "").join("");
+      }
+    }
+  } catch {}
+
+  return chunk;
 }
 
-function unmaskExamKeywords(text, map) {
-  if (!map || map.size === 0) return text;
-  let result = text;
-  for (const [ph, originalTerm] of map.entries()) {
-    result = result.replace(new RegExp(ph, "gi"), originalTerm);
+// Tag-Safe DOM Tokenizer: Splits HTML strictly by tags and translates ONLY the text nodes!
+// HTML tags, classes, and styles (<mark>, <strong>, <ul>, <li>, style="...")
+// are NEVER sent to the translation API and are 100% preserved without any ZTAG placeholder tokens.
+async function tagSafeDomTranslate(rawHtml, targetLang) {
+  if (!rawHtml || targetLang === "en") return rawHtml;
+
+  const tokens = rawHtml.split(/(<[^>]+>)/);
+  const translatedTokens = await Promise.all(
+    tokens.map(async (tok) => {
+      if (!tok) return "";
+      if (tok.startsWith("<") && tok.endsWith(">")) {
+        return tok; // Tag preserved 100% untouched
+      }
+      const trimmed = tok.trim();
+      if (!trimmed) return tok;
+      const translated = await translateChunkWithGoogle(trimmed, targetLang);
+      const leadSpace = tok.match(/^\s*/)[0];
+      const trailSpace = tok.match(/\s*$/)[0];
+      return leadSpace + translated + trailSpace;
+    })
+  );
+
+  return translatedTokens.join("");
+}
+
+// Gemini 3.6 Flash Context-Aware Translation for flawless academic translation
+async function translateWithGemini(rawHtml, targetLang, apiKey) {
+  const langLabel = INDIAN_LANG_NAMES[targetLang] || targetLang;
+  const prompt = `You are an expert academic translator for Indian competitive exam revision notes (UPSC, SSC, State PSC).
+Translate the following study overview note into ${langLabel}.
+CRITICAL RULES:
+1. Preserve ALL HTML structure, tags (like <div>, <p>, <ul>, <li>, <mark>, <span>, <strong>, <br>, etc.), inline styles (style="..."), and bullet points EXACTLY as they are.
+2. Translate the human readable sentences into natural, high-yield, grammatically flawless, academically precise ${langLabel}.
+3. Keep standard dates, numbers, years, and universally recognized proper nouns clear.
+4. Output ONLY the translated HTML content without markdown code blocks, backticks, or extra conversational remarks.
+
+HTML to translate:
+${rawHtml}`;
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.15 }
+    })
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Gemini translation error (status ${res.status}): ${errText}`);
   }
-  return result;
+
+  const data = await res.json();
+  const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!candidate) {
+    throw new Error("Gemini returned empty translation response");
+  }
+
+  let clean = candidate.replace(/^```html\s*/i, "").replace(/^```\s*/, "").replace(/\s*```$/, "").trim();
+  return clean;
 }
 
   // ==========================================
@@ -1551,75 +1620,149 @@ function unmaskExamKeywords(text, map) {
       return true;
     }
 
+    const cacheKey = `${targetLang}:${text}`;
+    if (!globalThis.__TRANSLATION_CACHE) globalThis.__TRANSLATION_CACHE = new Map();
+    if (globalThis.__TRANSLATION_CACHE.has(cacheKey)) {
+      sendJson(response, 200, {
+        translatedText: globalThis.__TRANSLATION_CACHE.get(cacheKey),
+        targetLang,
+        cached: true
+      });
+      return true;
+    }
+
+    let translatedText = text;
+    let usedMethod = "gemini";
+
     try {
-      // 1. Mask proper nouns, exam identifiers, articles, and acts to preserve them in English
-      const { masked, map: termMap } = maskExamKeywords(text);
-
-      // Helper function to translate a single text chunk via Google Translate
-      const translateChunk = async (chunk) => {
-        const trimmed = chunk.trim();
-        if (!trimmed) return chunk;
-
-        // Check if chunk starts with bullet / numbering prefix
-        const bulletMatch = chunk.match(/^(\s*[•\-\*\d\.]+\s*)(.*)$/);
-        const prefix = bulletMatch ? bulletMatch[1] : "";
-        const cleanText = bulletMatch ? bulletMatch[2] : trimmed;
-        if (!cleanText) return chunk;
-
-        // Try Google Translate clients5 API
+      const apiKey = await getGeminiApiKey();
+      if (apiKey) {
         try {
-          const gUrl = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=${encodeURIComponent(targetLang)}&q=${encodeURIComponent(cleanText)}`;
-          const gRes = await fetch(gUrl, {
-            headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            }
-          });
-          if (gRes.ok) {
-            const data = await gRes.json();
-            if (Array.isArray(data) && data[0] && typeof data[0][0] === "string") {
-              return prefix + data[0][0];
-            }
-          }
-        } catch {}
+          translatedText = await translateWithGemini(text, targetLang, apiKey);
+        } catch (geminiErr) {
+          console.warn("[Translation] Gemini fallback to TagSafe:", geminiErr.message);
+          usedMethod = "tag-safe-google";
+          translatedText = await tagSafeDomTranslate(text, targetLang);
+        }
+      } else {
+        usedMethod = "tag-safe-google";
+        translatedText = await tagSafeDomTranslate(text, targetLang);
+      }
 
-        // Fallback to gtx endpoint
-        try {
-          const gUrl2 = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(cleanText)}`;
-          const gRes2 = await fetch(gUrl2);
-          if (gRes2.ok) {
-            const data2 = await gRes2.json();
-            if (Array.isArray(data2?.[0])) {
-              return prefix + data2[0].map(item => item?.[0] || "").join("");
-            }
-          }
-        } catch {}
+      if (globalThis.__TRANSLATION_CACHE.size > 500) {
+        const firstKey = globalThis.__TRANSLATION_CACHE.keys().next().value;
+        globalThis.__TRANSLATION_CACHE.delete(firstKey);
+      }
+      globalThis.__TRANSLATION_CACHE.set(cacheKey, translatedText);
 
-        return chunk;
-      };
-
-      // Split into lines/paragraphs so bullets and paragraphs are preserved
-      const lines = masked.split("\n");
-      const translatedLines = await Promise.all(
-        lines.map(async line => {
-          if (!line.trim()) return "";
-          if (line.length > 1200) {
-            const sentences = line.split(/(?<=[.?!;।])\s+/);
-            const translatedSentences = await Promise.all(sentences.map(s => translateChunk(s)));
-            return translatedSentences.join(" ");
-          }
-          return await translateChunk(line);
-        })
-      );
-
-      const rawTranslated = translatedLines.join("\n");
-      // 2. Restore preserved proper nouns, articles, and acts in English
-      const translatedText = unmaskExamKeywords(rawTranslated, termMap);
-
-      sendJson(response, 200, { translatedText, targetLang });
+      sendJson(response, 200, { translatedText, targetLang, method: usedMethod });
     } catch (err) {
+      console.error("[Translation Error]:", err);
       sendJson(response, 200, { translatedText: text, targetLang, fallback: true, error: err.message });
     }
     return true;
+  }
+
+  // ==========================================
+  // Public Regional Indian Language Audio Speech API (/api/tts)
+  // High-fidelity speech for Tamil (ta), Telugu (te), Malayalam (ml), Kannada (kn), Hindi (hi), English (en)
+  // ==========================================
+  if ((request.method === "POST" || request.method === "GET") && url.pathname === "/api/tts") {
+    let text = "";
+    let lang = "en";
+
+    if (request.method === "GET") {
+      text = String(url.searchParams.get("text") || "").trim();
+      lang = String(url.searchParams.get("lang") || "en").trim().toLowerCase();
+    } else {
+      const body = await readBody(request).catch(() => ({}));
+      text = String(body.text || "").trim();
+      lang = String(body.lang || body.targetLang || "en").trim().toLowerCase();
+    }
+
+    if (!text) {
+      sendJson(response, 400, { error: "text parameter is required" });
+      return true;
+    }
+
+    const cleanText = text.slice(0, 2000);
+    const validLang = ["en", "hi", "ta", "te", "ml", "kn"].includes(lang) ? lang : "en";
+    const cacheKey = `${validLang}:${cleanText}`;
+
+    if (globalThis.__TTS_CACHE && globalThis.__TTS_CACHE.has(cacheKey)) {
+      const cached = globalThis.__TTS_CACHE.get(cacheKey);
+      response.writeHead(200, {
+        "Content-Type": "audio/mpeg",
+        "Content-Length": cached.length,
+        "Cache-Control": "public, max-age=86400",
+        "Access-Control-Allow-Origin": "*"
+      });
+      response.end(cached);
+      return true;
+    }
+
+    try {
+      // Chunk text cleanly at punctuation into ~140 char pieces for TTS
+      const chunks = [];
+      const rawSentences = cleanText.split(/([.!?;,\n।]+)/).filter(Boolean);
+      let currentChunk = "";
+
+      for (let i = 0; i < rawSentences.length; i++) {
+        const piece = rawSentences[i].trim();
+        if (!piece) continue;
+        if ((currentChunk + " " + piece).length > 140) {
+          if (currentChunk.trim()) chunks.push(currentChunk.trim());
+          currentChunk = piece;
+        } else {
+          currentChunk = currentChunk ? (currentChunk + " " + piece) : piece;
+        }
+      }
+      if (currentChunk.trim()) {
+        chunks.push(currentChunk.trim());
+      }
+      if (chunks.length === 0) chunks.push(cleanText.slice(0, 140));
+
+      const buffers = [];
+      for (const chunk of chunks) {
+        if (!chunk) continue;
+        const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${encodeURIComponent(validLang)}&client=tw-ob&q=${encodeURIComponent(chunk)}`;
+        const ttsRes = await fetch(ttsUrl, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+          }
+        });
+        if (ttsRes.ok) {
+          const ab = await ttsRes.arrayBuffer();
+          buffers.push(Buffer.from(ab));
+        }
+      }
+
+      if (buffers.length === 0) {
+        sendJson(response, 502, { error: "Failed to synthesize speech audio stream." });
+        return true;
+      }
+
+      const combinedAudio = Buffer.concat(buffers);
+      if (!globalThis.__TTS_CACHE) globalThis.__TTS_CACHE = new Map();
+      if (globalThis.__TTS_CACHE.size > 200) {
+        const firstKey = globalThis.__TTS_CACHE.keys().next().value;
+        globalThis.__TTS_CACHE.delete(firstKey);
+      }
+      globalThis.__TTS_CACHE.set(cacheKey, combinedAudio);
+
+      response.writeHead(200, {
+        "Content-Type": "audio/mpeg",
+        "Content-Length": combinedAudio.length,
+        "Cache-Control": "public, max-age=86400",
+        "Access-Control-Allow-Origin": "*"
+      });
+      response.end(combinedAudio);
+      return true;
+    } catch (err) {
+      console.error("[TTS Generation Error]:", err);
+      sendJson(response, 500, { error: "TTS generation failed: " + err.message });
+      return true;
+    }
   }
 
   // ==========================================

@@ -14,7 +14,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="favicon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=119.0">
+  <link rel="stylesheet" href="styles.css?v=121.0">
   <script>
     fetch("/api/auth/google/config")
       .then(r => r.json())
@@ -772,6 +772,40 @@
               </div>
             </div>
 
+            <!-- Audio Revision Player Bar (Web Speech API) -->
+            <div id="lightbox-tts-container" class="lightbox-tts-container" aria-label="Audio Revision Player">
+              <div class="tts-player-inner">
+                <button id="lightbox-tts-btn" class="tts-listen-btn" type="button" title="Listen to Study Notes with Audio Narration">
+                  <span class="tts-btn-icon">🎧</span>
+                  <span id="lightbox-tts-btn-label" class="tts-btn-label">Listen to Notes</span>
+                  <div id="tts-audio-waves" class="tts-audio-waves" hidden>
+                    <span class="wave-bar"></span>
+                    <span class="wave-bar"></span>
+                    <span class="wave-bar"></span>
+                    <span class="wave-bar"></span>
+                  </div>
+                </button>
+
+                <div id="lightbox-tts-controls" class="tts-controls" hidden>
+                  <button id="tts-pause-btn" class="tts-ctrl-btn" type="button" title="Pause / Resume Audio">
+                    <span id="tts-pause-icon">⏸️</span>
+                  </button>
+                  <button id="tts-stop-btn" class="tts-ctrl-btn" type="button" title="Stop Audio">
+                    <span>⏹️</span>
+                  </button>
+                  <div class="tts-speed-selector" role="group" aria-label="Playback Speed">
+                    <button type="button" class="tts-speed-btn active" data-rate="1" title="Normal Speed (1x)">1x</button>
+                    <button type="button" class="tts-speed-btn" data-rate="1.25" title="1.25x Speed">1.25x</button>
+                    <button type="button" class="tts-speed-btn" data-rate="1.5" title="1.5x Speed">1.5x</button>
+                  </div>
+                </div>
+              </div>
+              <div id="tts-status-pill" class="tts-status-pill" hidden>
+                <span class="tts-pulse-dot"></span>
+                <span id="tts-status-text">Playing audio narration...</span>
+              </div>
+            </div>
+
             <!-- Scrollable Overview Text Body -->
             <div class="lightbox-overview-scroll">
               <div id="lightbox-overview-text" class="lightbox-overview-text">
@@ -1005,6 +1039,6 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="app.js?v=73.0"></script>
+  <script src="app.js?v=75.0"></script>
 </body>
 </html>
