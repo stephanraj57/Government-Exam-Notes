@@ -3893,9 +3893,11 @@ function initAboutScrollReveal() {
 
   const targets = [];
 
-  // 1. Hero Section Box
+  // 1. Exclude Top Hero Section so it is immediately visible on page load without animation
   const hero = container.querySelector(".about-hero-section");
-  if (hero && !hero.classList.contains("about-reveal")) targets.push({ el: hero });
+  if (hero) {
+    hero.classList.remove("about-reveal", "is-revealed");
+  }
 
   // 2. Section Headers
   container.querySelectorAll(".about-section-header").forEach(hdr => {
