@@ -39,6 +39,7 @@ const PROFILE_FILE = path.join(DATA_DIR, "profile.json");
 const SESSIONS_FILE = path.join(DATA_DIR, "sessions.json");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
 const SECURITY_FILE = path.join(DATA_DIR, "admin_security.json");
+const FEEDBACK_FILE = path.join(DATA_DIR, "feedback.json");
 const environment = globalThis.process?.env || {};
 const previewConfig = globalThis.__EXAM_ALERT_CONFIG || {};
 const PORT = Number(previewConfig.port || environment.PORT || 4173);
@@ -223,6 +224,18 @@ async function readJson(filePath) {
         }
         return [];
       }
+      if (filePath === FEEDBACK_FILE) {
+        const dbFeedback = await mongoDb.collection("feedback").find({}, { projection: { _id: 0 } }).sort({ createdAt: -1 }).toArray();
+        if (Array.isArray(dbFeedback) && dbFeedback.length > 0) {
+          return dbFeedback;
+        }
+        const diskFeedback = await fs.readFile(FEEDBACK_FILE, "utf8").then(JSON.parse).catch(() => []);
+        if (Array.isArray(diskFeedback) && diskFeedback.length > 0) {
+          await mongoDb.collection("feedback").insertMany(diskFeedback.map(f => ({ ...f }))).catch(() => {});
+          return diskFeedback;
+        }
+        return [];
+      }
       if (filePath === PROFILE_FILE) {
         const doc = await mongoDb.collection("profile").findOne({ type: "admin_profile" }, { projection: { _id: 0 } });
         return doc || { ...DEFAULT_PROFILE };
@@ -329,6 +342,28 @@ async function writeJson(filePath, value) {
             }));
             await col.bulkWrite(ops, { ordered: false });
             const validIds = sanitizedValue.map(u => u.id).filter(Boolean);
+            if (validIds.length > 0) {
+              await col.deleteMany({ id: { $nin: validIds } });
+            }
+          }
+        }
+        return;
+      }
+      if (filePath === FEEDBACK_FILE) {
+        const col = mongoDb.collection("feedback");
+        if (Array.isArray(sanitizedValue)) {
+          if (sanitizedValue.length === 0) {
+            await col.deleteMany({});
+          } else {
+            const ops = sanitizedValue.map(f => ({
+              updateOne: {
+                filter: { id: f.id },
+                update: { $set: { ...f } },
+                upsert: true
+              }
+            }));
+            await col.bulkWrite(ops, { ordered: false });
+            const validIds = sanitizedValue.map(f => f.id).filter(Boolean);
             if (validIds.length > 0) {
               await col.deleteMany({ id: { $nin: validIds } });
             }
@@ -2598,6 +2633,274 @@ Guidelines:
   }
 
   // ==========================================
+  // Public Quick Study Experience Rating (No auth required, 1 rating per session)
+  // ==========================================
+  if (request.method === "POST" && url.pathname === "/api/experience-rating") {
+    const body = await readBody(request).catch(() => ({}));
+    const rating = Math.min(5, Math.max(1, parseInt(body.rating) || 5));
+
+    const emojiLabels = {
+      1: "😞 Poor (1/5)",
+      2: "😐 Fair (2/5)",
+      3: "🙂 Good (3/5)",
+      4: "😊 Satisfied (4/5)",
+      5: "🤩 Very Satisfied (5/5)"
+    };
+
+    const studentUser = await getStudentUser(request).catch(() => null);
+    const name = studentUser ? (studentUser.name || "Aspirant") : "Study Aspirant";
+    const email = studentUser ? (studentUser.email || "") : "";
+    const userId = studentUser ? (studentUser.id || "") : "";
+    const targetExam = studentUser ? (studentUser.targetExam || "") : "";
+
+    const newRatingItem = {
+      id: "fb_exp_" + crypto.randomBytes(6).toString("hex"),
+      userId,
+      name,
+      email,
+      rating,
+      category: "general",
+      targetExam,
+      message: `Quick Study Experience Rating: ${emojiLabels[rating] || (rating + "/5")}`,
+      quickTags: ["ExperienceRating"],
+      createdAt: new Date().toISOString(),
+      status: "reviewed",
+      starred: false,
+      source: "study_experience_pulse"
+    };
+
+    let feedbackList = await readJson(FEEDBACK_FILE).catch(() => []);
+    if (!Array.isArray(feedbackList)) feedbackList = [];
+    feedbackList.unshift(newRatingItem);
+    await writeJson(FEEDBACK_FILE, feedbackList);
+
+    // Also update interactions telemetry
+    let interactions = await readJson(INTERACTIONS_FILE).catch(() => ({}));
+    if (!interactions.experienceRatings) {
+      interactions.experienceRatings = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, total: 0 };
+    }
+    interactions.experienceRatings[rating] = (interactions.experienceRatings[rating] || 0) + 1;
+    interactions.experienceRatings.total = (interactions.experienceRatings.total || 0) + 1;
+    await writeJson(INTERACTIONS_FILE, interactions).catch(() => {});
+
+    sendJson(response, 200, {
+      success: true,
+      message: "Thank you for your rating!",
+      rating
+    });
+    return true;
+  }
+
+  // ==========================================
+  // Student Feedback & Suggestions API
+  // ==========================================
+  if (request.method === "POST" && url.pathname === "/api/feedback") {
+    const studentUser = await getStudentUser(request);
+    if (!studentUser) {
+      sendJson(response, 401, {
+        error: "Google authentication required to submit feedback. Please sign in with your Google account.",
+        requiresAuth: true
+      });
+      return true;
+    }
+
+    const body = await readBody(request).catch(() => ({}));
+    const message = String(body.message || "").trim();
+    const targetExam = String(body.targetExam || studentUser.targetExam || "").trim().slice(0, 80);
+    const category = String(body.category || "").trim();
+
+    // Mandatory Category Validation
+    const validCategories = ["topic_request", "ui_design", "bug_report", "general"];
+    if (!category || !validCategories.includes(category)) {
+      sendJson(response, 400, { error: "Please select a suggestion category (mandatory field)." });
+      return true;
+    }
+
+    // Mandatory Target Exam Validation
+    if (!targetExam) {
+      sendJson(response, 400, { error: "Target Exam is mandatory. Please select your target examination." });
+      return true;
+    }
+
+    // Mandatory Suggestion Message Validation
+    if (!message || message.length < 5) {
+      sendJson(response, 400, { error: "Suggestion or feedback message is mandatory (at least 5 characters)." });
+      return true;
+    }
+
+    const rating = Math.min(5, Math.max(1, parseInt(body.rating) || 5));
+    const name = String(studentUser.name || "Aspirant").trim().slice(0, 80);
+    const email = String(studentUser.email || "").trim().slice(0, 100);
+    const userId = studentUser.id || "";
+    const quickTags = Array.isArray(body.quickTags)
+      ? body.quickTags.map(t => String(t).trim()).filter(Boolean).slice(0, 10)
+      : [];
+
+    const newFeedback = {
+      id: "fb_" + crypto.randomBytes(6).toString("hex"),
+      userId,
+      name,
+      email,
+      rating,
+      category,
+      targetExam,
+      message: message.slice(0, 2500),
+      quickTags,
+      createdAt: new Date().toISOString(),
+      status: "unread",
+      starred: false
+    };
+
+    let feedbackList = await readJson(FEEDBACK_FILE).catch(() => []);
+    if (!Array.isArray(feedbackList)) feedbackList = [];
+    feedbackList.unshift(newFeedback);
+    await writeJson(FEEDBACK_FILE, feedbackList);
+
+    sendJson(response, 201, {
+      success: true,
+      message: "Thank you for your valuable suggestion! We will review it shortly.",
+      feedback: newFeedback
+    });
+    return true;
+  }
+
+  // Admin Get Feedback & Analytics Hub
+  if (request.method === "GET" && url.pathname === "/api/admin/feedback") {
+    if (!isAdmin(request)) return sendUnauthorized(response), true;
+
+    let feedbackList = await readJson(FEEDBACK_FILE).catch(() => []);
+    if (!Array.isArray(feedbackList)) feedbackList = [];
+
+    // Calculate Analytics
+    const totalCount = feedbackList.length;
+    let unreadCount = 0;
+    let starredCount = 0;
+    let totalRatingSum = 0;
+
+    const ratingCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    const categoryCounts = {
+      topic_request: 0,
+      feature_idea: 0,
+      ui_design: 0,
+      bug_report: 0,
+      general: 0
+    };
+    const examCounts = {};
+
+    feedbackList.forEach(fb => {
+      if (fb.status === "unread") unreadCount++;
+      if (fb.starred) starredCount++;
+
+      const r = Math.min(5, Math.max(1, parseInt(fb.rating) || 5));
+      ratingCounts[r] = (ratingCounts[r] || 0) + 1;
+      totalRatingSum += r;
+
+      const cat = fb.category || "general";
+      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+
+      if (fb.targetExam) {
+        examCounts[fb.targetExam] = (examCounts[fb.targetExam] || 0) + 1;
+      }
+    });
+
+    // Compute Top Content Demand Name
+    const topicRequests = feedbackList.filter(f => f.category === "topic_request");
+    const demandMap = {};
+    topicRequests.forEach(f => {
+      const key = (f.targetExam || f.message || "").trim();
+      if (key) demandMap[key] = (demandMap[key] || 0) + 1;
+    });
+
+    let topContentDemand = "None Yet";
+    let topDemandCount = 0;
+
+    for (const [key, count] of Object.entries(demandMap)) {
+      if (count > topDemandCount) {
+        topDemandCount = count;
+        topContentDemand = key;
+      }
+    }
+
+    if (topContentDemand === "None Yet" && Object.keys(examCounts).length > 0) {
+      for (const [exam, count] of Object.entries(examCounts)) {
+        if (count > topDemandCount) {
+          topDemandCount = count;
+          topContentDemand = exam;
+        }
+      }
+    }
+
+    const avgRating = totalCount > 0 ? (totalRatingSum / totalCount).toFixed(1) : "0.0";
+
+    sendJson(response, 200, {
+      success: true,
+      feedback: feedbackList,
+      metrics: {
+        totalCount,
+        unreadCount,
+        starredCount,
+        avgRating,
+        ratingCounts,
+        categoryCounts,
+        examCounts,
+        topContentDemand,
+        topDemandCount,
+        topicDemandsCount: categoryCounts.topic_request || 0,
+        uiDesignCount: categoryCounts.ui_design || 0,
+        bugReportsCount: categoryCounts.bug_report || 0,
+        featureIdeasCount: categoryCounts.feature_idea || 0
+      }
+    });
+    return true;
+  }
+
+  // Admin Update Feedback Status (Mark Read/Unread, Star/Unstar)
+  if (request.method === "PATCH" && url.pathname.startsWith("/api/admin/feedback/")) {
+    if (!isAdmin(request)) return sendUnauthorized(response), true;
+
+    const feedbackId = url.pathname.split("/").pop();
+    const body = await readBody(request).catch(() => ({}));
+
+    let feedbackList = await readJson(FEEDBACK_FILE).catch(() => []);
+    const item = feedbackList.find(f => f.id === feedbackId);
+
+    if (!item) {
+      sendJson(response, 404, { error: "Feedback item not found." });
+      return true;
+    }
+
+    if (body.status !== undefined) {
+      item.status = body.status === "read" || body.status === "reviewed" ? "reviewed" : "unread";
+    }
+    if (body.starred !== undefined) {
+      item.starred = Boolean(body.starred);
+    }
+
+    await writeJson(FEEDBACK_FILE, feedbackList);
+    sendJson(response, 200, { success: true, feedback: item });
+    return true;
+  }
+
+  // Admin Delete Feedback Item
+  if (request.method === "DELETE" && url.pathname.startsWith("/api/admin/feedback/")) {
+    if (!isAdmin(request)) return sendUnauthorized(response), true;
+
+    const feedbackId = url.pathname.split("/").pop();
+    let feedbackList = await readJson(FEEDBACK_FILE).catch(() => []);
+    const initialLen = feedbackList.length;
+    feedbackList = feedbackList.filter(f => f.id !== feedbackId);
+
+    if (feedbackList.length === initialLen) {
+      sendJson(response, 404, { error: "Feedback item not found." });
+      return true;
+    }
+
+    await writeJson(FEEDBACK_FILE, feedbackList);
+    sendJson(response, 200, { success: true, deleted: true });
+    return true;
+  }
+
+  // ==========================================
   // 1-Click Full Website Data Backup & Restore
   // ==========================================
   if ((request.method === "GET" || request.method === "POST") && url.pathname === "/api/admin/backup/export") {
@@ -2747,6 +3050,7 @@ Guidelines:
       tagAnalytics,
       categoryAnalytics,
       visits,
+      feedback: await readJson(FEEDBACK_FILE).catch(() => []),
       images
     };
 
@@ -2853,7 +3157,12 @@ Guidelines:
       await writeJson(INTERACTIONS_FILE, backup.interactions);
     }
 
-    // 5. Restore Profile & Brand Identity
+    // 5. Restore Student Feedback & Suggestions
+    if (Array.isArray(backup.feedback)) {
+      await writeJson(FEEDBACK_FILE, backup.feedback);
+    }
+
+    // 6. Restore Profile & Brand Identity
     let profile = backup.profile && typeof backup.profile === "object" ? { ...backup.profile } : null;
     if (!profile) profile = await readJson(PROFILE_FILE).catch(() => ({ ...DEFAULT_PROFILE }));
 
@@ -2940,7 +3249,7 @@ Guidelines:
     // 1. Wipe global visits & traffic logs
     await writeJson(VISITS_FILE, { count: 0, daily: {} });
 
-    // 2. Wipe global interactions & search query telemetry
+    // 2. Wipe global interactions, search query telemetry & study experience ratings
     await writeJson(INTERACTIONS_FILE, {
       totalLikes: 0,
       totalDownloads: 0,
@@ -2950,7 +3259,8 @@ Guidelines:
       notes: {},
       shares: {},
       searches: {},
-      missingSearches: {}
+      missingSearches: {},
+      experienceRatings: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, total: 0 }
     });
 
     // 3. Clear each registered student's interactions (likes, bookmarks, history, telemetry),
@@ -2975,9 +3285,15 @@ Guidelines:
     await writeJson(SESSIONS_FILE, []);
     studentSessions.clear();
 
+    // 5. Completely wipe entire Feedback and Ideas & Study Experience Ratings
+    await writeJson(FEEDBACK_FILE, []);
+    if (mongoDb) {
+      await mongoDb.collection("feedback").deleteMany({}).catch(() => {});
+    }
+
     sendJson(response, 200, {
       reset: true,
-      message: "Visitor traffic logs, search queries, interaction telemetry, and user interaction histories cleared successfully. Admin profile, published notes, and registered student accounts are safely preserved."
+      message: "Visitor traffic logs, search queries, interaction telemetry, entire feedback & ideas, and user interaction histories cleared successfully. Admin profile, published notes, and registered student accounts are safely preserved."
     }, {
       "Set-Cookie": `examAdminSession=${token}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax`
     });

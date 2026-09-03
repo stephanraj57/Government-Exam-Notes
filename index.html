@@ -17,7 +17,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="favicon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=133.0">
+  <link rel="stylesheet" href="styles.css?v=141.0">
   <script>
     fetch("/api/auth/google/config")
       .then(r => r.json())
@@ -614,39 +614,140 @@
       </div>
     </section>
 
-    <!-- 7. Platform Core Pillars Grid -->
-    <section class="about-stats-grid" aria-label="Platform Highlights">
-      <div class="about-stat-card">
-        <div class="about-stat-icon">💯</div>
-        <div class="about-stat-number">100% Free</div>
-        <div class="about-stat-label">Zero Subscriptions or Paywalls</div>
-      </div>
-      <div class="about-stat-card">
-        <div class="about-stat-icon">📚</div>
-        <div class="about-stat-number">7+ Subjects</div>
-        <div class="about-stat-label">History, Polity, Economy & More</div>
-      </div>
-      <div class="about-stat-card">
-        <div class="about-stat-icon">🔍</div>
-        <div class="about-stat-number">HD Zoom</div>
-        <div class="about-stat-label">Zero-Loss Lightbox Diagrams</div>
-      </div>
-      <div class="about-stat-card">
-        <div class="about-stat-icon">⚡</div>
-        <div class="about-stat-number">Fast Recall</div>
-        <div class="about-stat-label">Visual Mnemonics for Revision</div>
+    <!-- 7. Study Experience Rating Pulse (Public, 1 Rating Per Session, Instant Celebration) -->
+    <section class="study-experience-section" id="study-experience-section" aria-label="Study Experience Rating">
+      <div class="study-experience-card">
+        <div class="experience-header">
+          <div class="experience-badge">
+            <span class="experience-badge-icon">⭐</span>
+            <span>Aspirant Experience</span>
+          </div>
+          <h2 class="experience-title">How is your study experience so far?</h2>
+          <p class="experience-subtitle">Tap an emoji to rate your experience in 1 click — no sign in required!</p>
+        </div>
+
+        <!-- 5 Unselected Emojis: Poor to Very Satisfied -->
+        <div class="experience-rating-wrapper" id="experience-rating-wrapper">
+          <div class="feedback-emoji-rating experience-emoji-rating" id="quick-experience-rating" role="radiogroup" aria-label="How is your study experience so far?">
+            <button type="button" class="emoji-rate-btn experience-rate-btn" data-rating="1" title="Poor">
+              <span class="emoji-face">😞</span>
+              <span class="emoji-label">Poor</span>
+            </button>
+            <button type="button" class="emoji-rate-btn experience-rate-btn" data-rating="2" title="Fair">
+              <span class="emoji-face">😐</span>
+              <span class="emoji-label">Fair</span>
+            </button>
+            <button type="button" class="emoji-rate-btn experience-rate-btn" data-rating="3" title="Good">
+              <span class="emoji-face">🙂</span>
+              <span class="emoji-label">Good</span>
+            </button>
+            <button type="button" class="emoji-rate-btn experience-rate-btn" data-rating="4" title="Satisfied">
+              <span class="emoji-face">😊</span>
+              <span class="emoji-label">Satisfied</span>
+            </button>
+            <button type="button" class="emoji-rate-btn experience-rate-btn" data-rating="5" title="Very Satisfied">
+              <span class="emoji-face">🤩</span>
+              <span class="emoji-label">Very Satisfied</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Immediate Celebration Thank You State (Compact, Same Height as Emojis, No Panel Expansion) -->
+        <div class="experience-thankyou-card is-hidden" id="experience-thankyou-card" style="display: none;">
+          <div class="experience-thankyou-content">
+            <div class="experience-thankyou-left">
+              <span class="experience-thankyou-emoji">🎉</span>
+              <div class="experience-thankyou-texts">
+                <h3 class="experience-thankyou-title">Thank You for Your Rating!</h3>
+                <p class="experience-thankyou-msg" id="experience-thankyou-msg">Your rating has been recorded for this session.</p>
+              </div>
+            </div>
+            <div id="experience-selected-badge" class="experience-thankyou-badge"></div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- 8. Call To Action Banner -->
-    <section class="about-cta-card">
-      <h2 class="about-cta-title">Ready to Supercharge Your Exam Revision?</h2>
-      <p class="about-cta-sub">
-        Explore our growing library of visual notes, mind maps, and topic breakdowns. Start studying smarter today.
-      </p>
-      <button type="button" class="about-cta-btn" onclick="switchView('notes')">
-        <span>🚀</span> Start Learning Now
-      </button>
+    <!-- 8. Student Feedback & Suggestions Hub (Aspirant Voice) -->
+    <section class="about-feedback-section" id="about-feedback-section" aria-label="Student Feedback & Suggestions">
+      <div class="feedback-card-container">
+        <div class="feedback-header">
+          <div class="feedback-badge">
+            <span class="feedback-badge-icon">💬</span>
+            <span>Aspirant Voice</span>
+          </div>
+          <h2 class="feedback-title">Help Shape Your Exam Notes Library</h2>
+          <p class="feedback-subtitle">
+            What topics, mindmaps, or features would supercharge your preparation? We review every suggestion!
+          </p>
+        </div>
+
+        <!-- Google Authentication Status / Sign-In Required Banner -->
+        <div id="feedback-auth-banner" class="feedback-auth-banner"></div>
+
+        <form id="student-feedback-form" class="student-feedback-form" novalidate>
+          <input type="hidden" id="feedback-rating-val" name="rating" value="5">
+
+          <!-- Category Selection Chips (Mandatory Field) -->
+          <div class="feedback-field-group">
+            <label class="feedback-field-label">What is your suggestion about? <span class="feedback-req">*</span></label>
+            <div class="feedback-category-pills" id="feedback-category-pills">
+              <button type="button" class="feedback-cat-pill is-active" data-category="topic_request">📚 Topic / Note Demand</button>
+              <button type="button" class="feedback-cat-pill" data-category="ui_design">🎨 Website & Design</button>
+              <button type="button" class="feedback-cat-pill" data-category="bug_report">🐛 Report an Issue</button>
+              <button type="button" class="feedback-cat-pill" data-category="general">💬 General Thought</button>
+            </div>
+            <input type="hidden" id="feedback-category-val" name="category" value="topic_request" required>
+          </div>
+
+          <!-- Target Exam Row (Mandatory Field) -->
+          <div class="feedback-inputs-row single-col">
+            <div class="feedback-input-col">
+              <label for="feedback-target-exam" class="feedback-field-label">Your Target Exam <span class="feedback-req">*</span></label>
+              <select id="feedback-target-exam" class="feedback-select" name="targetExam" required>
+                <option value="" disabled selected>-- Select Your Target Exam * --</option>
+                <option value="UPSC CSE">UPSC Civil Services</option>
+                <option value="SSC CGL">SSC CGL / CHSL</option>
+                <option value="State PSC / TNPSC">State PSC / TNPSC / APPSC</option>
+                <option value="RRB NTPC">Railways (RRB NTPC / Group D)</option>
+                <option value="Banking / IBPS">Banking / IBPS / SBI PO</option>
+                <option value="Defense (CDS/NDA)">Defense (CDS / NDA / AFCAT)</option>
+                <option value="Other Govt Exam">Other Govt Exam</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Detailed Suggestion / Message (Mandatory Field) -->
+          <div class="feedback-field-group">
+            <label for="feedback-message" class="feedback-field-label">Your Suggestion or Idea <span class="feedback-req">*</span></label>
+            <textarea id="feedback-message" class="feedback-textarea" rows="4" placeholder="Tell us which topics, visual notes, or improvements you'd like to see next on Exam Alert India..." required minlength="5" maxlength="2000"></textarea>
+            <div class="feedback-char-counter"><span id="feedback-chars">0</span>/2000</div>
+          </div>
+
+          <!-- Submit Action Button -->
+          <div class="feedback-submit-row">
+            <button type="submit" id="feedback-submit-btn" class="feedback-submit-btn">
+              <span class="btn-icon">🚀</span>
+              <span class="btn-text">Submit Suggestion</span>
+            </button>
+            <div class="feedback-guarantee">
+              <span>🔒 Verified Google Aspirant • Feedback sent directly to Admin Studio</span>
+            </div>
+          </div>
+        </form>
+
+        <!-- Success / Celebration State (Shown after submit) -->
+        <div id="feedback-success-state" class="feedback-success-state is-hidden">
+          <div class="success-icon-badge">🎉</div>
+          <h3 class="success-title" id="feedback-success-title">Thank You, Aspirant!</h3>
+          <p class="success-desc">
+            Your suggestion has been delivered directly to the Admin Studio. We prioritize the most requested visual notes every week!
+          </p>
+          <button type="button" class="feedback-reset-btn" id="feedback-another-btn">
+            Send Another Suggestion ✍️
+          </button>
+        </div>
+      </div>
     </section>
 
     <!-- 9. Dedicated Administrator Portal Access Card -->
@@ -1111,6 +1212,6 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="app.js?v=84.0"></script>
+  <script src="app.js?v=91.0"></script>
 </body>
 </html>

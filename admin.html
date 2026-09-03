@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=133.0">
+  <link rel="stylesheet" href="styles.css?v=137.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -224,13 +224,13 @@
             </div>
             <b id="users-nav-badge" class="cat-count badge-live">0</b>
           </button>
-          <button class="category admin-nav-card" data-admin-view="tags">
-            <span class="nav-icon-box tags-box">🏷️</span>
+          <button class="category admin-nav-card" data-admin-view="feedback">
+            <span class="nav-icon-box feedback-box">💬</span>
             <div class="nav-text-col">
-              <span class="cat-name">Tag Analysis</span>
-              <small class="nav-sub-desc">Tag Cloud & Frequency</small>
+              <span class="cat-name">Feedback & Ideas</span>
+              <small class="nav-sub-desc">Student Demands & Ratings</small>
             </div>
-            <b id="tags-count-badge" class="cat-count">0</b>
+            <b id="feedback-nav-badge" class="cat-count badge-live">0</b>
           </button>
           <button class="category admin-nav-card" data-admin-view="missing-searches">
             <span class="nav-icon-box missing-searches-box">🔎</span>
@@ -415,6 +415,62 @@
                 </thead>
                 <tbody id="analysis-table-body">
                   <!-- Dynamically populated table rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Section: Tag Analysis (Interactive Tag Cloud & Frequency Leaderboard) -->
+        <div class="tags-main-grid dashboard-bottom-tags" style="margin-top: 20px;">
+          
+          <!-- Left: Interactive Tag Cloud Card -->
+          <div class="admin-card tags-cloud-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Visual Discovery</p>
+                <h2>Interactive Tag Cloud</h2>
+              </div>
+              <span class="badge live-badge" id="tags-unique-badge">0 Unique Tags</span>
+            </div>
+
+            <div class="tags-search-bar-wrap">
+              <span class="tags-search-icon">🔍</span>
+              <input type="search" id="admin-tags-search-input" class="tags-search-input" placeholder="Search keywords & tags (e.g. UPSC, GDP)..." autocomplete="off">
+            </div>
+
+            <div class="tag-cloud-container" id="admin-tag-cloud-container">
+              <!-- Dynamically populated interactive tag chips -->
+            </div>
+
+            <div class="tags-cloud-footer">
+              <small class="field-hint">💡 Tip: Click any tag chip to instantly filter the Content Library by that tag.</small>
+            </div>
+          </div>
+
+          <!-- Right: Top Tag Leaderboard & Frequency Metrics Card -->
+          <div class="admin-card tags-leaderboard-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Frequency Ranking</p>
+                <h2>Top Tags Leaderboard</h2>
+              </div>
+              <span class="badge live-badge" id="tags-leaderboard-badge">Most Applied</span>
+            </div>
+
+            <div class="tags-table-wrap">
+              <table class="tags-leaderboard-table">
+                <thead>
+                  <tr>
+                    <th>Rank & Tag</th>
+                    <th>Count</th>
+                    <th>Library Share</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="tags-leaderboard-tbody">
+                  <!-- Dynamically populated top tag rows -->
                 </tbody>
               </table>
             </div>
@@ -749,61 +805,157 @@
         </div>
       </div>
 
-      <!-- View: Tags (Tag Cloud, Frequency Analytics & Quick Drilldowns) -->
-      <div id="admin-view-tags" class="admin-view-pane" hidden>
-        <div class="tags-main-grid">
-          
-          <!-- Left: Interactive Tag Cloud Card -->
-          <div class="admin-card tags-cloud-card">
-            <div class="card-header">
-              <div>
-                <p class="eyebrow">Visual Discovery</p>
-                <h2>Interactive Tag Cloud</h2>
-              </div>
-              <span class="badge live-badge" id="tags-unique-badge">0 Unique Tags</span>
+      <!-- View: Feedback & Suggestions (Student Demands, Ideas & Ratings) -->
+      <div id="admin-view-feedback" class="admin-view-pane" hidden>
+        <div class="admin-card feedback-analytics-card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Student Demands & Voice</p>
+              <h2>Feedback & Content Suggestions</h2>
             </div>
-
-            <div class="tags-search-bar-wrap">
-              <span class="tags-search-icon">🔍</span>
-              <input type="search" id="admin-tags-search-input" class="tags-search-input" placeholder="Search keywords & tags (e.g. UPSC, GDP)..." autocomplete="off">
-            </div>
-
-            <div class="tag-cloud-container" id="admin-tag-cloud-container">
-              <!-- Dynamically populated interactive tag chips -->
-            </div>
-
-            <div class="tags-cloud-footer">
-              <small class="field-hint">💡 Tip: Click any tag chip to instantly filter the Content Library by that tag.</small>
+            <div class="users-header-actions">
+              <button type="button" id="feedback-export-csv-btn" class="export-users-btn" title="Download Feedback Telemetry Data as CSV">
+                <span>📥</span> Export CSV
+              </button>
             </div>
           </div>
 
-          <!-- Right: Top Tag Leaderboard & Frequency Metrics Card -->
-          <div class="admin-card tags-leaderboard-card">
-            <div class="card-header">
-              <div>
-                <p class="eyebrow">Frequency Ranking</p>
-                <h2>Top Tags Leaderboard</h2>
+          <!-- 4 Feedback KPI Cards -->
+          <div class="admin-metrics-grid four-col feedback-metrics-grid">
+            <!-- 1: Total Suggestions Count Alone -->
+            <div class="metric-card feedback-kpi-card">
+              <div class="metric-icon feedback-total-icon">💬</div>
+              <div class="metric-info">
+                <span class="metric-label">Total Suggestions</span>
+                <strong id="feedback-kpi-total" class="metric-value">0</strong>
+                <span class="metric-trend neutral" id="feedback-kpi-total-desc">All Submissions</span>
               </div>
-              <span class="badge live-badge" id="tags-leaderboard-badge">Most Applied</span>
             </div>
 
-            <div class="tags-table-wrap">
-              <table class="tags-leaderboard-table">
-                <thead>
-                  <tr>
-                    <th>Rank & Tag</th>
-                    <th>Count</th>
-                    <th>Library Share</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody id="tags-leaderboard-tbody">
-                  <!-- Dynamically populated top tag rows -->
-                </tbody>
-              </table>
+            <!-- 2: Unread Count -->
+            <div class="metric-card feedback-kpi-card">
+              <div class="metric-icon feedback-unread-icon" style="background: rgba(239, 68, 68, 0.12); color: #ef4444;">🔴</div>
+              <div class="metric-info">
+                <span class="metric-label">Unread Suggestions</span>
+                <strong id="feedback-kpi-unread-count" class="metric-value" style="color: #ef4444;">0</strong>
+                <span class="metric-trend" id="feedback-kpi-unread">0 New / Unread</span>
+              </div>
+            </div>
+
+            <!-- 3: Top Content Demand Name -->
+            <div class="metric-card feedback-kpi-card">
+              <div class="metric-icon feedback-topics-icon">📚</div>
+              <div class="metric-info">
+                <span class="metric-label">Top Content Demand</span>
+                <strong id="feedback-kpi-top-demand" class="metric-value" style="font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="Top Demanded Topic">None Yet</strong>
+                <span class="metric-trend info" id="feedback-kpi-top-demand-sub">Most Requested Content</span>
+              </div>
+            </div>
+
+            <!-- 4: Average Rating (Moved Here) -->
+            <div class="metric-card feedback-kpi-card">
+              <div class="metric-icon feedback-rating-icon">⭐</div>
+              <div class="metric-info">
+                <span class="metric-label">Average Rating</span>
+                <strong id="feedback-kpi-avg-rating" class="metric-value">5.0</strong>
+                <span class="metric-trend neutral" id="feedback-kpi-stars-visual">🤩 Very Satisfied (5/5)</span>
+              </div>
             </div>
           </div>
 
+          <!-- Rating Breakdown & Category Analytics Row (Engagement Ratio Style) -->
+          <div class="feedback-analytics-split-row">
+            <!-- Left: Student Satisfaction Breakdown (5 Emojis Engagement Ratio Style) -->
+            <div class="admin-card interactions-flow-card feedback-flow-card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Satisfaction Ratio</p>
+                  <h2>Student Satisfaction Breakdown</h2>
+                </div>
+                <span class="badge live-badge" id="feedback-ratings-count-badge">0 Ratings</span>
+              </div>
+
+              <div class="interaction-bars-container" id="feedback-rating-bars-list">
+                <!-- Dynamically populated 5 Emojis breakdown rows -->
+              </div>
+
+              <div class="interaction-summary-box">
+                <div class="summary-metric">
+                  <span class="summary-metric-val" id="summary-satisfaction-rate">0.0%</span>
+                  <span class="summary-metric-lbl">Satisfied (4-5★)</span>
+                </div>
+                <div class="summary-metric">
+                  <span class="summary-metric-val" id="summary-neutral-rate">0.0%</span>
+                  <span class="summary-metric-lbl">Neutral (3★)</span>
+                </div>
+                <div class="summary-metric">
+                  <span class="summary-metric-val" id="summary-critique-rate">0.0%</span>
+                  <span class="summary-metric-lbl">Needs Work (1-2★)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Feedback by Focus Area (4 Categories Engagement Ratio Style) -->
+            <div class="admin-card interactions-flow-card feedback-flow-card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Content Demands</p>
+                  <h2>Feedback by Focus Area</h2>
+                </div>
+                <span class="badge live-badge" id="feedback-categories-count-badge">4 Categories</span>
+              </div>
+
+              <div class="interaction-bars-container" id="feedback-category-bars-list">
+                <!-- Dynamically populated 4 Categories breakdown rows -->
+              </div>
+
+              <div class="interaction-summary-box">
+                <div class="summary-metric">
+                  <span class="summary-metric-val" id="summary-topic-demand-rate">0.0%</span>
+                  <span class="summary-metric-lbl">📚 Topic Demands</span>
+                </div>
+                <div class="summary-metric">
+                  <span class="summary-metric-val" id="summary-design-rate">0.0%</span>
+                  <span class="summary-metric-lbl">🎨 UI & Design</span>
+                </div>
+                <div class="summary-metric">
+                  <span class="summary-metric-val" id="summary-issue-rate">0.0%</span>
+                  <span class="summary-metric-lbl">🐛 Reported Issues</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Filter Dropdown & Search Toolbar -->
+          <div class="feedback-toolbar">
+            <div class="feedback-search-filter-group">
+              <div class="feedback-select-wrap">
+                <select id="feedback-filter-select" class="feedback-filter-select" aria-label="Filter feedback by category or status">
+                  <option value="all">All Feedback (0)</option>
+                  <option value="unread">Unread 🔴 (0)</option>
+                  <option value="topic_request">📚 Topic Demands (0)</option>
+                  <option value="ui_design">🎨 UI & Design (0)</option>
+                  <option value="bug_report">🐛 Issues (0)</option>
+                  <option value="general">💬 General Thought (0)</option>
+                  <option value="starred">⭐ Starred (0)</option>
+                </select>
+              </div>
+
+              <div class="feedback-search-box">
+                <span class="search-icon">🔍</span>
+                <input type="search" id="feedback-search-input" placeholder="Search feedback text, aspirant name, email..." autocomplete="off">
+              </div>
+            </div>
+
+            <div class="feedback-toolbar-meta">
+              <span id="feedback-results-count" class="feedback-results-badge">Showing suggestions</span>
+            </div>
+          </div>
+
+          <!-- Feedback Cards / Table List -->
+          <div class="feedback-list-container" id="feedback-list-container">
+            <!-- Dynamically populated cards or empty state -->
+          </div>
         </div>
       </div>
 
@@ -1457,10 +1609,10 @@
                 <span style="font-size: 0.68rem; font-weight: 700; color: #dc2626; background: rgba(239, 68, 68, 0.12); padding: 1px 6px; border-radius: 4px;">Protected</span>
               </div>
               <p style="font-size: 0.74rem; color: var(--ink-muted); margin: 0 0 10px; line-height: 1.45;">
-                Clear all notes, users & metrics to start fresh like a new website. Keeps admin profile, password & branding.
+                Clear all visitor telemetry, student interactions, entire feedback and ideas & metrics to start fresh like a new website. Keeps admin profile, password & published notes.
               </p>
               <button type="button" id="admin-clean-data-btn" class="profile-act-btn danger" style="width: 100%; font-size: 0.80rem; padding: 8px 12px; justify-content: center;">
-                <span>🧹</span> Clear All Data (Reset Website)
+                <span>🧹</span> Clear All Data & Feedback (Reset Website)
               </button>
             </div>
           </div>
@@ -1829,7 +1981,7 @@
         <div class="edit-header-left">
           <div class="clean-badge-icon">🧹</div>
           <div>
-            <h3 class="edit-modal-title" style="color: #ef4444;">Clear Platform Telemetry & Analytics</h3>
+            <h3 class="edit-modal-title" style="color: #ef4444;">Clear Platform Telemetry, Feedback & Analytics</h3>
             <p class="edit-modal-sub">Review items that will be deleted and items that will stay protected.</p>
           </div>
         </div>
@@ -1846,6 +1998,8 @@
               <span>🗑️</span> What Will Be Deleted:
             </div>
             <ul style="margin: 0; padding-left: 18px; font-size: 0.80rem; color: var(--ink); line-height: 1.55;">
+              <li><strong>Entire Feedback & Ideas</strong> (All student demands, topic requests, UI ideas, bug reports & star statuses)</li>
+              <li><strong>Study Experience Ratings</strong> (Satisfaction percentage breakdown, average ratings & pulse votes)</li>
               <li><strong>User Interactions</strong> (All student likes, saved bookmarks, view history & searches)</li>
               <li><strong>Visitor Traffic Logs</strong> (Total visit count & daily traffic metrics)</li>
               <li><strong>Interaction Telemetry</strong> (Global likes, downloads, shares & impressions)</li>
@@ -1888,7 +2042,7 @@
       <div class="modal-btn-row clean-data-glass-footer">
         <button class="outline-button edit-glass-cancel-btn" type="button" data-close>Cancel</button>
         <button id="clean-data-submit-btn" class="danger-btn bulk-btn clean-data-submit-btn" type="submit" style="padding: 10px 18px; font-weight: 700; background: #ef4444; color: #fff; border: 0; border-radius: var(--radius-md); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-          <span>🗑️</span> Confirm & Clear Telemetry Data
+          <span>🧹</span> Confirm & Reset Platform Data (Including Feedback)
         </button>
       </div>
     </form>
@@ -3513,6 +3667,6 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=103.0"></script>
+  <script src="admin.js?v=112.0"></script>
 </body>
 </html>

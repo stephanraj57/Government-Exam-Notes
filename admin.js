@@ -500,10 +500,10 @@ function showDashboard() {
   }
 
   // Restore user's current view from URL hash, sessionStorage or localStorage
-  const validViews = ["dashboard", "interactions", "users", "tags", "missing-searches", "publish", "modify", "profile"];
+  const validViews = ["dashboard", "interactions", "users", "feedback", "missing-searches", "publish", "modify", "profile"];
   const hash = window.location.hash.replace(/^#/, "");
   const savedView = sessionStorage.getItem("exam_admin_active_view") || localStorage.getItem("exam_admin_active_view") || "dashboard";
-  const targetView = (hash === "analysis" ? "dashboard" : (validViews.includes(hash) ? hash : (validViews.includes(savedView) ? savedView : "dashboard")));
+  const targetView = (hash === "analysis" || hash === "tags" ? "dashboard" : (validViews.includes(hash) ? hash : (validViews.includes(savedView) ? savedView : "dashboard")));
 
   // Switch immediately so page reload renders the exact active view with zero delay
   switchAdminView(targetView, true);
@@ -675,6 +675,8 @@ async function loadDashboardData() {
     const uBadge = $("#users-nav-badge");
     if (uBadge) uBadge.textContent = (adminUsersData.length || 0).toString();
   });
+
+  fetchAdminFeedback();
 
   // Calculate Top Category
   const catCountMap = {};
@@ -3007,6 +3009,424 @@ function exportUsersCsv() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   showToast("Student telemetry CSV exported successfully! 📥", "success");
+}
+
+// ==========================================
+// 4.032 Student Feedback & Suggestions Analytics Hub
+// ==========================================
+let adminFeedbackData = [];
+let adminFeedbackMetrics = {};
+let currentFeedbackTab = "all";
+
+const FEEDBACK_EMOJI_MAP = {
+  5: { emoji: "🤩", label: "Very Satisfied (5/5)", fillClass: "fill-very-satisfied" },
+  4: { emoji: "😊", label: "Satisfied (4/5)", fillClass: "fill-satisfied" },
+  3: { emoji: "🙂", label: "Good (3/5)", fillClass: "fill-good" },
+  2: { emoji: "😐", label: "Fair (2/5)", fillClass: "fill-fair" },
+  1: { emoji: "😞", label: "Poor (1/5)", fillClass: "fill-poor" }
+};
+
+async function fetchAdminFeedback() {
+  try {
+    const res = await api("/api/admin/feedback");
+    if (res && res.success) {
+      adminFeedbackData = res.feedback || [];
+      adminFeedbackMetrics = res.metrics || {};
+    }
+  } catch (err) {
+    adminFeedbackData = [];
+    adminFeedbackMetrics = {};
+  }
+  renderFeedbackView();
+}
+
+function renderFeedbackView() {
+  // 1. Update Top KPI Cards
+  const totalEl = $("#feedback-kpi-total");
+  const unreadCountEl = $("#feedback-kpi-unread-count");
+  const unreadEl = $("#feedback-kpi-unread");
+  const topDemandEl = $("#feedback-kpi-top-demand");
+  const topDemandSub = $("#feedback-kpi-top-demand-sub");
+  const avgRatingEl = $("#feedback-kpi-avg-rating");
+  const starsVisualEl = $("#feedback-kpi-stars-visual");
+  const navBadge = $("#feedback-nav-badge");
+  const ratingsBadge = $("#feedback-ratings-count-badge");
+
+  const total = adminFeedbackMetrics.totalCount || 0;
+  const unread = adminFeedbackMetrics.unreadCount || 0;
+  const avg = parseFloat(adminFeedbackMetrics.avgRating) || 5.0;
+
+  // Box 1: Total Suggestions Count Alone
+  if (totalEl) totalEl.textContent = total.toLocaleString("en-IN");
+
+  // Box 2: Unread Count
+  if (unreadCountEl) unreadCountEl.textContent = unread.toLocaleString("en-IN");
+  if (unreadEl) {
+    unreadEl.textContent = unread > 0 ? `${unread} New / Unread` : "All Reviewed ✓";
+    unreadEl.className = unread > 0 ? "metric-trend positive" : "metric-trend neutral";
+  }
+
+  // Box 3: Top Content Demand Name
+  const topDemandName = adminFeedbackMetrics.topContentDemand || "None Yet";
+  const topDemandCount = adminFeedbackMetrics.topDemandCount || 0;
+  if (topDemandEl) {
+    topDemandEl.textContent = topDemandName;
+    topDemandEl.title = topDemandName;
+  }
+  if (topDemandSub) {
+    topDemandSub.textContent = topDemandCount > 0 ? `${topDemandCount} Demand${topDemandCount === 1 ? '' : 's'}` : "Most Requested Content";
+  }
+
+  // Box 4: Average Rating
+  if (avgRatingEl) avgRatingEl.textContent = avg.toFixed(1);
+  if (starsVisualEl) {
+    const rounded = Math.min(5, Math.max(1, Math.round(avg)));
+    starsVisualEl.textContent = `${FEEDBACK_EMOJI_MAP[rounded]?.emoji || "🤩"} ${FEEDBACK_EMOJI_MAP[rounded]?.label || "Satisfied"}`;
+  }
+
+  if (navBadge) {
+    navBadge.textContent = unread.toString();
+    navBadge.className = unread > 0 ? "cat-count badge-warning" : "cat-count badge-live";
+  }
+  if (ratingsBadge) ratingsBadge.textContent = `${total} Rating${total === 1 ? '' : 's'}`;
+
+  // 2. Render Emoji Ratings Breakdown (5 down to 1 - Engagement Ratio Style)
+  const ratingBarsList = $("#feedback-rating-bars-list");
+  const ratingCounts = adminFeedbackMetrics.ratingCounts || {};
+
+  if (ratingBarsList) {
+    let html = "";
+    for (let r = 5; r >= 1; r--) {
+      const count = ratingCounts[r] || 0;
+      const pct = total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
+      const item = FEEDBACK_EMOJI_MAP[r];
+      html += `
+        <div class="interaction-bar-row">
+          <div class="interaction-row-label">
+            <span class="interaction-icon">${item.emoji}</span>
+            <strong>${item.label}</strong>
+          </div>
+          <div class="interaction-bar-track">
+            <div class="interaction-bar-fill ${item.fillClass}" style="width: ${pct}%;"></div>
+          </div>
+          <span class="interaction-count-badge">${pct}% (${count})</span>
+        </div>
+      `;
+    }
+    ratingBarsList.innerHTML = html;
+  }
+
+  // Summary Metrics for Satisfaction Ratio
+  const satHighCount = (ratingCounts[5] || 0) + (ratingCounts[4] || 0);
+  const satNeutralCount = ratingCounts[3] || 0;
+  const satCritiqueCount = (ratingCounts[2] || 0) + (ratingCounts[1] || 0);
+
+  const satEl = $("#summary-satisfaction-rate");
+  const neutralEl = $("#summary-neutral-rate");
+  const critiqueEl = $("#summary-critique-rate");
+  if (satEl) satEl.textContent = total > 0 ? `${((satHighCount / total) * 100).toFixed(1)}%` : "0.0%";
+  if (neutralEl) neutralEl.textContent = total > 0 ? `${((satNeutralCount / total) * 100).toFixed(1)}%` : "0.0%";
+  if (critiqueEl) critiqueEl.textContent = total > 0 ? `${((satCritiqueCount / total) * 100).toFixed(1)}%` : "0.0%";
+
+  // 3. Render Feedback Categories Distribution (4 Focus Areas - Engagement Ratio Style)
+  const catBarsList = $("#feedback-category-bars-list");
+  const catCounts = adminFeedbackMetrics.categoryCounts || {};
+  const focusAreas = [
+    { key: "topic_request", icon: "📚", label: "Topic / Note Demand", fillClass: "fill-topic-demand" },
+    { key: "ui_design", icon: "🎨", label: "Website & Design", fillClass: "fill-ui-design" },
+    { key: "bug_report", icon: "🐛", label: "Report an Issue", fillClass: "fill-bug-report" },
+    { key: "general", icon: "💬", label: "General Thought", fillClass: "fill-general" }
+  ];
+
+  if (catBarsList) {
+    let html = "";
+    focusAreas.forEach(area => {
+      const count = catCounts[area.key] || 0;
+      const pct = total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
+      html += `
+        <div class="interaction-bar-row">
+          <div class="interaction-row-label">
+            <span class="interaction-icon">${area.icon}</span>
+            <strong>${area.label}</strong>
+          </div>
+          <div class="interaction-bar-track">
+            <div class="interaction-bar-fill ${area.fillClass}" style="width: ${pct}%;"></div>
+          </div>
+          <span class="interaction-count-badge">${pct}% (${count})</span>
+        </div>
+      `;
+    });
+    catBarsList.innerHTML = html;
+  }
+
+  // Summary Metrics for Focus Areas
+  const summaryTopicEl = $("#summary-topic-demand-rate");
+  const summaryDesignEl = $("#summary-design-rate");
+  const summaryIssueEl = $("#summary-issue-rate");
+  if (summaryTopicEl) summaryTopicEl.textContent = total > 0 ? `${(((catCounts.topic_request || 0) / total) * 100).toFixed(1)}%` : "0.0%";
+  if (summaryDesignEl) summaryDesignEl.textContent = total > 0 ? `${(((catCounts.ui_design || 0) / total) * 100).toFixed(1)}%` : "0.0%";
+  if (summaryIssueEl) summaryIssueEl.textContent = total > 0 ? `${(((catCounts.bug_report || 0) / total) * 100).toFixed(1)}%` : "0.0%";
+
+  // 4. Update Filter Dropdown Options with Live Counts
+  const filterSelect = $("#feedback-filter-select");
+  if (filterSelect) {
+    const unreadCount = unread;
+    const topicCount = catCounts.topic_request || 0;
+    const uiCount = catCounts.ui_design || 0;
+    const bugCount = catCounts.bug_report || 0;
+    const generalCount = catCounts.general || 0;
+    const starredCount = adminFeedbackMetrics.starredCount || 0;
+
+    const optAll = filterSelect.querySelector('option[value="all"]');
+    const optUnread = filterSelect.querySelector('option[value="unread"]');
+    const optTopics = filterSelect.querySelector('option[value="topic_request"]');
+    const optUi = filterSelect.querySelector('option[value="ui_design"]');
+    const optBugs = filterSelect.querySelector('option[value="bug_report"]');
+    const optGeneral = filterSelect.querySelector('option[value="general"]');
+    const optStarred = filterSelect.querySelector('option[value="starred"]');
+
+    if (optAll) optAll.textContent = `All Feedback (${total})`;
+    if (optUnread) optUnread.textContent = `Unread 🔴 (${unreadCount})`;
+    if (optTopics) optTopics.textContent = `📚 Topic Demands (${topicCount})`;
+    if (optUi) optUi.textContent = `🎨 UI & Design (${uiCount})`;
+    if (optBugs) optBugs.textContent = `🐛 Issues (${bugCount})`;
+    if (optGeneral) optGeneral.textContent = `💬 General Thought (${generalCount})`;
+    if (optStarred) optStarred.textContent = `⭐ Starred (${starredCount})`;
+
+    filterSelect.value = currentFeedbackTab || "all";
+  }
+
+  // 5. Render Feedback List
+  renderFeedbackList();
+}
+
+function renderFeedbackList() {
+  const container = $("#feedback-list-container");
+  if (!container) return;
+
+  const searchInput = $("#feedback-search-input");
+  const query = (searchInput?.value || "").trim().toLowerCase();
+
+  let filtered = adminFeedbackData.filter(item => {
+    // Dropdown / Tab filter
+    if (currentFeedbackTab === "unread" && item.status !== "unread") return false;
+    if (currentFeedbackTab === "topic_request" && item.category !== "topic_request") return false;
+    if (currentFeedbackTab === "ui_design" && item.category !== "ui_design") return false;
+    if (currentFeedbackTab === "bug_report" && item.category !== "bug_report") return false;
+    if (currentFeedbackTab === "general" && item.category !== "general") return false;
+    if (currentFeedbackTab === "starred" && !item.starred) return false;
+
+    // Search query
+    if (query) {
+      const textMatch = (item.message || "").toLowerCase().includes(query);
+      const nameMatch = (item.name || "").toLowerCase().includes(query);
+      const emailMatch = (item.email || "").toLowerCase().includes(query);
+      const examMatch = (item.targetExam || "").toLowerCase().includes(query);
+      if (!textMatch && !nameMatch && !emailMatch && !examMatch) return false;
+    }
+    return true;
+  });
+
+  const countBadge = $("#feedback-results-count");
+  if (countBadge) {
+    countBadge.textContent = `Showing ${filtered.length} of ${adminFeedbackData.length} suggestion${adminFeedbackData.length === 1 ? '' : 's'}`;
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="feedback-empty-state">
+        <div class="feedback-empty-icon">📭</div>
+        <h4>No feedback found</h4>
+        <p>No suggestions match the selected filter or search query.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const categoryLabels = {
+    topic_request: "📚 Topic / Note Demand",
+    ui_design: "🎨 Website & Design",
+    bug_report: "🐛 Report an Issue",
+    general: "💬 General Thought"
+  };
+
+  container.innerHTML = filtered.map(item => {
+    const initial = (item.name || "A").trim().charAt(0).toUpperCase();
+    const r = Math.min(5, Math.max(1, parseInt(item.rating) || 5));
+    const emojiInfo = FEEDBACK_EMOJI_MAP[r] || { emoji: "⭐", label: "Rating" };
+    const catLabel = categoryLabels[item.category] || (item.category === "feature_idea" ? "💡 Feature Idea" : "💬 Suggestion");
+    const dateStr = item.createdAt ? new Date(item.createdAt).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }) : "Recent";
+    const isUnread = item.status === "unread";
+    const isStarred = Boolean(item.starred);
+
+    const tagsHtml = Array.isArray(item.quickTags) && item.quickTags.length > 0
+      ? item.quickTags.map(t => `<span class="feedback-tag-pill">#${escapeHtml(t)}</span>`).join(" ")
+      : "";
+
+    const emailReplyBtn = item.email ? `
+      <a href="mailto:${encodeURIComponent(item.email)}?subject=${encodeURIComponent('Re: Your Suggestion on Exam Alert India')}" class="fb-action-btn" title="Reply via Email">
+        ✉️ Reply
+      </a>
+    ` : "";
+
+    return `
+      <div class="feedback-item-card ${isUnread ? 'is-unread' : ''} ${isStarred ? 'is-starred' : ''}" data-id="${item.id}">
+        <div class="feedback-item-head">
+          <div class="feedback-user-info">
+            <div class="feedback-user-avatar">${initial}</div>
+            <div class="feedback-user-meta">
+              <span class="feedback-user-name">${escapeHtml(item.name || "Aspirant")}</span>
+              <span class="feedback-user-email">Google Verified Student • ${item.email ? escapeHtml(item.email) : "Authenticated"}</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            ${item.targetExam ? `<span class="cat-pill" style="font-size: 0.72rem; padding: 3px 8px;">${escapeHtml(item.targetExam)}</span>` : ''}
+            <span class="feedback-tag-pill">${catLabel}</span>
+            <span class="feedback-rating-badge" title="${r}/5 - ${emojiInfo.label}">${emojiInfo.emoji} ${emojiInfo.label} (${r}/5)</span>
+          </div>
+        </div>
+
+        <div class="feedback-item-body">${escapeHtml(item.message || "")}</div>
+
+        ${tagsHtml ? `<div class="feedback-tags-row">${tagsHtml}</div>` : ''}
+
+        <div class="feedback-item-meta">
+          <span>🕒 ${dateStr} • Status: <strong>${isUnread ? '🔴 New' : '✓ Reviewed'}</strong></span>
+          <div class="feedback-actions-row">
+            ${emailReplyBtn}
+            <button type="button" class="fb-action-btn ${isStarred ? 'star-active' : ''}" onclick="toggleFeedbackStarred('${item.id}', ${!isStarred})">
+              ${isStarred ? '⭐ Starred' : '☆ Star'}
+            </button>
+            <button type="button" class="fb-action-btn" onclick="toggleFeedbackStatus('${item.id}', '${isUnread ? 'reviewed' : 'unread'}')">
+              ${isUnread ? '✓ Mark Read' : '↺ Mark Unread'}
+            </button>
+            <button type="button" class="fb-action-btn delete-btn" onclick="deleteFeedbackItem('${item.id}')" title="Delete Suggestion">
+              🗑️
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function toggleFeedbackStatus(id, newStatus) {
+  try {
+    const res = await api(`/api/admin/feedback/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus })
+    });
+    if (res && res.success) {
+      showToast(`Feedback marked as ${newStatus === "reviewed" ? "reviewed" : "unread"}.`, "info");
+      await fetchAdminFeedback();
+    }
+  } catch (err) {
+    showToast(`✕ ${err.message || "Could not update feedback status"}`, "error");
+  }
+}
+
+async function toggleFeedbackStarred(id, starred) {
+  try {
+    const res = await api(`/api/admin/feedback/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ starred })
+    });
+    if (res && res.success) {
+      showToast(starred ? "⭐ Feedback starred as favorite!" : "Feedback unstarred.", "info");
+      await fetchAdminFeedback();
+    }
+  } catch (err) {
+    showToast(`✕ ${err.message || "Could not update feedback"}`, "error");
+  }
+}
+
+async function deleteFeedbackItem(id) {
+  if (!confirm("Are you sure you want to delete this student feedback?")) return;
+  try {
+    const res = await api(`/api/admin/feedback/${id}`, {
+      method: "DELETE"
+    });
+    if (res && res.success) {
+      showToast("✓ Feedback item deleted.", "success");
+      await fetchAdminFeedback();
+    }
+  } catch (err) {
+    showToast(`✕ ${err.message || "Could not delete feedback"}`, "error");
+  }
+}
+
+function downloadFeedbackCSV() {
+  if (!adminFeedbackData || adminFeedbackData.length === 0) {
+    showToast("No feedback records available to export.", "warning");
+    return;
+  }
+
+  const headers = ["ID", "Created At", "Name", "Email", "Target Exam", "Rating", "Category", "Status", "Starred", "Message"];
+  const rows = adminFeedbackData.map(item => [
+    item.id || "",
+    item.createdAt || "",
+    `"${(item.name || "").replace(/"/g, '""')}"`,
+    `"${(item.email || "").replace(/"/g, '""')}"`,
+    `"${(item.targetExam || "").replace(/"/g, '""')}"`,
+    item.rating || 5,
+    `"${(item.category || "").replace(/"/g, '""')}"`,
+    item.status || "unread",
+    item.starred ? "true" : "false",
+    `"${(item.message || "").replace(/"/g, '""')}"`
+  ]);
+
+  const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `ExamAlertIndia_Feedback_Export_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast("📥 Feedback telemetry exported to CSV successfully!", "success");
+}
+
+function initAdminFeedbackListeners() {
+  const filterSelect = $("#feedback-filter-select");
+  if (filterSelect) {
+    filterSelect.addEventListener("change", () => {
+      currentFeedbackTab = filterSelect.value || "all";
+      renderFeedbackList();
+    });
+  }
+
+  const tabs = $$("#feedback-filter-tabs .fb-tab-btn");
+  tabs.forEach(btn => {
+    btn.addEventListener("click", () => {
+      tabs.forEach(t => t.classList.remove("active"));
+      btn.classList.add("active");
+      currentFeedbackTab = btn.dataset.tab || "all";
+      if (filterSelect) filterSelect.value = currentFeedbackTab;
+      renderFeedbackList();
+    });
+  });
+
+  const searchInput = $("#feedback-search-input");
+  if (searchInput) {
+    searchInput.addEventListener("input", () => {
+      renderFeedbackList();
+    });
+  }
+
+  const exportBtn = $("#feedback-export-csv-btn");
+  if (exportBtn) {
+    exportBtn.addEventListener("click", downloadFeedbackCSV);
+  }
 }
 
 // ==========================================
@@ -5525,8 +5945,8 @@ function attachSpellChecker(inputEl, alertContainerEl, onFixedCallback = null) {
 let currentAdminView = "dashboard";
 
 function switchAdminView(viewName, updateHash = true) {
-  const validViews = ["dashboard", "interactions", "users", "tags", "missing-searches", "publish", "modify", "profile"];
-  if (viewName === "analysis" || !validViews.includes(viewName)) {
+  const validViews = ["dashboard", "interactions", "users", "feedback", "missing-searches", "publish", "modify", "profile"];
+  if (viewName === "analysis" || viewName === "tags" || !validViews.includes(viewName)) {
     viewName = "dashboard";
   }
 
@@ -5570,8 +5990,8 @@ function switchAdminView(viewName, updateHash = true) {
             ? "User Interactions"
             : (viewName === "users"
                 ? "Users & Students"
-                : (viewName === "tags"
-                    ? "Tag Analysis"
+                : (viewName === "feedback"
+                    ? "Feedback & Suggestions"
                     : (viewName === "missing-searches"
                         ? "Search Demands"
                         : (viewName === "publish" 
@@ -5594,8 +6014,8 @@ function switchAdminView(viewName, updateHash = true) {
               ? "Student Engagement & Interaction Telemetry ⚡"
               : (viewName === "users"
                   ? "Google Authenticated Students & Telemetry 👥"
-                  : (viewName === "tags"
-                      ? "Tag Cloud & Keyword Distribution 🏷️"
+                  : (viewName === "feedback"
+                      ? "Student Demands, Ideas & Feedback Analytics 💬"
                       : (viewName === "missing-searches"
                           ? "Student Search Demands & Content Gaps 🔎"
                           : (viewName === "publish" 
@@ -5611,12 +6031,13 @@ function switchAdminView(viewName, updateHash = true) {
     renderCategoryChart();
     renderRecentNotes();
     renderAnalysisView();
+    renderTagsView();
   } else if (viewName === "interactions") {
     renderInteractionsView();
   } else if (viewName === "users") {
     renderUsersView();
-  } else if (viewName === "tags") {
-    renderTagsView();
+  } else if (viewName === "feedback") {
+    fetchAdminFeedback();
   } else if (viewName === "missing-searches") {
     renderMissingSearchesView();
   } else if (viewName === "modify") {
@@ -6159,7 +6580,7 @@ function setupEventListeners() {
   // Handle browser back/forward and hash changes
   window.addEventListener("hashchange", () => {
     const hash = window.location.hash.replace(/^#/, "");
-    const validViews = ["dashboard", "analysis", "interactions", "tags", "missing-searches", "publish", "modify", "profile"];
+    const validViews = ["dashboard", "analysis", "interactions", "users", "feedback", "tags", "missing-searches", "publish", "modify", "profile", "backup"];
     if (validViews.includes(hash) && sessionStorage.getItem("exam_admin_local_session") === "true") {
       switchAdminView(hash, false);
     }
@@ -7534,10 +7955,11 @@ function setupEventListeners() {
       };
 
       if (cleanDialog) cleanDialog.close();
-      showToast("✓ Visitor logs, search queries & interaction telemetry have been cleared! Admin profile, published notes, and registered users remain safe.", "success");
+      showToast("✓ Visitor logs, search queries, entire feedback & ideas, and interaction telemetry have been completely cleared! Admin profile, published notes, and registered users remain safe.", "success");
       await loadDashboardData();
       if (typeof renderUsersView === "function") renderUsersView();
       if (typeof renderInteractionsView === "function") renderInteractionsView();
+      if (typeof fetchAdminFeedback === "function") await fetchAdminFeedback();
     } catch (err) {
       if (cleanMsg) {
         cleanMsg.textContent = err.message || "Incorrect admin password. Data wipe was rejected.";
@@ -7981,6 +8403,7 @@ function setupEventListeners() {
   $("#lightbox-next-btn")?.addEventListener("click", nextLightbox);
   setupLightboxTTS();
   initAiAssistant();
+  initAdminFeedbackListeners();
 
   $("#lightbox-close-btn")?.addEventListener("click", () => {
     stopAudioNarration();

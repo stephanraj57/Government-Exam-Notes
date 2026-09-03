@@ -2405,6 +2405,7 @@ function setupEventListeners() {
 
   // Mobile Category Pill Strip
   $$(".cat-pill").forEach(btn => {
+    if (btn.closest("#feedback-category-pills")) return;
     btn.addEventListener("click", () => selectCategory(btn.dataset.category));
   });
 
@@ -3512,3 +3513,377 @@ loadNotes();
     sendHeartbeat(true);
   });
 })();
+
+// ==========================================
+// Student Feedback & Suggestions Form Controller
+// ==========================================
+function initFeedbackForm() {
+  const form = document.getElementById("student-feedback-form");
+  if (!form) return;
+
+  const emojiContainer = document.getElementById("feedback-emoji-rating");
+  const emojiBtns = emojiContainer ? emojiContainer.querySelectorAll(".emoji-rate-btn") : [];
+  const ratingValInput = document.getElementById("feedback-rating-val");
+  const sentimentDisplay = document.getElementById("emoji-sentiment-display");
+
+  const emojiSentiments = {
+    1: "😞 Poor (1/5)",
+    2: "😐 Fair (2/5)",
+    3: "🙂 Good (3/5)",
+    4: "😊 Satisfied (4/5)",
+    5: "🤩 Very Satisfied (5/5)"
+  };
+
+  function updateEmojiRating(rating) {
+    const r = parseInt(rating) || 5;
+    if (ratingValInput) ratingValInput.value = r;
+    if (sentimentDisplay) sentimentDisplay.textContent = emojiSentiments[r] || `${r}/5`;
+
+    emojiBtns.forEach(btn => {
+      const btnRating = parseInt(btn.dataset.rating) || 5;
+      btn.classList.toggle("is-active", btnRating === r);
+    });
+  }
+
+  emojiBtns.forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const r = parseInt(btn.dataset.rating) || 5;
+      updateEmojiRating(r);
+    });
+  });
+
+  // Category Selection (no search redirect, isolated class .feedback-cat-pill)
+  const catPills = document.querySelectorAll("#feedback-category-pills .feedback-cat-pill");
+  const catVal = document.getElementById("feedback-category-val");
+
+  catPills.forEach(pill => {
+    pill.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      catPills.forEach(p => p.classList.remove("is-active"));
+      pill.classList.add("is-active");
+      if (catVal) catVal.value = pill.dataset.category || "topic_request";
+    });
+  });
+
+  // Message Character Counter
+  const messageInput = document.getElementById("feedback-message");
+  const charsCounter = document.getElementById("feedback-chars");
+  if (messageInput && charsCounter) {
+    messageInput.addEventListener("input", () => {
+      charsCounter.textContent = messageInput.value.length;
+    });
+  }
+
+  // Google Authentication Banner & Profile Sync
+  const authBanner = document.getElementById("feedback-auth-banner");
+
+  function renderAuthBanner() {
+    if (!authBanner) return;
+    const user = typeof currentStudentUser !== "undefined" ? currentStudentUser : null;
+
+    if (user) {
+      const initial = (user.name || "A").trim().charAt(0).toUpperCase();
+      authBanner.innerHTML = `
+        <div class="feedback-user-auth-badge">
+          ${user.picture 
+            ? `<img class="feedback-user-pic" src="${escapeHtml(user.picture)}" alt="${escapeHtml(user.name || 'User')}" onerror="this.style.display='none'">` 
+            : `<div class="feedback-user-avatar-fallback">${initial}</div>`
+          }
+          <div class="feedback-user-meta">
+            <span class="feedback-user-meta-name">${escapeHtml(user.name || "Student Aspirant")}</span>
+            <span class="feedback-user-meta-email">${escapeHtml(user.email || "")}</span>
+          </div>
+          <span class="feedback-auth-check">✓ Google Verified Aspirant</span>
+        </div>
+      `;
+
+      // Google authenticated user -> Reveal form
+      if (form) form.style.display = "flex";
+
+      // Auto-prefill target exam if user set a goal
+      const examSelect = document.getElementById("feedback-target-exam");
+      if (examSelect && user.targetExam && !examSelect.value) {
+        for (const opt of examSelect.options) {
+          if (opt.value && opt.value.toLowerCase().includes(user.targetExam.toLowerCase())) {
+            examSelect.value = opt.value;
+            break;
+          }
+        }
+      }
+    } else {
+      // Unauthenticated user -> Lock form completely, only Google authenticated users can access
+      if (form) form.style.display = "none";
+
+      authBanner.innerHTML = `
+        <div class="feedback-login-banner">
+          <span class="login-banner-icon">🔒</span>
+          <div class="login-banner-info">
+            <h4>Google Authentication Required</h4>
+            <p>Aspirant Voice is exclusively accessible to Google authenticated aspirants. Please sign in to submit visual note demands, report issues, and share ideas.</p>
+          </div>
+          <button type="button" class="feedback-google-signin-btn" id="feedback-google-signin-btn">
+            <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span>Sign in with Google to Access Aspirant Voice</span>
+          </button>
+        </div>
+      `;
+
+      const signinBtn = document.getElementById("feedback-google-signin-btn");
+      if (signinBtn) {
+        signinBtn.addEventListener("click", () => {
+          if (typeof openStudentAuthModal === "function") {
+            openStudentAuthModal();
+          }
+        });
+      }
+    }
+  }
+
+  renderAuthBanner();
+  window.addEventListener("student-auth-changed", renderAuthBanner);
+
+  // Form Submit Handler
+  const submitBtn = document.getElementById("feedback-submit-btn");
+  const successState = document.getElementById("feedback-success-state");
+  const anotherBtn = document.getElementById("feedback-another-btn");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    // Check Google authentication (mandatory)
+    if (typeof currentStudentUser === "undefined" || !currentStudentUser) {
+      if (typeof showToast === "function") {
+        showToast("🔒 Please sign in with Google to access Aspirant Voice!", "warning");
+      }
+      if (typeof openStudentAuthModal === "function") {
+        openStudentAuthModal();
+      }
+      return;
+    }
+
+    // Validate Category (mandatory)
+    const category = catVal ? catVal.value : "";
+    if (!category) {
+      if (typeof showToast === "function") {
+        showToast("Please select what your suggestion is about (mandatory field).", "warning");
+      }
+      return;
+    }
+
+    // Validate Target Exam (mandatory)
+    const examSelect = document.getElementById("feedback-target-exam");
+    const targetExam = (examSelect?.value || "").trim();
+    if (!targetExam) {
+      if (typeof showToast === "function") {
+        showToast("Please select your Target Exam (mandatory field).", "warning");
+      } else {
+        alert("Please select your Target Exam (mandatory field).");
+      }
+      examSelect?.focus();
+      return;
+    }
+
+    // Validate Message (mandatory)
+    const msg = (messageInput ? messageInput.value : "").trim();
+    if (!msg || msg.length < 5) {
+      if (typeof showToast === "function") {
+        showToast("Please write your suggestion or feedback (mandatory, at least 5 characters).", "warning");
+      } else {
+        alert("Please write your suggestion or feedback (mandatory).");
+      }
+      messageInput?.focus();
+      return;
+    }
+
+    const rating = ratingValInput ? parseInt(ratingValInput.value) || 5 : 5;
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      const btnText = submitBtn.querySelector(".btn-text");
+      if (btnText) btnText.textContent = "Sending...";
+    }
+
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-student-id": currentStudentUser.id || ""
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          rating,
+          category,
+          targetExam,
+          message: msg
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        if (res.status === 401 || data.requiresAuth) {
+          if (typeof openStudentAuthModal === "function") openStudentAuthModal();
+        }
+        throw new Error(data.error || "Failed to submit feedback.");
+      }
+
+      // Success
+      const successTitle = document.getElementById("feedback-success-title");
+      if (successTitle) {
+        const studentName = currentStudentUser?.name ? currentStudentUser.name.trim() : "Aspirant";
+        successTitle.textContent = `Thank You, ${studentName}!`;
+      }
+
+      form.style.display = "none";
+      if (successState) successState.classList.remove("is-hidden");
+
+      if (typeof showToast === "function") {
+        showToast("🎉 Thank you! Your feedback has been sent directly to Admin Studio.", "success");
+      }
+    } catch (err) {
+      if (typeof showToast === "function") {
+        showToast(`✕ ${err.message || "Could not submit feedback"}`, "error");
+      } else {
+        alert(err.message);
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        const btnText = submitBtn.querySelector(".btn-text");
+        if (btnText) btnText.textContent = "Submit Suggestion";
+      }
+    }
+  });
+
+  if (anotherBtn) {
+    anotherBtn.addEventListener("click", () => {
+      form.reset();
+      const examSelect = document.getElementById("feedback-target-exam");
+      if (examSelect) examSelect.value = "";
+      if (charsCounter) charsCounter.textContent = "0";
+      if (successState) successState.classList.add("is-hidden");
+      renderAuthBanner();
+    });
+  }
+}
+
+// ==========================================
+// Quick Study Experience Pulse Controller (No Auth Required, 1 per session, Compact)
+// ==========================================
+function initStudyExperienceRating() {
+  const section = document.getElementById("study-experience-section");
+  if (!section) return;
+
+  const wrapper = document.getElementById("experience-rating-wrapper");
+  const thankyouCard = document.getElementById("experience-thankyou-card");
+  const selectedBadge = document.getElementById("experience-selected-badge");
+  const buttons = section.querySelectorAll(".experience-rate-btn");
+
+  const emojiMap = {
+    1: { emoji: "😞", label: "Poor" },
+    2: { emoji: "😐", label: "Fair" },
+    3: { emoji: "🙂", label: "Good" },
+    4: { emoji: "😊", label: "Satisfied" },
+    5: { emoji: "🤩", label: "Very Satisfied" }
+  };
+
+  const SESSION_KEY = "study_experience_rated";
+  const savedRating = sessionStorage.getItem(SESSION_KEY);
+
+  function showThankYouState(rating, animated = false) {
+    if (!wrapper || !thankyouCard) return;
+    wrapper.style.display = "none";
+    thankyouCard.classList.remove("is-hidden");
+    thankyouCard.style.display = "flex";
+    if (animated) {
+      thankyouCard.style.animation = "none";
+      void thankyouCard.offsetWidth; // trigger reflow
+      thankyouCard.style.animation = "celebrationPopIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both";
+    }
+
+    if (selectedBadge && rating) {
+      const info = emojiMap[rating] || { emoji: "⭐", label: "Rated" };
+      selectedBadge.innerHTML = `<span class="experience-selected-pill">${info.emoji} Rated ${info.label} (${rating}/5)</span>`;
+    }
+  }
+
+  // 1 Rating Per Session Enforcement:
+  // If already rated in this session, show the compact thank you state (locked for this session)
+  if (savedRating) {
+    showThankYouState(parseInt(savedRating) || 5, false);
+    return;
+  }
+
+  // If not rated yet in this session:
+  // Strictly display the 5 unselected emojis; thank you card is hidden before feedback
+  if (wrapper) wrapper.style.display = "flex";
+  if (thankyouCard) {
+    thankyouCard.style.display = "none";
+    thankyouCard.classList.add("is-hidden");
+  }
+
+  buttons.forEach(btn => {
+    btn.classList.remove("is-active");
+    btn.style.transform = "";
+    btn.style.borderColor = "";
+  });
+
+  // Handle click: user rates strictly once per session
+  buttons.forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Guard: strictly 1 rating per session
+      if (sessionStorage.getItem(SESSION_KEY)) return;
+
+      const rating = parseInt(btn.dataset.rating) || 5;
+      sessionStorage.setItem(SESSION_KEY, rating.toString());
+
+      // Button pop feedback
+      btn.style.transform = "scale(1.18)";
+      btn.style.borderColor = "#10b981";
+
+      // Show immediate compact celebration thank you state (zero panel height growth)
+      setTimeout(() => {
+        showThankYouState(rating, true);
+        if (typeof showToast === "function") {
+          showToast("🎉 Thank You for your Rating!", "success");
+        }
+      }, 180);
+
+      // Record to server & admin panel
+      try {
+        await fetch("/api/experience-rating", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rating })
+        });
+      } catch (err) {
+        // Silent catch for smooth UX
+      }
+    });
+  });
+}
+
+// Auto-run when DOM is ready
+function runPublicFeedbackInits() {
+  initFeedbackForm();
+  initStudyExperienceRating();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", runPublicFeedbackInits);
+} else {
+  runPublicFeedbackInits();
+}
+
+
