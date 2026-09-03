@@ -2855,10 +2855,12 @@ async function openUserDetailsModal(userId) {
     if (activeEl) activeEl.textContent = `Last Active: ${formatRelativeOrExactTime(u.lastActiveAt)}`;
     if (sessionEl) sessionEl.textContent = `${u.loginCount || 1} Session${u.loginCount === 1 ? '' : 's'}`;
 
-    const likedNotesList = u.likedNotes || u.bookmarkedNotes || [];
+    const activeNoteIds = new Set(allNotes.map(n => n.id));
+    const rawLiked = u.likedNotes || u.bookmarkedNotes || [];
+    const likedNotesList = rawLiked.filter(n => activeNoteIds.has(n.id || n.noteId));
     const downloadedNotesList = u.downloadedNotes || [];
     if (viewsStat) viewsStat.textContent = (u.viewsCount || (u.views || []).length).toLocaleString();
-    if (likesStat) likesStat.textContent = (u.likesCount || likedNotesList.length).toLocaleString();
+    if (likesStat) likesStat.textContent = (likedNotesList.length).toLocaleString();
     if (downloadsStat) downloadsStat.textContent = (u.downloadsCount || downloadedNotesList.length).toLocaleString();
     if (sharesStat) sharesStat.textContent = (u.sharesCount || (u.shares || []).length).toLocaleString();
     if (bookmarksPill) bookmarksPill.textContent = `${likedNotesList.length} Note${likedNotesList.length === 1 ? '' : 's'}`;
@@ -7623,6 +7625,11 @@ function setupEventListeners() {
       showToast(`✓ ${count} note${count > 1 ? "s" : ""} permanently deleted from library.`, "success");
       pendingDeleteNoteIds = [];
       await loadDashboardData();
+      await fetchAdminUsersData();
+      renderUsersView();
+      if (currentUserDetailId) {
+        openUserDetailsModal(currentUserDetailId);
+      }
     } catch (err) {
       if (deleteMsg) {
         deleteMsg.textContent = err.message || "Incorrect admin password. Deletion was rejected.";

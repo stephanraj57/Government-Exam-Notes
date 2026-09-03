@@ -1098,6 +1098,106 @@ async function handleApi(request, response, url) {
     return true;
   }
 
+  // ==========================================
+  // Helper: Synchronize Interactions & Users when Notes are Deleted
+  // As requested by user: views, share, and downloads are IRREVERSIBLE historical metrics
+  // and are preserved. Active bookmarks and likes are removed immediately!
+  // ==========================================
+  async function cleanupDeletedNotesFromInteractionsAndUsers(deletedNoteIds) {
+    if (!deletedNoteIds || deletedNoteIds.length === 0) return;
+    const deletedSet = new Set(deletedNoteIds.map(String));
+
+    // 1. Get current remaining active note IDs
+    const allNotes = await readJson(NOTES_FILE).catch(() => []);
+    const activeNoteIds = new Set(allNotes.map(n => n.id));
+
+    // 2. Clean up INTERACTIONS_FILE
+    let interactions = await readJson(INTERACTIONS_FILE).catch(() => ({}));
+    if (!interactions.notes) interactions.notes = {};
+
+    deletedNoteIds.forEach(id => {
+      delete interactions.notes[id];
+    });
+
+    let syncedLikes = 0;
+    let syncedDownloads = 0;
+    let syncedImpressions = 0;
+    for (const [nId, nData] of Object.entries(interactions.notes)) {
+      if (activeNoteIds.has(nId) || nId.startsWith("sample-")) {
+        syncedLikes += (Number(nData.likes) || 0);
+        syncedDownloads += (Number(nData.downloads) || 0);
+        syncedImpressions += (Number(nData.impressions) || 0);
+      } else {
+        delete interactions.notes[nId];
+      }
+    }
+    interactions.totalLikes = syncedLikes;
+    interactions.totalDownloads = syncedDownloads;
+    interactions.totalImpressions = Math.max(syncedImpressions, Number(interactions.totalImpressions) || 0);
+    await writeJson(INTERACTIONS_FILE, interactions).catch(() => {});
+
+    // 3. Clean up USERS_FILE & MongoDB users collection
+    let users = await readJson(USERS_FILE).catch(() => []);
+    let anyUserUpdated = false;
+
+    for (const user of users) {
+      let userChanged = false;
+
+      // A. Clean user.bookmarks
+      if (Array.isArray(user.bookmarks)) {
+        const originalLen = user.bookmarks.length;
+        user.bookmarks = user.bookmarks.filter(b => {
+          const bId = typeof b === "object" && b ? (b.noteId || b.id) : b;
+          return bId && !deletedSet.has(String(bId)) && activeNoteIds.has(String(bId));
+        });
+        if (user.bookmarks.length !== originalLen) userChanged = true;
+      }
+
+      // B. Clean user.likes
+      if (Array.isArray(user.likes)) {
+        const originalLen = user.likes.length;
+        user.likes = user.likes.filter(l => {
+          const lId = typeof l === "object" && l ? (l.noteId || l.id) : l;
+          return lId && !deletedSet.has(String(lId)) && activeNoteIds.has(String(lId));
+        });
+        if (user.likes.length !== originalLen) userChanged = true;
+      }
+
+      // C. Recalculate likesCount & bookmarksCount strictly based on remaining active liked notes
+      const activeLikedIds = getUniqueLikedNoteIds(user).filter(id => activeNoteIds.has(id));
+      user.likesCount = activeLikedIds.length;
+      user.bookmarksCount = activeLikedIds.length;
+
+      if (userChanged) {
+        anyUserUpdated = true;
+      }
+    }
+
+    if (anyUserUpdated || users.length > 0) {
+      await writeJson(USERS_FILE, users).catch(() => {});
+    }
+
+    // If MongoDB is connected, also pull deleted notes from users collection
+    if (isMongoConnected && mongoDb) {
+      try {
+        const usersCol = mongoDb.collection("users");
+        for (const delId of deletedNoteIds) {
+          await usersCol.updateMany(
+            {},
+            {
+              $pull: {
+                bookmarks: delId,
+                likes: { $in: [delId, { noteId: delId }] }
+              }
+            }
+          );
+        }
+      } catch (mErr) {
+        console.warn("[MongoDB] Error purging deleted notes from users collection:", mErr.message);
+      }
+    }
+  }
+
   if (request.method === "POST" && url.pathname === "/api/admin/notes/delete") {
     const body = await readBody(request).catch(() => ({}));
     const enteredPassword = String(body.password || "").trim();
@@ -1133,6 +1233,8 @@ async function handleApi(request, response, url) {
     }
 
     await writeJson(NOTES_FILE, remainingNotes);
+    await cleanupDeletedNotesFromInteractionsAndUsers(ids);
+
     sendJson(response, 200, { deleted: true, count: ids.length }, {
       "Set-Cookie": `examAdminSession=${token}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax`
     });
@@ -1159,6 +1261,8 @@ async function handleApi(request, response, url) {
       await fs.unlink(path.join(ROOT, note.imageUrl)).catch(() => undefined);
     }
     await writeJson(NOTES_FILE, notes.filter((item) => item.id !== id));
+    await cleanupDeletedNotesFromInteractionsAndUsers([id]);
+
     sendJson(response, 200, { deleted: true });
     return true;
   }
@@ -1343,6 +1447,10 @@ async function handleApi(request, response, url) {
       sendJson(response, 200, { authenticated: false, user: null });
       return true;
     }
+    const notes = await readJson(NOTES_FILE).catch(() => []);
+    const activeNoteIds = new Set(notes.map(n => n.id));
+    const activeLikedIds = getUniqueLikedNoteIds(user).filter(id => activeNoteIds.has(id));
+
     sendJson(response, 200, {
       authenticated: true,
       user: {
@@ -1354,9 +1462,9 @@ async function handleApi(request, response, url) {
         targetExamDetail: user.targetExamDetail || "",
         joinedAt: user.joinedAt,
         lastActiveAt: user.lastActiveAt,
-        likes: user.likes || [],
-        bookmarks: user.bookmarks || [],
-        likesCount: (user.likes || []).length,
+        likes: activeLikedIds,
+        bookmarks: activeLikedIds,
+        likesCount: activeLikedIds.length,
         sharesCount: (user.shares || []).length,
         viewsCount: (user.views || []).length,
         downloadsCount: (user.downloads || []).length
@@ -2285,7 +2393,7 @@ Guidelines:
       if (lastActiveTs >= sevenDaysAgo) active7Days++;
       if (joinedTs >= sevenDaysAgo) newSignups7Days++;
 
-      const uniqueLikedIds = getUniqueLikedNoteIds(user);
+      const uniqueLikedIds = getUniqueLikedNoteIds(user).filter(id => notesMap.has(id));
       const likesCount = uniqueLikedIds.length;
       totalBookmarksAcrossUsers += likesCount;
 
@@ -2384,7 +2492,7 @@ Guidelines:
     const notes = await readJson(NOTES_FILE).catch(() => []);
     const notesMap = new Map(notes.map(n => [n.id, n]));
 
-    const uniqueLikedIds = getUniqueLikedNoteIds(user);
+    const uniqueLikedIds = getUniqueLikedNoteIds(user).filter(nId => notesMap.has(nId));
     const likedNotes = uniqueLikedIds.map(nId => {
       const note = notesMap.get(nId);
       return note ? { id: note.id, title: note.title, subject: note.subject, imageUrl: note.imageUrl } : { id: nId, title: "Visual Revision Note", subject: "General" };
