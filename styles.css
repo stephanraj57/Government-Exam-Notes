@@ -1498,6 +1498,108 @@ a.nav-link.active .nav-icon {
   background: var(--surface-subtle);
 }
 
+.voice-search-btn {
+  font-size: 1.15rem;
+  color: var(--ink-muted);
+  padding: 4px 6px;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.voice-search-btn:hover {
+  color: var(--primary);
+  background: var(--surface-subtle);
+  transform: scale(1.08);
+}
+
+.voice-search-btn.is-listening {
+  color: #ef4444;
+  animation: voiceMicPulse 1.4s infinite ease-in-out;
+}
+
+@keyframes voiceMicPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50% { transform: scale(1.18); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* Floating Voice Search Listening Pill */
+.voice-search-indicator {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  animation: voicePillFadeIn 0.22s ease-out;
+  width: 100%;
+}
+
+@keyframes voicePillFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.voice-indicator-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.12);
+  font-size: 0.82rem;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .voice-indicator-pill {
+  background: rgba(30, 41, 59, 0.85);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.voice-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+  animation: pulseDotAnim 1s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+.voice-indicator-text {
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.voice-cancel-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  transition: color 0.15s ease;
+}
+
+.voice-cancel-btn:hover {
+  color: #ef4444;
+}
+
 .toolbar-controls {
   display: flex;
   align-items: center;
@@ -3245,6 +3347,18 @@ a.mobile-nav-btn:focus {
   transform: translateY(-2px) scale(1.08);
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45);
   color: #ffffff !important;
+}
+
+.lightbox-dl-action-btn.is-downloading {
+  opacity: 0.75;
+  cursor: wait !important;
+  pointer-events: none;
+  animation: dlSpinPulse 1s infinite linear;
+}
+
+@keyframes dlSpinPulse {
+  0%, 100% { transform: scale(0.96); opacity: 0.7; }
+  50% { transform: scale(1.08); opacity: 1; }
 }
 
 .lightbox-dl-action-btn svg {

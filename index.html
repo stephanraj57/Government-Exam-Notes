@@ -17,7 +17,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="favicon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=131.0">
+  <link rel="stylesheet" href="styles.css?v=133.0">
   <script>
     fetch("/api/auth/google/config")
       .then(r => r.json())
@@ -203,9 +203,21 @@
       <!-- Search & Controls Toolbar -->
       <div class="toolbar">
         <div class="search-box">
-          <span class="search-icon">⌕</span>
+          <span class="search-icon">🔍</span>
           <input id="note-search" type="search" placeholder="Search by title or #tag (e.g. 1857, #preamble)..." aria-label="Search notes">
+          <button id="voice-search-btn" class="voice-search-btn" type="button" title="Voice Search (Speak any topic or keyword)" aria-label="Search by Voice">
+            <span class="mic-icon">🎙️</span>
+          </button>
           <button id="clear-search" class="clear-search-btn" type="button" title="Clear search" hidden>×</button>
+        </div>
+
+        <!-- Live Voice Search Floating Listening Indicator -->
+        <div id="voice-search-indicator" class="voice-search-indicator" hidden aria-live="polite">
+          <div class="voice-indicator-pill">
+            <span class="voice-pulse-dot"></span>
+            <span id="voice-indicator-text" class="voice-indicator-text">Listening... Speak now</span>
+            <button type="button" id="voice-cancel-btn" class="voice-cancel-btn" title="Cancel voice search" aria-label="Cancel">✕</button>
+          </div>
         </div>
 
         <div class="toolbar-controls">
@@ -740,13 +752,13 @@
               <button id="lightbox-share-btn" class="icon-action-btn lightbox-action-icon-btn share-btn" type="button" title="Share Note" aria-label="Share Note">
                 <span class="btn-icon">📤</span>
               </button>
-              <a id="lightbox-download-btn" class="lightbox-dl-action-btn" download="exam-note.jpg" title="Download High-Res Diagram" target="_blank" rel="noopener" aria-label="Download High-Res Diagram">
+              <button type="button" id="lightbox-download-btn" class="lightbox-dl-action-btn" title="Download Note with Domain Watermark" aria-label="Download Note with Domain Watermark">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                   <polyline points="7 10 12 15 17 10"></polyline>
                   <line x1="12" y1="15" x2="12" y2="3"></line>
                 </svg>
-              </a>
+              </button>
             </div>
           </div>
         </div>
@@ -1099,6 +1111,6 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="app.js?v=82.0"></script>
+  <script src="app.js?v=84.0"></script>
 </body>
 </html>

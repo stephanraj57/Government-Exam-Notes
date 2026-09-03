@@ -8122,6 +8122,124 @@ function setupEventListeners() {
   $$("[data-close]").forEach(btn => {
     btn.addEventListener("click", () => btn.closest("dialog")?.close());
   });
+
+  // Admin Lightbox Direct Watermarked Download
+  $("#lightbox-download-btn")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (currentLightboxIndex >= 0 && currentLightboxIndex < allNotes.length) {
+      triggerAdminNoteDownload(allNotes[currentLightboxIndex]);
+    }
+  });
+}
+
+function triggerAdminNoteDownload(note) {
+  if (!note || !note.imageUrl) return;
+
+  const dlBtn = $("#lightbox-download-btn");
+  if (dlBtn) dlBtn.classList.add("is-downloading");
+  showToast("Preparing image note with official watermark... 📥", "info");
+
+  const safeFilename = `${(note.title || "exam-note").replace(/[^a-zA-Z0-9_-]/g, "_")}_ExamAlertIndia.jpg`;
+
+  function initiateDirectBlobDownload(blob) {
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = safeFilename;
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    }, 1500);
+
+    if (dlBtn) dlBtn.classList.remove("is-downloading");
+    showToast("Downloaded revision note with official watermark! ✅", "success");
+  }
+
+  function stampWatermarkAndDownload(img) {
+    try {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const width = img.naturalWidth || img.width || 1200;
+      const height = img.naturalHeight || img.height || 800;
+
+      const bannerHeight = Math.max(54, Math.round(width * 0.048));
+      canvas.width = width;
+      canvas.height = height + bannerHeight;
+
+      ctx.drawImage(img, 0, 0, width, height);
+
+      ctx.fillStyle = "#090d16";
+      ctx.fillRect(0, height, width, bannerHeight);
+
+      ctx.fillStyle = "#3b82f6";
+      ctx.fillRect(0, height, width, Math.max(2, Math.round(bannerHeight * 0.045)));
+
+      const host = window.location.hostname;
+      const domain = (host && !["localhost", "127.0.0.1"].includes(host)) ? host : "examalertindia.com";
+      const fontSize = Math.max(16, Math.round(bannerHeight * 0.36));
+      ctx.font = `600 ${fontSize}px system-ui, -apple-system, sans-serif`;
+      ctx.textBaseline = "middle";
+
+      const centerY = height + (bannerHeight / 2) + Math.round(bannerHeight * 0.02);
+      const paddingX = Math.max(20, Math.round(width * 0.025));
+
+      if (width >= 640) {
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText("📚 Exam Alert India", paddingX, centerY);
+
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#60a5fa";
+        ctx.fillText(`🌐 ${domain}  •  Free AI Govt Exam Notes`, width - paddingX, centerY);
+      } else {
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#60a5fa";
+        ctx.fillText(`📚 Exam Alert India • ${domain}`, width / 2, centerY);
+      }
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          initiateDirectBlobDownload(blob);
+        } else {
+          fallbackProxyDownload();
+        }
+      }, "image/jpeg", 0.95);
+    } catch (err) {
+      fallbackProxyDownload();
+    }
+  }
+
+  function fallbackProxyDownload() {
+    const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(note.imageUrl)}`;
+    const proxyImg = new Image();
+    proxyImg.crossOrigin = "anonymous";
+    proxyImg.onload = () => {
+      stampWatermarkAndDownload(proxyImg);
+    };
+    proxyImg.onerror = () => {
+      if (dlBtn) dlBtn.classList.remove("is-downloading");
+      const a = document.createElement("a");
+      a.href = proxyUrl;
+      a.download = safeFilename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => document.body.removeChild(a), 1000);
+      showToast("Downloaded revision note! ✅", "success");
+    };
+    proxyImg.src = proxyUrl;
+  }
+
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.onload = () => {
+    stampWatermarkAndDownload(img);
+  };
+  img.onerror = () => {
+    fallbackProxyDownload();
+  };
+  img.src = note.imageUrl;
 }
 
 // ==========================================
@@ -9018,7 +9136,6 @@ function updateLightboxContent(note) {
   }
 
   if (downloadBtn) {
-    downloadBtn.href = note.imageUrl || "#";
     downloadBtn.hidden = !note.imageUrl;
   }
 

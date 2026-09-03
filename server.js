@@ -2022,6 +2022,42 @@ Return ONLY a valid JSON object matching this schema:
   }
 
   // ==========================================
+  // Public Secure Image Download Proxy (/api/proxy-image)
+  // Conceals Cloudinary URLs and guarantees same-origin canvas watermarking
+  // ==========================================
+  if (request.method === "GET" && url.pathname === "/api/proxy-image") {
+    const targetUrl = url.searchParams.get("url");
+    if (!targetUrl || !/^https?:\/\//i.test(targetUrl)) {
+      sendJson(response, 400, { error: "Invalid or missing url parameter" });
+      return true;
+    }
+    try {
+      const imgRes = await fetch(targetUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
+      });
+      if (!imgRes.ok) {
+        sendJson(response, imgRes.status, { error: "Failed to fetch image upstream" });
+        return true;
+      }
+      const contentType = imgRes.headers.get("content-type") || "image/jpeg";
+      const buffer = await imgRes.arrayBuffer();
+
+      response.writeHead(200, {
+        "Content-Type": contentType,
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "public, max-age=86400, immutable"
+      });
+      response.end(Buffer.from(buffer));
+      return true;
+    } catch (err) {
+      sendJson(response, 500, { error: err.message || "Proxy image failed" });
+      return true;
+    }
+  }
+
+  // ==========================================
   // Public AI Study Assistant API (/api/ai/chat)
   // 100% Free & Unlimited Study Q&A, Mnemonics & Exam Insights
   // ==========================================

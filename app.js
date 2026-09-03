@@ -916,18 +916,120 @@ let pendingDownloadNote = null;
 
 function triggerNoteDownload(note) {
   if (!note || !note.imageUrl) return;
-  const link = document.createElement("a");
-  link.href = note.imageUrl;
-  link.download = `${(note.title || "exam-note").replace(/[^a-zA-Z0-9_-]/g, "_")}.jpg`;
-  link.target = "_blank";
-  link.rel = "noopener";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
 
-  trackInteraction("download", { noteId: note.id });
-  sendStudentTelemetry("download", { noteId: note.id });
-  showToast("Downloading revision note diagram... 📥", "success");
+  const dlBtn = $("#lightbox-download-btn");
+  if (dlBtn) dlBtn.classList.add("is-downloading");
+  showToast("Preparing image note with official watermark... 📥", "info");
+
+  const safeFilename = `${(note.title || "exam-note").replace(/[^a-zA-Z0-9_-]/g, "_")}_ExamAlertIndia.jpg`;
+
+  function initiateDirectBlobDownload(blob) {
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = safeFilename;
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    }, 1500);
+
+    if (dlBtn) dlBtn.classList.remove("is-downloading");
+    showToast("Downloaded revision note with official watermark! ✅", "success");
+
+    trackInteraction("download", { noteId: note.id });
+    sendStudentTelemetry("download", { noteId: note.id });
+  }
+
+  function stampWatermarkAndDownload(img) {
+    try {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const width = img.naturalWidth || img.width || 1200;
+      const height = img.naturalHeight || img.height || 800;
+
+      const bannerHeight = Math.max(54, Math.round(width * 0.048));
+      canvas.width = width;
+      canvas.height = height + bannerHeight;
+
+      // 1. Draw original diagram completely untouched
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // 2. Draw watermark bottom bar
+      ctx.fillStyle = "#090d16";
+      ctx.fillRect(0, height, width, bannerHeight);
+
+      // Top glowing accent divider
+      ctx.fillStyle = "#3b82f6";
+      ctx.fillRect(0, height, width, Math.max(2, Math.round(bannerHeight * 0.045)));
+
+      // 3. Domain & Branding text
+      const host = window.location.hostname;
+      const domain = (host && !["localhost", "127.0.0.1"].includes(host)) ? host : "examalertindia.com";
+      const fontSize = Math.max(16, Math.round(bannerHeight * 0.36));
+      ctx.font = `600 ${fontSize}px system-ui, -apple-system, sans-serif`;
+      ctx.textBaseline = "middle";
+
+      const centerY = height + (bannerHeight / 2) + Math.round(bannerHeight * 0.02);
+      const paddingX = Math.max(20, Math.round(width * 0.025));
+
+      if (width >= 640) {
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText("📚 Exam Alert India", paddingX, centerY);
+
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#60a5fa";
+        ctx.fillText(`🌐 ${domain}  •  Free AI Govt Exam Notes`, width - paddingX, centerY);
+      } else {
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#60a5fa";
+        ctx.fillText(`📚 Exam Alert India • ${domain}`, width / 2, centerY);
+      }
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          initiateDirectBlobDownload(blob);
+        } else {
+          fallbackProxyDownload();
+        }
+      }, "image/jpeg", 0.95);
+    } catch (err) {
+      console.warn("Canvas watermark error, trying proxy fallback:", err);
+      fallbackProxyDownload();
+    }
+  }
+
+  function fallbackProxyDownload() {
+    const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(note.imageUrl)}`;
+    const proxyImg = new Image();
+    proxyImg.crossOrigin = "anonymous";
+    proxyImg.onload = () => {
+      stampWatermarkAndDownload(proxyImg);
+    };
+    proxyImg.onerror = () => {
+      if (dlBtn) dlBtn.classList.remove("is-downloading");
+      const a = document.createElement("a");
+      a.href = proxyUrl;
+      a.download = safeFilename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => document.body.removeChild(a), 1000);
+      showToast("Downloaded revision note! ✅", "success");
+    };
+    proxyImg.src = proxyUrl;
+  }
+
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.onload = () => {
+    stampWatermarkAndDownload(img);
+  };
+  img.onerror = () => {
+    fallbackProxyDownload();
+  };
+  img.src = note.imageUrl;
 }
 
 function updateBookmarkButtonsInPlace(noteId) {
@@ -1406,7 +1508,6 @@ function updateLightboxContent(note) {
   }
 
   if (downloadBtn) {
-    downloadBtn.href = note.imageUrl || "#";
     downloadBtn.hidden = !note.imageUrl;
   }
 
@@ -2401,6 +2502,154 @@ function setupEventListeners() {
     render();
     searchInput?.focus();
   });
+
+  // ==========================================
+  // Instant Voice Search (Web Speech Recognition)
+  // ==========================================
+  let voiceRecognition = null;
+  let isVoiceListening = false;
+
+  function applyVoiceSearchTranscript(spokenText) {
+    if (!searchInput || !spokenText) return;
+
+    const cleanQuery = spokenText.trim().replace(/[\.\?!,]+$/, "");
+    searchInput.value = cleanQuery;
+    syncClearSearchBtn();
+
+    if (cleanQuery.startsWith("#")) {
+      activeTag = cleanQuery.slice(1).trim();
+    } else {
+      activeTag = null;
+    }
+    updatePopularTags();
+    currentPage = 1;
+    render();
+
+    trackInteraction("search", { query: cleanQuery, mode: "voice" });
+
+    const notesSection = $("#notes") || $("#notes-grid") || $(".notes-section");
+    if (notesSection) {
+      notesSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
+  function showVoiceIndicator(show, text = "") {
+    const indicator = $("#voice-search-indicator");
+    const indicatorText = $("#voice-indicator-text");
+    if (!indicator) return;
+    if (show) {
+      indicator.hidden = false;
+      if (indicatorText && text) indicatorText.textContent = text;
+    } else {
+      indicator.hidden = true;
+    }
+  }
+
+  function initVoiceSearch() {
+    const voiceBtn = $("#voice-search-btn");
+    const cancelBtn = $("#voice-cancel-btn");
+    if (!voiceBtn || !searchInput) return;
+
+    cancelBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (voiceRecognition && isVoiceListening) {
+        voiceRecognition.stop();
+      }
+      showVoiceIndicator(false);
+    });
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      voiceBtn.title = "Voice recognition not supported in this browser (supported in Chrome, Edge, Safari, Android)";
+      voiceBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        showToast("🎙️ Voice search is supported in Chrome, Edge, Safari, and Android browsers.", "info");
+      });
+      return;
+    }
+
+    try {
+      voiceRecognition = new SpeechRecognition();
+      voiceRecognition.continuous = false;
+      voiceRecognition.interimResults = true;
+      voiceRecognition.lang = "en-IN"; // Accurately recognizes Indian English and Hindi exam terms
+
+      voiceRecognition.onstart = () => {
+        isVoiceListening = true;
+        voiceBtn.classList.add("is-listening");
+        voiceBtn.setAttribute("aria-pressed", "true");
+        showVoiceIndicator(true, "Listening... Speak a topic (e.g. 'Polity', '1857')");
+      };
+
+      voiceRecognition.onresult = (event) => {
+        let interimTranscript = "";
+        let finalTranscript = "";
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+
+        const currentSpoken = (finalTranscript || interimTranscript).trim();
+        if (currentSpoken) {
+          const clean = currentSpoken.replace(/[\.\?!,]+$/, "");
+          searchInput.value = clean;
+          syncClearSearchBtn();
+          showVoiceIndicator(true, `"${clean}"`);
+
+          if (finalTranscript) {
+            applyVoiceSearchTranscript(clean);
+            showToast(`🎙️ Voice Search: "${clean}"`, "success");
+          }
+        }
+      };
+
+      voiceRecognition.onerror = (event) => {
+        console.warn("[Voice Search Notice]:", event.error);
+        isVoiceListening = false;
+        voiceBtn.classList.remove("is-listening");
+        voiceBtn.setAttribute("aria-pressed", "false");
+        showVoiceIndicator(false);
+
+        if (event.error === "not-allowed") {
+          showToast("🎙️ Microphone permission denied. Please allow microphone access in browser.", "warning");
+        } else if (event.error !== "no-speech" && event.error !== "aborted") {
+          showToast(`🎙️ Voice search notice: ${event.error}`, "warning");
+        }
+      };
+
+      voiceRecognition.onend = () => {
+        isVoiceListening = false;
+        voiceBtn.classList.remove("is-listening");
+        voiceBtn.setAttribute("aria-pressed", "false");
+        showVoiceIndicator(false);
+      };
+
+      voiceBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (isVoiceListening) {
+          voiceRecognition.stop();
+        } else {
+          try {
+            voiceRecognition.start();
+          } catch (err) {
+            console.warn("Speech recognition restart:", err);
+            voiceRecognition.stop();
+          }
+        }
+      });
+
+    } catch (err) {
+      console.warn("SpeechRecognition init error:", err);
+    }
+  }
+
+  initVoiceSearch();
 
   // Sort Dropdown
   $("#sort-notes")?.addEventListener("change", () => {
