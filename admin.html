@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=137.0">
+  <link rel="stylesheet" href="styles.css?v=154.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -660,14 +660,17 @@
       <!-- View: Users & Student Intelligence (Google Auto Auth & Learner Analytics) -->
       <div id="admin-view-users" class="admin-view-pane" hidden>
         <div class="admin-card user-analytics-card">
-          <div class="card-header">
+          <div class="card-header users-card-header">
             <div>
               <p class="eyebrow">Student Intelligence & Telemetry</p>
               <h2>Google Authenticated Users & Analytics</h2>
             </div>
             <div class="users-header-actions">
-              <button type="button" id="users-export-csv-btn" class="export-users-btn" title="Download Student Telemetry Data as CSV">
-                <span>📥</span> Export CSV
+              <button type="button" id="users-export-csv-btn" class="export-users-btn export-csv-btn" title="Download Full Student Telemetry Data as CSV">
+                <span>📄</span> Export CSV
+              </button>
+              <button type="button" id="users-export-excel-btn" class="export-users-btn export-excel-btn" title="Export Student Name, Email, Target Exam, Views, Likes, Shares to Excel">
+                <span>📊</span> Export Excel
               </button>
             </div>
           </div>
@@ -3667,6 +3670,6 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=112.0"></script>
+  <script src="admin.js?v=114.0"></script>
 </body>
 </html>

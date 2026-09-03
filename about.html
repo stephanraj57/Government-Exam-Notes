@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=145.0">
+  <link rel="stylesheet" href="styles.css?v=154.0">
 </head>
 <body class="about-body">
   <!-- Ambient Radial Mesh Glow Backdrop & Floating Orbs (Obsidian Studio Aesthetic) -->
@@ -44,7 +44,7 @@
         <span class="nav-icon">❤️</span> Saved
       </a>
       <a href="about.html" class="nav-link active">
-        <span class="nav-icon">ℹ️</span> About
+        <span class="nav-icon">✨</span> About
       </a>
     </nav>
 
@@ -447,8 +447,8 @@
           <input type="hidden" id="feedback-rating-val" name="rating" value="5">
 
           <!-- Category Selection Chips (Mandatory Field) -->
-          <div class="feedback-field-group">
-            <label class="feedback-field-label">What is your suggestion about? <span class="feedback-req">*</span></label>
+          <div class="feedback-field-group feedback-category-group">
+            <label class="feedback-field-label feedback-field-label-center">What is your suggestion about? <span class="feedback-req">*</span></label>
             <div class="feedback-category-pills" id="feedback-category-pills">
               <button type="button" class="feedback-cat-pill is-active" data-category="topic_request">📚 Topic / Note Demand</button>
               <button type="button" class="feedback-cat-pill" data-category="ui_design">🎨 Website & Design</button>
@@ -511,16 +511,11 @@
     <!-- 8. Dedicated Administrator Portal Access Card -->
     <section class="about-admin-entry-card" aria-label="Administrator Portal">
       <div class="about-admin-entry-inner">
-        <div class="about-admin-badge-col">
-          <span class="about-admin-entry-icon">🔐</span>
-          <div>
-            <h3 class="about-admin-entry-title">Administrator Portal & Studio</h3>
-            <p class="about-admin-entry-sub">Authorized portal for content management, revision note uploads, and student intelligence telemetry.</p>
-          </div>
-        </div>
-        <a id="admin-login-button" href="admin.html" class="about-admin-entry-btn" title="Open Admin Studio Portal">
+        <span class="about-admin-entry-icon" aria-hidden="true">🔐</span>
+        <h3 class="about-admin-entry-title">Administrator Portal & Studio</h3>
+        <p class="about-admin-entry-sub">Authorized portal for content management, revision note uploads, and student intelligence telemetry.</p>
+        <a id="admin-login-button" href="admin.html" target="_blank" rel="noopener noreferrer" class="about-admin-entry-btn" title="Open Admin Studio Portal in new tab">
           <span>Admin Studio Login</span>
-          <span class="entry-arrow">↗</span>
         </a>
       </div>
     </section>
@@ -534,10 +529,10 @@
         <span>•</span>
         <a href="about.html">About</a>
         <span>•</span>
-        <a href="admin.html">Admin Studio</a>
+        <a href="admin.html" target="_blank" rel="noopener noreferrer">Admin Studio</a>
       </div>
       <div>
-        © 2026 <strong>Free AI Govt Exam Notes</strong>. Curated with ❤️ by <strong>Stephanraj</strong> for aspirants across India.
+        © 2026 <strong>Free AI Govt Exam Notes</strong>. Curated with ❤️ by <strong>Stephan</strong> for aspirants across India.
       </div>
     </footer>
 
@@ -560,7 +555,7 @@
     </a>
     <a href="about.html" class="mobile-nav-btn active" title="About Free AI Govt Exam Notes">
       <span class="mob-icon-wrap">
-        <span class="mob-icon">ℹ️</span>
+        <span class="mob-icon">✨</span>
       </span>
       <span>About</span>
     </a>

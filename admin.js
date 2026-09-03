@@ -3011,6 +3011,66 @@ function exportUsersCsv() {
   showToast("Student telemetry CSV exported successfully! 📥", "success");
 }
 
+function exportUsersExcel() {
+  if (!adminUsersData || adminUsersData.length === 0) {
+    showToast("No student user data available to export.", "info");
+    return;
+  }
+
+  const headers = ["Student Name", "Email Address", "Target Exam", "View Count", "Like Count", "Share Count"];
+  const rows = adminUsersData.map(u => [
+    u.name || "Anonymous",
+    u.email || "N/A",
+    u.targetExam || "Not Specified",
+    Number(u.viewsCount) || 0,
+    Number(u.likesCount) || 0,
+    Number(u.sharesCount) || 0
+  ]);
+
+  // Create professional HTML/XML-based Excel format (.xls) with custom styling and formatting
+  const excelContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Students Telemetry</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+    <style>
+      th { background-color: #10b981; color: #ffffff; font-weight: bold; height: 32px; font-size: 13px; text-align: left; padding: 6px 12px; }
+      td { height: 26px; font-size: 12px; padding: 4px 10px; font-family: Calibri, Arial, sans-serif; }
+      .num-col { text-align: right; }
+    </style>
+  </head>
+  <body>
+    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; font-family: Calibri, Arial, sans-serif;">
+      <thead>
+        <tr>
+          ${headers.map(h => `<th>${h}</th>`).join("")}
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(row => `<tr>
+          <td>${String(row[0]).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+          <td>${String(row[1]).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+          <td>${String(row[2]).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+          <td class="num-col">${row[3]}</td>
+          <td class="num-col">${row[4]}</td>
+          <td class="num-col">${row[5]}</td>
+        </tr>`).join("")}
+      </tbody>
+    </table>
+  </body>
+  </html>`;
+
+  const blob = new Blob([excelContent], { type: "application/vnd.ms-excel;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `exam_alert_students_excel_${new Date().toISOString().slice(0, 10)}.xls`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast("Student Excel spreadsheet exported successfully! 📊", "success");
+}
+
 // ==========================================
 // 4.032 Student Feedback & Suggestions Analytics Hub
 // ==========================================
@@ -3285,7 +3345,7 @@ function renderFeedbackList() {
               <span class="feedback-user-email">Google Verified Student • ${item.email ? escapeHtml(item.email) : "Authenticated"}</span>
             </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="feedback-item-badges">
             ${item.targetExam ? `<span class="cat-pill" style="font-size: 0.72rem; padding: 3px 8px;">${escapeHtml(item.targetExam)}</span>` : ''}
             <span class="feedback-tag-pill">${catLabel}</span>
             <span class="feedback-rating-badge" title="${r}/5 - ${emojiInfo.label}">${emojiInfo.emoji} ${emojiInfo.label} (${r}/5)</span>
@@ -6428,6 +6488,10 @@ function setupEventListeners() {
 
   $("#users-export-csv-btn")?.addEventListener("click", () => {
     exportUsersCsv();
+  });
+
+  $("#users-export-excel-btn")?.addEventListener("click", () => {
+    exportUsersExcel();
   });
 
   // Delegated click handler for Inspect User Profile Button

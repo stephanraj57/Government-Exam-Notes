@@ -17,7 +17,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="favicon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=145.0">
+  <link rel="stylesheet" href="styles.css?v=154.0">
   <script>
     fetch("/api/auth/google/config")
       .then(r => r.json())
@@ -53,7 +53,7 @@
         <span class="nav-icon">❤️</span> Saved <span id="bookmark-badge" class="badge">0</span>
       </button>
       <button type="button" class="nav-link" data-view="about" title="About Free AI Govt Exam Notes">
-        <span class="nav-icon">ℹ️</span> About
+        <span class="nav-icon">✨</span> About
       </button>
     </nav>
 
@@ -689,8 +689,8 @@
           <input type="hidden" id="feedback-rating-val" name="rating" value="5">
 
           <!-- Category Selection Chips (Mandatory Field) -->
-          <div class="feedback-field-group">
-            <label class="feedback-field-label">What is your suggestion about? <span class="feedback-req">*</span></label>
+          <div class="feedback-field-group feedback-category-group">
+            <label class="feedback-field-label feedback-field-label-center">What is your suggestion about? <span class="feedback-req">*</span></label>
             <div class="feedback-category-pills" id="feedback-category-pills">
               <button type="button" class="feedback-cat-pill is-active" data-category="topic_request">📚 Topic / Note Demand</button>
               <button type="button" class="feedback-cat-pill" data-category="ui_design">🎨 Website & Design</button>
@@ -753,16 +753,11 @@
     <!-- 9. Dedicated Administrator Portal Access Card -->
     <section class="about-admin-entry-card" aria-label="Administrator Portal">
       <div class="about-admin-entry-inner">
-        <div class="about-admin-badge-col">
-          <span class="about-admin-entry-icon">🔐</span>
-          <div>
-            <h3 class="about-admin-entry-title">Administrator Portal & Studio</h3>
-            <p class="about-admin-entry-sub">Authorized portal for content management, revision note uploads, and student intelligence telemetry.</p>
-          </div>
-        </div>
-        <a id="admin-login-button" href="admin.html" class="about-admin-entry-btn" title="Open Admin Studio Portal">
+        <span class="about-admin-entry-icon" aria-hidden="true">🔐</span>
+        <h3 class="about-admin-entry-title">Administrator Portal & Studio</h3>
+        <p class="about-admin-entry-sub">Authorized portal for content management, revision note uploads, and student intelligence telemetry.</p>
+        <a id="admin-login-button" href="admin.html" target="_blank" rel="noopener noreferrer" class="about-admin-entry-btn" title="Open Admin Studio Portal in new tab">
           <span>Admin Studio Login</span>
-          <span class="entry-arrow">↗</span>
         </a>
       </div>
     </section>
@@ -776,10 +771,10 @@
         <span>•</span>
         <button type="button" class="footer-nav-link-btn" onclick="switchView('about')">About</button>
         <span>•</span>
-        <a href="admin.html">Admin Studio</a>
+        <a href="admin.html" target="_blank" rel="noopener noreferrer">Admin Studio</a>
       </div>
       <div>
-        © 2026 <strong>Free AI Govt Exam Notes</strong>. Curated with ❤️ by <strong>Stephanraj</strong> for aspirants across India.
+        © 2026 <strong>Free AI Govt Exam Notes</strong>. Curated with ❤️ by <strong>Stephan</strong> for aspirants across India.
       </div>
     </footer>
 
@@ -802,7 +797,7 @@
     </button>
     <button type="button" class="mobile-nav-btn" data-view="about" title="About Free AI Govt Exam Notes">
       <span class="mob-icon-wrap">
-        <span class="mob-icon">ℹ️</span>
+        <span class="mob-icon">✨</span>
       </span>
       <span>About</span>
     </button>
