@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=129.0">
+  <link rel="stylesheet" href="styles.css?v=131.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -2374,10 +2374,7 @@
             <div class="lightbox-overview-head">
               <div class="overview-head-left">
                 <span class="overview-head-icon">📖</span>
-                <div>
-                  <h3 class="overview-head-title">Study Notes & Overview</h3>
-                  <span class="overview-head-sub">High-yield revision summary & key exam concepts</span>
-                </div>
+                <h3 class="overview-head-title">Study Notes & Overview</h3>
               </div>
               <span class="lightbox-meta-date">📅 Final Preview</span>
             </div>
@@ -2389,6 +2386,8 @@
                 <button type="button" class="translate-lang-btn active" style="pointer-events: none;">English</button>
                 <button type="button" class="translate-lang-btn" style="pointer-events: none;">हिन्दी</button>
                 <button type="button" class="translate-lang-btn" style="pointer-events: none;">தமிழ்</button>
+                <button type="button" class="translate-lang-btn" style="pointer-events: none;">বাংলা</button>
+                <button type="button" class="translate-lang-btn" style="pointer-events: none;">मराठी</button>
                 <button type="button" class="translate-lang-btn" style="pointer-events: none;">తెలుగు</button>
                 <button type="button" class="translate-lang-btn" style="pointer-events: none;">മലയാളം</button>
                 <button type="button" class="translate-lang-btn" style="pointer-events: none;">ಕನ್ನಡ</button>
@@ -2555,10 +2554,7 @@
             <div class="lightbox-overview-head">
               <div class="overview-head-left">
                 <span class="overview-head-icon">📖</span>
-                <div>
-                  <h3 class="overview-head-title">Study Notes & Overview</h3>
-                  <span class="overview-head-sub">High-yield revision summary & key exam concepts</span>
-                </div>
+                <h3 class="overview-head-title">Study Notes & Overview</h3>
               </div>
               <span id="lightbox-meta" class="lightbox-meta-date">📅 Recent</span>
             </div>
@@ -2570,6 +2566,8 @@
                 <button type="button" class="translate-lang-btn active" data-lang="en" title="English (Original)">English</button>
                 <button type="button" class="translate-lang-btn" data-lang="hi" title="हिन्दी (Hindi)">हिन्दी</button>
                 <button type="button" class="translate-lang-btn" data-lang="ta" title="தமிழ் (Tamil)">தமிழ்</button>
+                <button type="button" class="translate-lang-btn" data-lang="bn" title="বাংলা (Bengali)">বাংলা</button>
+                <button type="button" class="translate-lang-btn" data-lang="mr" title="मराठी (Marathi)">मराठी</button>
                 <button type="button" class="translate-lang-btn" data-lang="te" title="తెలుగు (Telugu)">తెలుగు</button>
                 <button type="button" class="translate-lang-btn" data-lang="ml" title="മലയാളം (Malayalam)">മലയാളം</button>
                 <button type="button" class="translate-lang-btn" data-lang="kn" title="ಕನ್ನಡ (Kannada)">ಕನ್ನಡ</button>
@@ -2615,6 +2613,67 @@
               <div id="lightbox-overview-text" class="lightbox-overview-text">
                 <!-- Dynamically populated rich overview / bullet points -->
               </div>
+
+              <!-- On-Device Local AI Study Assistant (Chrome Built-in AI / WebLLM) -->
+              <div id="lightbox-ai-assistant" class="lightbox-ai-assistant is-collapsed" aria-label="AI Study Assistant">
+                <div class="ai-assistant-header" id="ai-assistant-toggle" role="button" tabindex="0" title="Click to collapse / expand AI Study Assistant">
+                  <div class="ai-assistant-title">
+                    <span class="ai-avatar-pulse">🤖</span>
+                    <div>
+                      <div class="ai-title-row">
+                        <strong class="ai-title-text">AI Study Assistant</strong>
+                        <span id="ai-engine-badge" class="ai-engine-badge badge-detecting" title="Active AI Engine">
+                          <span class="ai-badge-dot"></span>
+                          <span id="ai-engine-badge-text">Detecting Local AI...</span>
+                        </span>
+                      </div>
+                      <small class="ai-sub-text">100% Free · On-Device · Instant Doubts & Memory Tricks</small>
+                    </div>
+                  </div>
+                  <button type="button" class="ai-collapse-btn" id="ai-collapse-btn" aria-label="Collapse / Expand Assistant">
+                    <span class="ai-collapse-icon">▾</span>
+                  </button>
+                </div>
+
+                <div class="ai-assistant-body" id="ai-assistant-body">
+                  <!-- Quick Prompt Chips -->
+                  <div class="ai-quick-chips" role="group" aria-label="Quick AI Prompts">
+                    <button type="button" class="ai-chip-btn" data-action="explain_simple" title="Get a simple, beginner-friendly explanation">
+                      <span>💡 Explain Simply</span>
+                    </button>
+                    <button type="button" class="ai-chip-btn" data-action="mnemonic" title="Get a clever memory trick or acronym">
+                      <span>🧠 Memory Mnemonic</span>
+                    </button>
+                    <button type="button" class="ai-chip-btn" data-action="exam_questions" title="See high-probability exam questions & MCQs">
+                      <span>🎯 Exam MCQs</span>
+                    </button>
+                    <button type="button" class="ai-chip-btn" data-action="key_takeaways" title="Summary of 4-5 high-yield revision facts">
+                      <span>📝 Key Takeaways</span>
+                    </button>
+                  </div>
+
+                  <!-- Chat & Output Stream -->
+                  <div class="ai-chat-output" id="ai-chat-output" aria-live="polite">
+                    <div class="ai-welcome-msg">
+                      <span class="ai-welcome-icon">✨</span>
+                      <div>
+                        <p><strong>Hi aspirant!</strong> Ask any doubt about this topic, or tap one of the quick revision chips above.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Input Form -->
+                  <form class="ai-input-form" id="ai-input-form" autocomplete="off">
+                    <input type="text" id="ai-query-input" class="ai-query-input" placeholder="Ask a doubt about this topic..." maxlength="300" aria-label="Ask a doubt about this topic">
+                    <button type="submit" id="ai-send-btn" class="ai-send-btn" title="Send question to AI Assistant" aria-label="Send">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+                      </svg>
+                    </button>
+                  </form>
+                </div>
+              </div>
+
             </div>
 
             <!-- Tags Section -->
@@ -3454,6 +3513,6 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=99.0"></script>
+  <script src="admin.js?v=101.0"></script>
 </body>
 </html>

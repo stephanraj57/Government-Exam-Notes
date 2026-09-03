@@ -1525,6 +1525,8 @@ function getUniqueLikedNoteIds(user) {
 const INDIAN_LANG_NAMES = {
   hi: "Hindi (हिन्दी)",
   ta: "Tamil (தமிழ்)",
+  bn: "Bengali (বাংলা)",
+  mr: "Marathi (मराठी)",
   te: "Telugu (తెలుగు)",
   ml: "Malayalam (മലയാളം)",
   kn: "Kannada (ಕನ್ನಡ)"
@@ -1709,7 +1711,7 @@ ${rawHtml}`;
     }
 
     const cleanText = text.slice(0, 2000);
-    const validLang = ["en", "hi", "ta", "te", "ml", "kn"].includes(lang) ? lang : "en";
+    const validLang = ["en", "hi", "ta", "bn", "mr", "te", "ml", "kn"].includes(lang) ? lang : "en";
     const cacheKey = `${validLang}:${cleanText}`;
 
     if (globalThis.__TTS_CACHE && globalThis.__TTS_CACHE.has(cacheKey)) {
@@ -2017,6 +2019,166 @@ Return ONLY a valid JSON object matching this schema:
       sendJson(response, 500, { error: err.message || "Failed to analyze diagram with Gemini AI." });
     }
     return true;
+  }
+
+  // ==========================================
+  // Public AI Study Assistant API (/api/ai/chat)
+  // 100% Free & Unlimited Study Q&A, Mnemonics & Exam Insights
+  // ==========================================
+  function generateSmartFallbackAnswer(title, subject, overviewHtml, action, query) {
+    const cleanText = (overviewHtml || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const sentences = cleanText.split(/([.!?;:\n।]+)/).filter(s => s.trim().length > 15);
+    const topSentences = sentences.slice(0, 5).map(s => s.trim());
+
+    if (action === "explain_simple") {
+      return `### 💡 Simple Explanation: ${title || "Core Concepts"}\n\n` +
+        `**Key Idea:** This topic belongs to **${subject || "General Studies"}** and is frequently tested in competitive government exams.\n\n` +
+        (topSentences.length > 0 
+          ? `In essence:\n` + topSentences.slice(0, 3).map(s => `• ${s}`).join("\n") 
+          : `• Focus on the timeline, major stakeholders, and constitutional/economic implications.`);
+    }
+
+    if (action === "mnemonic") {
+      const words = (title || "EXAM").split(/\s+/).filter(w => w.length > 2);
+      const acronym = words.map(w => w[0].toUpperCase()).join("");
+      return `### 🧠 Memory Mnemonic Trick\n\n` +
+        `**Acronym:** \`${acronym || "CORE"}\`\n\n` +
+        (topSentences.slice(0, 4).map((s, i) => `• **${(acronym[i] || "•")}** — ${s.slice(0, 80)}...`).join("\n") ||
+        `• Associate key events with their chronological dates and cause-effect triggers.`);
+    }
+
+    if (action === "exam_questions") {
+      return `### 🎯 Probable Exam MCQs (${subject || "General Studies"})\n\n` +
+        `**Q1. Which of the following is most centrally associated with "${title}"?**\n` +
+        `• (A) ${topSentences[0]?.slice(0, 60) || "Primary historical cause"}\n` +
+        `• (B) Secondary economic shift\n` +
+        `• (C) Administrative reorganization\n` +
+        `• (D) None of the above\n` +
+        `*Answer:* **(A)** — ${topSentences[0]?.slice(0, 90) || "Directly confirmed in study notes."}\n\n` +
+        `**Q2. In which exam paper does this topic carry maximum weightage?**\n` +
+        `• GS Paper 1 / General Awareness & Revision Syllabus.`;
+    }
+
+    if (action === "key_takeaways") {
+      return `### 📝 Key Exam Takeaways\n\n` +
+        (topSentences.length > 0 
+          ? topSentences.map(s => `• **High-Yield:** ${s}`).join("\n") 
+          : `• Review the visual diagram for rapid chronological memorization.`);
+    }
+
+    return `### 🤖 Study Assistant Answer\n\n` +
+      `Regarding **"${query}"** in the context of **${title}**:\n\n` +
+      (topSentences.slice(0, 2).map(s => `• ${s}`).join("\n") ||
+      `• Refer to the high-yield diagram above for exact exam terminology and concept flow.`);
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/ai/chat") {
+    const body = await readBody(request).catch(() => ({}));
+    const noteTitle = String(body.noteTitle || "").trim();
+    const noteSubject = String(body.noteSubject || "").trim();
+    const noteOverview = String(body.noteOverview || "").trim();
+    const userQuery = String(body.userQuery || body.prompt || "").trim();
+    const quickAction = String(body.quickAction || "").trim();
+
+    if (!userQuery && !quickAction) {
+      sendJson(response, 400, { error: "userQuery or quickAction is required" });
+      return true;
+    }
+
+    const cacheKey = `${noteTitle}:${noteSubject}:${quickAction}:${userQuery}`.toLowerCase().slice(0, 300);
+    if (globalThis.__AI_CHAT_CACHE && globalThis.__AI_CHAT_CACHE.has(cacheKey)) {
+      const cachedAnswer = globalThis.__AI_CHAT_CACHE.get(cacheKey);
+      sendJson(response, 200, {
+        answer: cachedAnswer,
+        provider: "cloud-cache",
+        cached: true
+      });
+      return true;
+    }
+
+    const apiKey = await getGeminiApiKey();
+
+    let taskInstruction = "";
+    if (quickAction === "explain_simple") {
+      taskInstruction = "Explain this topic in very simple, easy-to-understand terms suitable for a beginner preparing for competitive exams (UPSC, SSC CGL, State PSC). Use an analogy if helpful and keep it under 3 short paragraphs.";
+    } else if (quickAction === "mnemonic") {
+      taskInstruction = "Provide 1-2 clever, memorable mnemonics / memory tricks (acronym or catchy phrase) to easily remember the core facts, dates, or points of this topic during exams.";
+    } else if (quickAction === "exam_questions") {
+      taskInstruction = "Formulate 2-3 high-probability Multiple Choice Questions (MCQs) or exam questions directly based on this note for exams like UPSC, SSC, or State PSC. Include the correct answer and a 1-line explanation for each.";
+    } else if (quickAction === "key_takeaways") {
+      taskInstruction = "Summarize the 4-5 most critical exam takeaways, key dates, articles, or formulas in concise bullet points with bold keywords.";
+    } else {
+      taskInstruction = `Answer the student's question accurately and helpfully in the context of this study topic: "${userQuery}"`;
+    }
+
+    const prompt = `You are an expert AI Study Assistant for competitive government exam aspirants (UPSC, SSC CGL, State PSC, Banking, Railways).
+Current Study Note:
+- Title: ${noteTitle || "General Study Topic"}
+- Subject: ${noteSubject || "General Studies"}
+- Note Content / Overview:
+${(noteOverview || "").replace(/<[^>]+>/g, " ").slice(0, 3000)}
+
+Task:
+${taskInstruction}
+
+Guidelines:
+- Keep the response structured, clear, and easy to read on mobile screens.
+- Use markdown formatting: bold key terms, bullet points, and clean section headers.
+- Keep tone encouraging, educational, and exam-focused.`;
+
+    try {
+      if (apiKey) {
+        const geminiResult = await callGeminiGenerateContent(apiKey, {
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 1000
+          }
+        });
+
+        if (geminiResult.ok) {
+          const answer = geminiResult.data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          if (answer) {
+            if (!globalThis.__AI_CHAT_CACHE) globalThis.__AI_CHAT_CACHE = new Map();
+            if (globalThis.__AI_CHAT_CACHE.size > 200) {
+              const firstKey = globalThis.__AI_CHAT_CACHE.keys().next().value;
+              globalThis.__AI_CHAT_CACHE.delete(firstKey);
+            }
+            globalThis.__AI_CHAT_CACHE.set(cacheKey, answer);
+
+            sendJson(response, 200, {
+              answer,
+              provider: "gemini-cloud",
+              model: geminiResult.model
+            });
+            return true;
+          }
+        }
+      }
+
+      const fallbackAnswer = generateSmartFallbackAnswer(noteTitle, noteSubject, noteOverview, quickAction, userQuery);
+      if (!globalThis.__AI_CHAT_CACHE) globalThis.__AI_CHAT_CACHE = new Map();
+      if (globalThis.__AI_CHAT_CACHE.size > 200) {
+        const firstKey = globalThis.__AI_CHAT_CACHE.keys().next().value;
+        globalThis.__AI_CHAT_CACHE.delete(firstKey);
+      }
+      globalThis.__AI_CHAT_CACHE.set(cacheKey, fallbackAnswer);
+
+      sendJson(response, 200, {
+        answer: fallbackAnswer,
+        provider: "smart-fallback"
+      });
+      return true;
+    } catch (err) {
+      const fallbackAnswer = generateSmartFallbackAnswer(noteTitle, noteSubject, noteOverview, quickAction, userQuery);
+      if (!globalThis.__AI_CHAT_CACHE) globalThis.__AI_CHAT_CACHE = new Map();
+      globalThis.__AI_CHAT_CACHE.set(cacheKey, fallbackAnswer);
+      sendJson(response, 200, {
+        answer: fallbackAnswer,
+        provider: "smart-fallback"
+      });
+      return true;
+    }
   }
 
   // ==========================================

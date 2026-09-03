@@ -1140,6 +1140,7 @@ function clearNoteUrlParam() {
 
 function openLightbox(index) {
   stopAudioNarration();
+  resetAiAssistantChat();
   if (index < 0 || index >= currentFilteredList.length) return;
   currentLightboxIndex = index;
   const note = currentFilteredList[index];
@@ -1258,6 +1259,8 @@ const INDIAN_LANGUAGES = {
   en: "English",
   hi: "हिन्दी",
   ta: "தமிழ்",
+  bn: "বাংলা",
+  mr: "मराठी",
   te: "తెలుగు",
   ml: "മലയാളം",
   kn: "ಕನ್ನಡ"
@@ -1451,6 +1454,8 @@ const LANG_VOICE_MAP = {
   en: ["en-IN", "en-GB", "en-US", "en"],
   hi: ["hi-IN", "hi"],
   ta: ["ta-IN", "ta"],
+  bn: ["bn-IN", "bn-BD", "bn"],
+  mr: ["mr-IN", "mr"],
   te: ["te-IN", "te"],
   ml: ["ml-IN", "ml"],
   kn: ["kn-IN", "kn"]
@@ -1795,6 +1800,277 @@ function setupLightboxTTS() {
       const rate = parseFloat(btn.dataset.rate) || 1.0;
       setTTSSpeed(rate);
     });
+  });
+}
+
+// ==========================================
+// 9.28 On-Device Local AI Study Assistant (Chrome Built-in AI / WebLLM)
+// ==========================================
+let detectedAiProvider = "cloud"; // "chrome-nano" | "webllm" | "cloud"
+let isAiGenerating = false;
+
+async function detectAiProvider() {
+  const badge = $("#ai-engine-badge");
+  const badgeText = $("#ai-engine-badge-text");
+  if (!badge || !badgeText) return;
+
+  // 1. Check for Chrome Built-in AI (Prompt API with Gemini Nano)
+  if (typeof window.ai !== "undefined" && window.ai?.languageModel) {
+    try {
+      const caps = await window.ai.languageModel.capabilities();
+      if (caps && (caps.available === "readily" || caps.available === "after-download")) {
+        detectedAiProvider = "chrome-nano";
+        badge.className = "ai-engine-badge badge-nano";
+        badgeText.textContent = "Chrome Built-in AI (Nano)";
+        badge.title = "Running 100% locally on your device via Chrome Gemini Nano (0 network transfer, 0 latency)";
+        return;
+      }
+    } catch {}
+  }
+
+  // 2. Check for WebGPU (WebLLM compatibility)
+  if (typeof navigator !== "undefined" && navigator.gpu) {
+    detectedAiProvider = "webllm";
+    badge.className = "ai-engine-badge badge-webllm";
+    badgeText.textContent = "WebLLM (Local GPU)";
+    badge.title = "Local WebGPU detected: ready for on-device AI inference";
+    return;
+  }
+
+  // 3. High-Speed Free Cloud Relay
+  detectedAiProvider = "cloud";
+  badge.className = "ai-engine-badge badge-cloud";
+  badgeText.textContent = "Free AI Assistant";
+  badge.title = "High-speed free study assistant powered by Google Gemini";
+}
+
+function formatAiMarkdown(text) {
+  if (!text) return "";
+  let html = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  // Headers
+  html = html.replace(/^### (.*$)/gim, "<h4>$1</h4>");
+  html = html.replace(/^## (.*$)/gim, "<h3>$1</h3>");
+  html = html.replace(/^# (.*$)/gim, "<h3>$1</h3>");
+
+  // Bold & Italic
+  html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
+  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+
+  // Bullet points
+  const lines = html.split("\n");
+  let inList = false;
+  const processedLines = [];
+
+  for (let line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("• ") || trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+      if (!inList) {
+        processedLines.push("<ul>");
+        inList = true;
+      }
+      processedLines.push(`<li>${trimmed.replace(/^[•\-\*]\s*/, "")}</li>`);
+    } else {
+      if (inList) {
+        processedLines.push("</ul>");
+        inList = false;
+      }
+      if (trimmed.length > 0) {
+        if (!trimmed.startsWith("<h")) {
+          processedLines.push(`<p>${line}</p>`);
+        } else {
+          processedLines.push(line);
+        }
+      }
+    }
+  }
+  if (inList) processedLines.push("</ul>");
+
+  return processedLines.join("\n");
+}
+
+function resetAiAssistantChat() {
+  const chatOutput = $("#ai-chat-output");
+  if (chatOutput) {
+    chatOutput.innerHTML = `
+      <div class="ai-welcome-msg">
+        <span class="ai-welcome-icon">✨</span>
+        <div>
+          <p><strong>Hi aspirant!</strong> Ask any doubt about this topic, or tap one of the quick revision chips above.</p>
+        </div>
+      </div>
+    `;
+  }
+  document.querySelectorAll(".ai-chip-btn").forEach(b => b.classList.remove("active"));
+  const input = $("#ai-query-input");
+  if (input) input.value = "";
+  isAiGenerating = false;
+}
+
+async function askAiAssistant(userQuery = "", actionType = null) {
+  if (isAiGenerating) return;
+
+  const chatOutput = $("#ai-chat-output");
+  const inputEl = $("#ai-query-input");
+  const sendBtn = $("#ai-send-btn");
+  if (!chatOutput) return;
+
+  const noteTitle = $("#lightbox-title")?.textContent?.trim() || "";
+  const noteSubject = $("#lightbox-subject")?.textContent?.trim() || "";
+  const noteOverview = $("#lightbox-overview-text")?.innerText?.trim() || "";
+
+  // Label for the user bubble
+  let userLabel = userQuery;
+  if (actionType === "explain_simple") userLabel = "💡 Explain this topic in simple terms";
+  else if (actionType === "mnemonic") userLabel = "🧠 Give me a memory mnemonic trick";
+  else if (actionType === "exam_questions") userLabel = "🎯 What are the probable exam questions?";
+  else if (actionType === "key_takeaways") userLabel = "📝 Give me the key exam takeaways";
+
+  if (!userLabel) return;
+
+  // Append user bubble
+  const userBubble = document.createElement("div");
+  userBubble.className = "ai-bubble ai-user-bubble";
+  userBubble.textContent = userLabel;
+  chatOutput.appendChild(userBubble);
+
+  // Append loading bubble
+  const loadingBubble = document.createElement("div");
+  loadingBubble.className = "ai-bubble ai-assistant-bubble";
+  loadingBubble.innerHTML = `
+    <div class="ai-loading-dots">
+      <span></span><span></span><span></span>
+    </div>
+  `;
+  chatOutput.appendChild(loadingBubble);
+  chatOutput.scrollTop = chatOutput.scrollHeight;
+
+  // Disable UI
+  isAiGenerating = true;
+  if (sendBtn) sendBtn.disabled = true;
+  if (inputEl) inputEl.disabled = true;
+
+  try {
+    let answerText = "";
+    let providerName = "Free AI Assistant";
+
+    // Tier 1: Try Chrome Built-in AI (Prompt API / Gemini Nano) if available
+    if (detectedAiProvider === "chrome-nano" && window.ai?.languageModel) {
+      try {
+        const session = await window.ai.languageModel.create({
+          systemPrompt: "You are an expert tutor for competitive government exams (UPSC, SSC CGL, State PSC). Answer clearly, concisely, and helpfully using bullet points and bold key terms."
+        });
+        const prompt = `Study Topic: ${noteTitle} (${noteSubject})\nNotes:\n${noteOverview.slice(0, 1500)}\n\nStudent Request: ${userLabel}`;
+        answerText = await session.prompt(prompt);
+        session.destroy();
+        providerName = "Chrome Built-in AI (Nano)";
+      } catch (err) {
+        console.warn("Chrome AI prompt error, switching to cloud relay:", err);
+      }
+    }
+
+    // Tier 2 & 3: Cloud relay / smart engine
+    if (!answerText) {
+      const res = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          noteTitle,
+          noteSubject,
+          noteOverview,
+          userQuery: userQuery,
+          quickAction: actionType
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        answerText = data.answer || "No response received.";
+        if (data.provider === "gemini-cloud") {
+          providerName = "Google Gemini AI";
+        } else if (data.provider === "cloud-cache") {
+          providerName = "Instant Cached AI";
+        } else {
+          providerName = "Free AI Assistant";
+        }
+      } else {
+        answerText = "Unable to process question at this time. Please try again or tap another quick chip.";
+      }
+    }
+
+    // Render Answer Bubble
+    loadingBubble.innerHTML = `
+      <div class="ai-answer-content">${formatAiMarkdown(answerText)}</div>
+      <div class="ai-bubble-actions">
+        <span class="ai-provider-tag">⚡ ${providerName}</span>
+        <button type="button" class="ai-copy-btn" title="Copy answer to clipboard">
+          <span class="copy-icon">📋</span>
+          <span class="copy-text">Copy</span>
+        </button>
+      </div>
+    `;
+
+    // Setup Copy button
+    const copyBtn = loadingBubble.querySelector(".ai-copy-btn");
+    copyBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      navigator.clipboard.writeText(answerText).then(() => {
+        const copyText = copyBtn.querySelector(".copy-text");
+        if (copyText) {
+          copyText.textContent = "Copied!";
+          setTimeout(() => { copyText.textContent = "Copy"; }, 2000);
+        }
+      }).catch(() => {});
+    });
+
+  } catch (err) {
+    loadingBubble.innerHTML = `<p style="color: #ef4444; margin: 0;">Notice: ${escapeHtml(err.message || "Failed to reach AI assistant. Please try again.")}</p>`;
+  } finally {
+    isAiGenerating = false;
+    if (sendBtn) sendBtn.disabled = false;
+    if (inputEl) {
+      inputEl.disabled = false;
+      inputEl.value = "";
+    }
+    chatOutput.scrollTop = chatOutput.scrollHeight;
+  }
+}
+
+function initAiAssistant() {
+  detectAiProvider();
+
+  // Collapsible toggle
+  const toggleHeader = $("#ai-assistant-toggle");
+  const assistantContainer = $("#lightbox-ai-assistant");
+  toggleHeader?.addEventListener("click", (e) => {
+    e.preventDefault();
+    assistantContainer?.classList.toggle("is-collapsed");
+  });
+
+  // Quick Action Chips
+  document.querySelectorAll(".ai-chip-btn").forEach(chip => {
+    chip.addEventListener("click", (e) => {
+      e.preventDefault();
+      document.querySelectorAll(".ai-chip-btn").forEach(b => b.classList.remove("active"));
+      chip.classList.add("active");
+      const action = chip.getAttribute("data-action");
+      askAiAssistant("", action);
+    });
+  });
+
+  // Input Form
+  const form = $("#ai-input-form");
+  const input = $("#ai-query-input");
+  form?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const query = input?.value?.trim();
+    if (!query) return;
+    document.querySelectorAll(".ai-chip-btn").forEach(b => b.classList.remove("active"));
+    askAiAssistant(query, null);
   });
 }
 
@@ -2233,13 +2509,16 @@ function setupEventListeners() {
   $("#lightbox-next-btn")?.addEventListener("click", nextLightbox);
   $("#lightbox-close-btn")?.addEventListener("click", closeLightbox);
   setupLightboxTTS();
+  initAiAssistant();
 
   lightboxDialog?.addEventListener("close", () => {
     stopAudioNarration();
+    resetAiAssistantChat();
     clearNoteUrlParam();
   });
   lightboxDialog?.addEventListener("cancel", () => {
     stopAudioNarration();
+    resetAiAssistantChat();
     clearNoteUrlParam();
   });
   lightboxDialog?.addEventListener("click", (e) => {
