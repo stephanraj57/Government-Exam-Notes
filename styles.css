@@ -21688,6 +21688,63 @@ body.about-mode .mobile-category-strip {
   margin-bottom: 8px;
 }
 
+/* ========================================================
+   About Page Scroll-Reveal Animation: Style 1 (Subtle Glass Lift & Staggered Cascade)
+   ======================================================== */
+html.js-reveal-ready .about-reveal {
+  opacity: 0;
+  transform: translateY(28px) scale(0.985);
+  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s ease,
+              border-color 0.3s ease;
+  will-change: opacity, transform;
+}
+
+html.js-reveal-ready .about-reveal.is-revealed {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Staggered cascading delays for grid items */
+html.js-reveal-ready .about-reveal.stagger-1 { transition-delay: 50ms; }
+html.js-reveal-ready .about-reveal.stagger-2 { transition-delay: 110ms; }
+html.js-reveal-ready .about-reveal.stagger-3 { transition-delay: 170ms; }
+html.js-reveal-ready .about-reveal.stagger-4 { transition-delay: 230ms; }
+html.js-reveal-ready .about-reveal.stagger-5 { transition-delay: 290ms; }
+html.js-reveal-ready .about-reveal.stagger-6 { transition-delay: 350ms; }
+
+/* Smooth hover elevational lift once revealed */
+html.js-reveal-ready .about-reveal.is-revealed:hover {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.25s ease,
+              border-color 0.25s ease,
+              background 0.25s ease;
+}
+
+html.js-reveal-ready .about-feature-card.about-reveal.is-revealed:hover,
+html.js-reveal-ready .about-step-card.about-reveal.is-revealed:hover {
+  transform: translateY(-4px) scale(1);
+}
+
+html.js-reveal-ready .about-creator-card.about-reveal.is-revealed:hover,
+html.js-reveal-ready .about-instagram-card.about-reveal.is-revealed:hover,
+html.js-reveal-ready .study-experience-card.about-reveal.is-revealed:hover,
+html.js-reveal-ready .feedback-card-container.about-reveal.is-revealed:hover,
+html.js-reveal-ready .about-admin-entry-card.about-reveal.is-revealed:hover {
+  transform: translateY(-3px) scale(1);
+}
+
+/* Accessibility fallback: Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  html.js-reveal-ready .about-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
 
 
 

@@ -765,6 +765,7 @@ function switchView(viewName, updateHash = true) {
     if (aboutViewPanel) {
       aboutViewPanel.style.display = "flex";
       window.scrollTo({ top: 0, behavior: "smooth" });
+      setTimeout(initAboutScrollReveal, 60);
     }
     if (mobileCatStrip) mobileCatStrip.style.display = "none";
     document.title = "About Us | Free AI Govt Exam Notes";
@@ -3874,10 +3875,97 @@ function initStudyExperienceRating() {
   });
 }
 
+// ==========================================
+// About Page Scroll-Reveal Controller (Style 1: Subtle Glass Lift & Staggered Cascade)
+// ==========================================
+function initAboutScrollReveal() {
+  const isAboutPage = document.body.classList.contains("about-body");
+  const aboutPanel = document.getElementById("about-view-panel");
+  const isAboutPanelVisible = aboutPanel && window.getComputedStyle(aboutPanel).display !== "none";
+
+  if (!isAboutPage && !isAboutPanelVisible) return;
+
+  // Mark document root as reveal-ready so CSS transitions engage
+  document.documentElement.classList.add("js-reveal-ready");
+
+  const container = isAboutPage ? (document.querySelector(".about-page-wrapper") || document.body) : aboutPanel;
+  if (!container) return;
+
+  const targets = [];
+
+  // 1. Hero Section Box
+  const hero = container.querySelector(".about-hero-section");
+  if (hero && !hero.classList.contains("about-reveal")) targets.push({ el: hero });
+
+  // 2. Section Headers
+  container.querySelectorAll(".about-section-header").forEach(hdr => {
+    if (!hdr.classList.contains("about-reveal")) targets.push({ el: hdr });
+  });
+
+  // 3. Standalone Large Box Panels
+  const panelSelectors = [
+    ".about-creator-card",
+    ".about-instagram-card",
+    ".study-experience-card",
+    ".feedback-card-container",
+    ".about-admin-entry-card"
+  ];
+  panelSelectors.forEach(sel => {
+    const card = container.querySelector(sel);
+    if (card && !card.classList.contains("about-reveal")) targets.push({ el: card });
+  });
+
+  // 4. Staggered Cascading Grids (Key Features, Exams Covered, Workflow Steps)
+  const gridGroups = [
+    container.querySelectorAll(".about-features-grid > .about-feature-card"),
+    container.querySelectorAll(".about-exams-grid > .about-exam-card"),
+    container.querySelectorAll(".about-steps-grid > .about-step-card")
+  ];
+
+  gridGroups.forEach(nodeList => {
+    nodeList.forEach((card, idx) => {
+      if (!card.classList.contains("about-reveal")) {
+        const stagger = (idx % 6) + 1;
+        targets.push({ el: card, stagger });
+      }
+    });
+  });
+
+  if (!targets.length) return;
+
+  // Graceful fallback for environments without IntersectionObserver
+  if (!("IntersectionObserver" in window)) {
+    targets.forEach(({ el }) => el.classList.add("is-revealed"));
+    return;
+  }
+
+  const observer = new IntersectionObserver((entries, obs) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("is-revealed");
+        obs.unobserve(entry.target);
+      }
+    });
+  }, {
+    root: null,
+    rootMargin: "0px 0px -40px 0px",
+    threshold: 0.1
+  });
+
+  targets.forEach(({ el, stagger }) => {
+    el.classList.add("about-reveal");
+    if (stagger) {
+      el.classList.add(`stagger-${stagger}`);
+    }
+    observer.observe(el);
+  });
+}
+
 // Auto-run when DOM is ready
 function runPublicFeedbackInits() {
   initFeedbackForm();
   initStudyExperienceRating();
+  initAboutScrollReveal();
 }
 
 if (document.readyState === "loading") {
