@@ -728,10 +728,13 @@
         const igQr = p.instagramQrUrl || "assets/instagram_qr.png";
         const initials = name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "SR";
 
-        // Update Brand Logo across page & app install card
+        // Update Brand Logo across page & app install card & browser tab
         document.querySelectorAll(".brand-logo, .app-avatar-img").forEach(el => {
           el.style.display = "block";
           el.src = logo;
+        });
+        document.querySelectorAll("link[rel*='icon'], link[rel='apple-touch-icon']").forEach(link => {
+          link.href = logo;
         });
 
         // Update Instagram Section (QR Image, Handles & Links)
@@ -902,6 +905,6 @@
     })();
   </script>
 
-  <script src="app.js?v=98.0"></script>
+  <script src="app.js?v=99.0"></script>
 </body>
 </html>

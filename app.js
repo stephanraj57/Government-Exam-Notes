@@ -301,6 +301,7 @@ async function loadNotes() {
     }
     if (localProfile.logoUrl) {
       document.querySelectorAll(".brand-logo, .app-avatar-img").forEach(img => { img.src = localProfile.logoUrl; });
+      document.querySelectorAll("link[rel*='icon'], link[rel='apple-touch-icon']").forEach(link => { link.href = localProfile.logoUrl; });
     }
   }
 
@@ -320,6 +321,9 @@ async function loadNotes() {
         if (logo) {
           document.querySelectorAll(".brand-logo, .app-avatar-img").forEach(img => {
             img.src = logo;
+          });
+          document.querySelectorAll("link[rel*='icon'], link[rel='apple-touch-icon']").forEach(link => {
+            link.href = logo;
           });
         }
       }

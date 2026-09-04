@@ -575,7 +575,7 @@ function applyAdminProfileUI(profile) {
   // Update Brand Logos & Browser Tab Favicon
   $$(".brand-logo").forEach(el => { el.src = logo; });
   $$(".edit-modal-brand-logo").forEach(el => { el.src = logo; });
-  document.querySelectorAll("link[rel*='icon']").forEach(link => {
+  document.querySelectorAll("link[rel*='icon'], link[rel='apple-touch-icon']").forEach(link => {
     link.href = logo;
   });
 

@@ -1033,6 +1033,8 @@ async function handleApi(request, response, url) {
           } catch {}
           await fs.writeFile(path.join(UPLOAD_DIR, fileName), imageBuffer);
           await fs.writeFile(path.join(ROOT, "assets", "ailogo.png"), imageBuffer).catch(() => {});
+          await fs.writeFile(path.join(ROOT, "favicon.png"), imageBuffer).catch(() => {});
+          await fs.writeFile(path.join(ROOT, "favicon.ico"), imageBuffer).catch(() => {});
           profile.logoUrl = `/uploads/${fileName}?t=${Date.now()}`;
         }
       }
@@ -3306,8 +3308,11 @@ Guidelines:
       if (match) {
         const ext = match[1].includes("svg") ? "svg" : match[1].includes("png") ? "png" : match[1].includes("webp") ? "webp" : "png";
         const logoBuffer = Buffer.from(match[2].replace(/[\r\n\s]/g, ""), "base64");
+        const fileName = `site_logo_${Date.now()}.${ext}`;
         await fs.writeFile(path.join(UPLOAD_DIR, fileName), logoBuffer);
         await fs.writeFile(path.join(ROOT, "assets", "ailogo.png"), logoBuffer).catch(() => {});
+        await fs.writeFile(path.join(ROOT, "favicon.png"), logoBuffer).catch(() => {});
+        await fs.writeFile(path.join(ROOT, "favicon.ico"), logoBuffer).catch(() => {});
         profile.logoUrl = `/uploads/${fileName}?t=${Date.now()}`;
       }
     }
