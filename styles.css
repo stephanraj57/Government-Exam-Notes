@@ -15652,19 +15652,21 @@ body.about-mode .mobile-category-strip {
 .edit-logo-preview-frame {
   width: 58px;
   height: 58px;
-  border-radius: 14px;
+  border-radius: 50%;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   display: grid;
   place-items: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  padding: 6px;
+  padding: 4px;
+  overflow: hidden;
 }
 
 .edit-logo-preview-img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 /* Instagram Community & QR Barcode Card inside Modal */
@@ -23712,23 +23714,28 @@ html.js-reveal-ready .about-admin-entry-card.about-reveal.is-revealed:hover {
 .app-avatar-img {
   width: 76px;
   height: 76px;
-  border-radius: 20px;
+  border-radius: 50% !important;
   object-fit: cover;
   box-shadow: 0 12px 28px -6px rgba(37, 99, 235, 0.35),
-              0 0 0 2px rgba(255, 255, 255, 0.9);
+              0 0 0 2px rgba(255, 255, 255, 0.9),
+              0 0 0 4px rgba(16, 185, 129, 0.25);
   display: block;
-  background: #0f172a;
+  background: var(--surface-subtle, rgba(241, 245, 249, 0.6));
+  padding: 2px;
+  box-sizing: border-box;
 }
 
 [data-theme="dark"] .app-avatar-img {
+  background: rgba(30, 41, 59, 0.85);
   box-shadow: 0 12px 30px -4px rgba(16, 185, 129, 0.3),
-              0 0 0 2px rgba(255, 255, 255, 0.15);
+              0 0 0 2px rgba(255, 255, 255, 0.15),
+              0 0 0 4px rgba(16, 185, 129, 0.3);
 }
 
 .app-verified-badge {
   position: absolute;
-  bottom: -4px;
-  right: -4px;
+  bottom: 0px;
+  right: 0px;
   width: 22px;
   height: 22px;
   background: linear-gradient(135deg, #10b981, #059669);

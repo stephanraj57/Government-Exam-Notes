@@ -4019,7 +4019,7 @@ function deleteNotesByIds(ids) {
 // ==========================================
 // 5. Intelligent Image Optimizer & File Processor
 // ==========================================
-function optimizeImageFile(file, maxDimension = 2400, quality = 0.90) {
+function optimizeImageFile(file, maxDimension = 2400, quality = 0.90, preserveTransparency = false) {
   return new Promise((resolve, reject) => {
     // If it's SVG, keep raw SVG base64
     if (file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg")) {
@@ -4029,6 +4029,9 @@ function optimizeImageFile(file, maxDimension = 2400, quality = 0.90) {
       reader.readAsDataURL(file);
       return;
     }
+
+    const isPngOrWebp = file.type === "image/png" || file.type === "image/webp" || file.name.toLowerCase().endsWith(".png") || file.name.toLowerCase().endsWith(".webp");
+    const keepTransparent = preserveTransparency || isPngOrWebp;
 
     const reader = new FileReader();
     reader.onerror = reject;
@@ -4056,14 +4059,26 @@ function optimizeImageFile(file, maxDimension = 2400, quality = 0.90) {
           return;
         }
 
-        // Fill clean white background for PNG transparency
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, width, height);
+        if (!keepTransparent) {
+          // Fill clean white background only for JPEGs
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, width, height);
+        } else {
+          // Ensure canvas starts clear with transparent alpha channel
+          ctx.clearRect(0, 0, width, height);
+        }
+
         ctx.drawImage(img, 0, 0, width, height);
 
         try {
-          const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
-          resolve(compressedDataUrl);
+          if (keepTransparent) {
+            const mimeType = (file.type === "image/webp" || file.name.toLowerCase().endsWith(".webp")) ? "image/webp" : "image/png";
+            const compressedDataUrl = canvas.toDataURL(mimeType);
+            resolve(compressedDataUrl);
+          } else {
+            const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
+            resolve(compressedDataUrl);
+          }
         } catch {
           resolve(e.target.result);
         }
@@ -7256,7 +7271,7 @@ function setupEventListeners() {
 
     // QR Image preview
     if (editIgQrImg) {
-      editIgQrImg.src = adminProfileState.instagramQrUrl || "assets/instagram_qr.svg?v=3.1";
+      editIgQrImg.src = adminProfileState.instagramQrUrl || "assets/instagram_qr.png";
     }
     if (editIgQrFileInput) editIgQrFileInput.value = "";
 
@@ -7658,7 +7673,7 @@ function setupEventListeners() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const dataUrl = await optimizeImageFile(file, 400, 0.92);
+      const dataUrl = await optimizeImageFile(file, 512, 0.95, true);
       selectedLogoData = dataUrl;
       if (editLogoPreviewImg) editLogoPreviewImg.src = dataUrl;
       showToast("✓ Website logo selected! Click 'Save Profile Changes' to apply across all pages.", "info");
@@ -7682,7 +7697,7 @@ function setupEventListeners() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const dataUrl = await optimizeImageFile(file, 600, 0.95);
+      const dataUrl = await optimizeImageFile(file, 600, 0.95, true);
       selectedIgQrData = dataUrl;
       if (editIgQrImg) editIgQrImg.src = dataUrl;
       showToast("✓ Instagram QR image selected! Click 'Save Profile Changes' to apply to About Us page.", "info");
