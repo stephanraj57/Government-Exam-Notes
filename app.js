@@ -4022,10 +4022,16 @@ if (document.readyState === "loading") {
   function updateInstallButtons() {
     const installBtns = document.querySelectorAll("#pwa-install-btn, .app-install-btn");
     const statusBadges = document.querySelectorAll("#pwa-installed-msg, .app-installed-status");
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
     if (isRunningStandalone()) {
       installBtns.forEach(btn => { btn.style.display = "none"; });
       statusBadges.forEach(msg => { msg.style.display = "flex"; });
+    } else if (isIOS) {
+      installBtns.forEach(btn => {
+        const sub = btn.querySelector(".install-btn-secondary");
+        if (sub) sub.textContent = "Tap Share ⬆️ ➔ Add to Home Screen ➕";
+      });
     } else if (deferredPrompt) {
       installBtns.forEach(btn => {
         btn.classList.add("is-ready");
@@ -4065,7 +4071,7 @@ if (document.readyState === "loading") {
     } else {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
       if (isIOS) {
-        showToast('📲 On iPhone: Tap Share (⬆️) at the bottom, then tap "Add to Home Screen"!', "info");
+        showToast('📲 iPhone: Tap Safari Share button (⬆️), then scroll down and tap "Add to Home Screen" ➕!', "info");
       } else {
         showToast('📲 Tap Chrome menu (⋮) at top-right, then select "Install app" or "Add to Home screen"!', "info");
       }

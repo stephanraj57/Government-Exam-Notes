@@ -10,7 +10,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
-  <link rel="apple-touch-icon" href="favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/ailogo.png">
+  <link rel="apple-touch-icon" href="assets/ailogo.png">
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#2563eb">
@@ -18,7 +19,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="AI notes">
-  <link rel="stylesheet" href="styles.css?v=170.0">
+  <link rel="stylesheet" href="styles.css?v=173.0">
 </head>
 <body class="about-body">
   <!-- Ambient Radial Mesh Glow Backdrop & Floating Orbs (Obsidian Studio Aesthetic) -->
@@ -161,29 +162,29 @@
     <section class="about-app-section" id="install-app-section" aria-label="AI Notes Mobile App">
       <div class="about-section-header">
         <span class="about-section-badge" style="background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.15)); color: #10b981; border-color: rgba(16,185,129,0.3);">
-          📲 Android Mobile Application
+          📲 Android & iPhone (iOS) Application
         </span>
         <h2 class="about-section-title">Install "AI Notes" App</h2>
-        <p class="about-section-sub">Add directly to your Android device for instant 1-tap revision & offline reading.</p>
+        <p class="about-section-sub">Add directly to your Android or iPhone device for instant 1-tap revision & offline reading.</p>
       </div>
 
       <div class="about-app-card">
         <div class="app-card-left">
           <div class="app-avatar-wrap">
             <img src="assets/ailogo.png" alt="AI Notes App Icon" class="app-avatar-img" width="76" height="76" onerror="this.src='favicon.png'">
-            <span class="app-verified-badge" title="Official Android App">✓</span>
+            <span class="app-verified-badge" title="Official Mobile App">✓</span>
           </div>
           <div class="app-content-wrap">
             <div class="app-header-row">
               <h3 class="app-card-title">AI notes</h3>
               <div class="app-capsule-badge">
                 <span class="role-sparkle">✦</span>
-                <span class="app-badge-text">Android WebAPK • Free</span>
+                <span class="app-badge-text">Android & iOS WebApp • Free</span>
                 <span class="role-sparkle">✦</span>
               </div>
             </div>
             <p class="app-card-desc">
-              Experience the full power of <strong>AI Notes</strong> right from your Android home screen with our official Progressive Web App. Fast, zero-distraction, and lightweight.
+              Experience the full power of <strong>AI Notes</strong> right from your Android or iPhone home screen with our official Progressive Web App. Fast, zero-distraction, and lightweight.
             </p>
 
             <div class="app-features-grid">
@@ -191,7 +192,7 @@
                 <span class="feat-icon">⚡</span>
                 <div class="feat-text">
                   <strong>1-Tap Home Screen Launch</strong>
-                  <span>Opens instantly like any Play Store app with your custom logo.</span>
+                  <span>Opens instantly like any native app with the official AI Notes icon.</span>
                 </div>
               </div>
               <div class="app-feature-pill">
@@ -220,18 +221,33 @@
         </div>
 
         <div class="app-card-right">
-          <button id="pwa-install-btn" class="app-install-btn" type="button" aria-label="Install AI Notes Android App">
+          <div class="app-platform-logos" aria-label="Available on Android and Apple iOS">
+            <div class="platform-chip platform-chip-android" title="Android Compatible">
+              <svg class="platform-chip-svg" viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true">
+                <path d="M17.523 15.341c-.551 0-1-.449-1-1 0-.55.449-1 1-1 .55 0 1 .45 1 1 0 .551-.45 1-1 1m-11.046 0c-.551 0-1-.449-1-1 0-.55.449-1 1-1 .55 0 1 .45 1 1 0 .551-.45 1-1 1m11.405-6.02l1.997-3.46a.416.416 0 00-.152-.567.416.416 0 00-.568.152l-2.022 3.503c-1.611-.734-3.431-1.144-5.362-1.144s-3.751.41-5.362 1.144L4.408 5.446a.416.416 0 00-.568-.152.416.416 0 00-.152.567l1.997 3.46C2.688 11.086.643 14.776.643 19h22.714c0-4.224-2.045-7.914-5.074-9.679"/>
+              </svg>
+              <span>Android</span>
+            </div>
+            <span class="platform-chip-divider" aria-hidden="true">&amp;</span>
+            <div class="platform-chip platform-chip-apple" title="Apple iOS Compatible">
+              <svg class="platform-chip-svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.63-.77 1.06-1.84.94-2.91-.91.04-2.02.61-2.67 1.38-.58.67-1.09 1.76-.95 2.81 1.02.08 2.05-.51 2.68-1.28z"/>
+              </svg>
+              <span>Apple iOS</span>
+            </div>
+          </div>
+          <button id="pwa-install-btn" class="app-install-btn" type="button" aria-label="Install AI Notes Mobile App">
             <span class="install-btn-icon">📲</span>
             <div class="install-btn-labels">
               <span class="install-btn-primary">Install "AI Notes" App</span>
-              <span class="install-btn-secondary">Instant 1-Tap Android Install</span>
+              <span class="install-btn-secondary">Instant Android & iPhone Setup</span>
             </div>
           </button>
           <div id="pwa-installed-msg" class="app-installed-status" style="display:none;">
             <span class="status-icon">✅</span>
             <span>App is installed on this device!</span>
           </div>
-          <p class="install-guide-hint">Compatible with Chrome, Samsung Internet, Edge & Brave on Android.</p>
+          <p class="install-guide-hint">Compatible with Android (Chrome/Edge/Samsung) & iPhone (Safari "Add to Home Screen").</p>
         </div>
       </div>
     </section>
@@ -301,7 +317,7 @@
               <span class="ig-qr-title">SCAN CODE / BARCODE</span>
             </div>
             <div class="ig-qr-image-wrap">
-              <img src="assets/instagram_qr.svg?v=3.1" alt="Instagram QR Barcode for @smart_ai_notes" class="ig-qr-img" width="180" height="180">
+              <img src="assets/instagram_qr.png" alt="Instagram QR Barcode for @smart_ai_notes" class="ig-qr-img" width="180" height="180" onerror="this.onerror=null; this.src='assets/instagram_qr.png';">
             </div>
             <div class="ig-qr-footer">
               <span class="ig-qr-handle">@smart_ai_notes</span>
@@ -709,7 +725,7 @@
         const avatar = p.avatarUrl || "assets/admin.jpg";
         const logo = p.logoUrl || "assets/ailogo.png";
         const igHandle = (p.instagram || "smart_ai_notes").replace(/^@/, "");
-        const igQr = p.instagramQrUrl || "assets/instagram_qr.svg?v=3.1";
+        const igQr = p.instagramQrUrl || "assets/instagram_qr.png";
         const initials = name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "SR";
 
         // Update Brand Logo across page
@@ -886,6 +902,6 @@
     })();
   </script>
 
-  <script src="app.js?v=96.0"></script>
+  <script src="app.js?v=97.0"></script>
 </body>
 </html>
