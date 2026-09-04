@@ -3,9 +3,9 @@
 // High-Speed Offline Caching & Background Sync
 // =====================================================================
 
-const CACHE_NAME = "ai-notes-static-v1.0";
-const API_CACHE_NAME = "ai-notes-api-v1.0";
-const IMAGE_CACHE_NAME = "ai-notes-images-v1.0";
+const CACHE_NAME = "ai-notes-static-v1.1";
+const API_CACHE_NAME = "ai-notes-api-v1.1";
+const IMAGE_CACHE_NAME = "ai-notes-images-v1.1";
 
 const PRECACHE_ASSETS = [
   "/",
