@@ -728,8 +728,8 @@
         const igQr = p.instagramQrUrl || "assets/instagram_qr.png";
         const initials = name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "SR";
 
-        // Update Brand Logo across page
-        document.querySelectorAll(".brand-logo").forEach(el => {
+        // Update Brand Logo across page & app install card
+        document.querySelectorAll(".brand-logo, .app-avatar-img").forEach(el => {
           el.style.display = "block";
           el.src = logo;
         });
@@ -902,6 +902,6 @@
     })();
   </script>
 
-  <script src="app.js?v=97.0"></script>
+  <script src="app.js?v=98.0"></script>
 </body>
 </html>

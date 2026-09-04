@@ -300,7 +300,7 @@ async function loadNotes() {
       document.querySelectorAll(".avatar-img").forEach(img => { img.src = localProfile.avatarUrl; });
     }
     if (localProfile.logoUrl) {
-      document.querySelectorAll(".brand-logo").forEach(img => { img.src = localProfile.logoUrl; });
+      document.querySelectorAll(".brand-logo, .app-avatar-img").forEach(img => { img.src = localProfile.logoUrl; });
     }
   }
 
@@ -318,7 +318,7 @@ async function loadNotes() {
         }
         const logo = d.profile.logoUrl;
         if (logo) {
-          document.querySelectorAll(".brand-logo").forEach(img => {
+          document.querySelectorAll(".brand-logo, .app-avatar-img").forEach(img => {
             img.src = logo;
           });
         }
@@ -2937,7 +2937,7 @@ function setupEventListeners() {
 function applyProfileState(p) {
   if (!p) return;
   if (p.logoUrl) {
-    document.querySelectorAll(".brand-logo").forEach(img => {
+    document.querySelectorAll(".brand-logo, .app-avatar-img").forEach(img => {
       img.style.display = "block";
       img.src = p.logoUrl;
     });

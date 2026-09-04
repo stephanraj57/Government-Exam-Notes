@@ -1032,6 +1032,7 @@ async function handleApi(request, response, url) {
             }
           } catch {}
           await fs.writeFile(path.join(UPLOAD_DIR, fileName), imageBuffer);
+          await fs.writeFile(path.join(ROOT, "assets", "ailogo.png"), imageBuffer).catch(() => {});
           profile.logoUrl = `/uploads/${fileName}?t=${Date.now()}`;
         }
       }
@@ -3304,8 +3305,9 @@ Guidelines:
       const match = String(assetsSource.logoData).match(/^data:image\/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=\r\n\s]+)$/);
       if (match) {
         const ext = match[1].includes("svg") ? "svg" : match[1].includes("png") ? "png" : match[1].includes("webp") ? "webp" : "png";
-        const fileName = `site_logo_${Date.now()}.${ext}`;
-        await fs.writeFile(path.join(UPLOAD_DIR, fileName), Buffer.from(match[2].replace(/[\r\n\s]/g, ""), "base64"));
+        const logoBuffer = Buffer.from(match[2].replace(/[\r\n\s]/g, ""), "base64");
+        await fs.writeFile(path.join(UPLOAD_DIR, fileName), logoBuffer);
+        await fs.writeFile(path.join(ROOT, "assets", "ailogo.png"), logoBuffer).catch(() => {});
         profile.logoUrl = `/uploads/${fileName}?t=${Date.now()}`;
       }
     }
