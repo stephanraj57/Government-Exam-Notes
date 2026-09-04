@@ -3017,53 +3017,115 @@ function exportUsersExcel() {
     return;
   }
 
+  const escapeXml = (str) => {
+    if (str === null || str === undefined) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
+  };
+
   const headers = ["Student Name", "Email Address", "Target Exam", "View Count", "Like Count", "Share Count"];
-  const rows = adminUsersData.map(u => [
-    u.name || "Anonymous",
-    u.email || "N/A",
-    u.targetExam || "Not Specified",
-    Number(u.viewsCount) || 0,
-    Number(u.likesCount) || 0,
-    Number(u.sharesCount) || 0
-  ]);
+  
+  // Microsoft Excel 2003 XML Spreadsheet Format (Supported natively in all MS Excel versions, Office 365, Google Sheets, LibreOffice)
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+  <Title>Student Intelligence &amp; Telemetry</Title>
+  <Author>Free AI Govt Exam Notes</Author>
+  <Created>${new Date().toISOString()}</Created>
+ </DocumentProperties>
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Center"/>
+   <Borders/>
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#1E293B"/>
+   <Interior/>
+   <NumberFormat/>
+   <Protection/>
+  </Style>
+  <Style ss:ID="HeaderStyle">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#059669"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#059669"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#059669"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#059669"/>
+   </Borders>
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#FFFFFF" ss:Bold="1"/>
+   <Interior ss:Color="#10B981" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="DataText">
+   <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+   </Borders>
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="10" ss:Color="#1E293B"/>
+  </Style>
+  <Style ss:ID="DataNumber">
+   <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+   </Borders>
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="10" ss:Color="#1E293B"/>
+   <NumberFormat ss:Format="#,##0"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Students Telemetry">
+  <Table ss:DefaultRowHeight="20">
+   <Column ss:Width="160"/>
+   <Column ss:Width="200"/>
+   <Column ss:Width="140"/>
+   <Column ss:Width="90"/>
+   <Column ss:Width="90"/>
+   <Column ss:Width="90"/>
+   <Row ss:Height="24">
+`;
 
-  // Create professional HTML/XML-based Excel format (.xls) with custom styling and formatting
-  const excelContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Students Telemetry</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
-    <style>
-      th { background-color: #10b981; color: #ffffff; font-weight: bold; height: 32px; font-size: 13px; text-align: left; padding: 6px 12px; }
-      td { height: 26px; font-size: 12px; padding: 4px 10px; font-family: Calibri, Arial, sans-serif; }
-      .num-col { text-align: right; }
-    </style>
-  </head>
-  <body>
-    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; font-family: Calibri, Arial, sans-serif;">
-      <thead>
-        <tr>
-          ${headers.map(h => `<th>${h}</th>`).join("")}
-        </tr>
-      </thead>
-      <tbody>
-        ${rows.map(row => `<tr>
-          <td>${String(row[0]).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
-          <td>${String(row[1]).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
-          <td>${String(row[2]).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
-          <td class="num-col">${row[3]}</td>
-          <td class="num-col">${row[4]}</td>
-          <td class="num-col">${row[5]}</td>
-        </tr>`).join("")}
-      </tbody>
-    </table>
-  </body>
-  </html>`;
+  headers.forEach(h => {
+    xml += `    <Cell ss:StyleID="HeaderStyle"><Data ss:Type="String">${escapeXml(h)}</Data></Cell>\n`;
+  });
+  xml += `   </Row>\n`;
 
-  const blob = new Blob([excelContent], { type: "application/vnd.ms-excel;charset=utf-8;" });
+  adminUsersData.forEach(u => {
+    xml += `   <Row>\n`;
+    xml += `    <Cell ss:StyleID="DataText"><Data ss:Type="String">${escapeXml(u.name || "Anonymous")}</Data></Cell>\n`;
+    xml += `    <Cell ss:StyleID="DataText"><Data ss:Type="String">${escapeXml(u.email || "N/A")}</Data></Cell>\n`;
+    xml += `    <Cell ss:StyleID="DataText"><Data ss:Type="String">${escapeXml(u.targetExam || "Not Specified")}</Data></Cell>\n`;
+    xml += `    <Cell ss:StyleID="DataNumber"><Data ss:Type="Number">${Number(u.viewsCount) || 0}</Data></Cell>\n`;
+    xml += `    <Cell ss:StyleID="DataNumber"><Data ss:Type="Number">${Number(u.likesCount) || 0}</Data></Cell>\n`;
+    xml += `    <Cell ss:StyleID="DataNumber"><Data ss:Type="Number">${Number(u.sharesCount) || 0}</Data></Cell>\n`;
+    xml += `   </Row>\n`;
+  });
+
+  xml += `  </Table>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <Selected/>
+   <ProtectObjects>False</ProtectObjects>
+   <ProtectScenarios>False</ProtectScenarios>
+   <DisplayGridlines/>
+  </WorksheetOptions>
+ </Worksheet>
+</Workbook>`;
+
+  const blob = new Blob([xml], { type: "application/vnd.ms-excel;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `exam_alert_students_excel_${new Date().toISOString().slice(0, 10)}.xls`;
+  a.download = `exam_alert_students_telemetry_${new Date().toISOString().slice(0, 10)}.xls`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -3312,6 +3374,8 @@ function renderFeedbackList() {
 
   container.innerHTML = filtered.map(item => {
     const initial = (item.name || "A").trim().charAt(0).toUpperCase();
+    const avatarUrl = item.picture ? item.picture : `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(item.name || 'student')}`;
+    const fallbackUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(item.name || 'student')}`;
     const r = Math.min(5, Math.max(1, parseInt(item.rating) || 5));
     const emojiInfo = FEEDBACK_EMOJI_MAP[r] || { emoji: "⭐", label: "Rating" };
     const catLabel = categoryLabels[item.category] || (item.category === "feature_idea" ? "💡 Feature Idea" : "💬 Suggestion");
@@ -3339,7 +3403,7 @@ function renderFeedbackList() {
       <div class="feedback-item-card ${isUnread ? 'is-unread' : ''} ${isStarred ? 'is-starred' : ''}" data-id="${item.id}">
         <div class="feedback-item-head">
           <div class="feedback-user-info">
-            <div class="feedback-user-avatar">${initial}</div>
+            <img class="feedback-user-avatar" src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(item.name || 'Student')}" onerror="this.onerror=null; this.src='${fallbackUrl}';" loading="lazy">
             <div class="feedback-user-meta">
               <span class="feedback-user-name">${escapeHtml(item.name || "Aspirant")}</span>
               <span class="feedback-user-email">Google Verified Student • ${item.email ? escapeHtml(item.email) : "Authenticated"}</span>
@@ -6169,8 +6233,10 @@ function updateRealtimeClock() {
   const now = new Date();
   
   // Format DD/MM/YYYY
-  const day = String(now.getDate()).padStart(2, "0");
-  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const dayNum = now.getDate();
+  const day = String(dayNum).padStart(2, "0");
+  const monthIdx = now.getMonth();
+  const month = String(monthIdx + 1).padStart(2, "0");
   const year = now.getFullYear();
   const dateFormatted = `${day}/${month}/${year}`;
   
@@ -6196,6 +6262,33 @@ function updateRealtimeClock() {
   if (dateEl) dateEl.textContent = dateFormatted;
   if (dayEl) dayEl.textContent = dayName;
 
+  // Update Sidebar Today's Event / Holiday Pill
+  const sidebarTodayEventWrap = $("#admin-sidebar-today-event");
+  const sidebarEventIcon = $("#admin-sidebar-event-icon");
+  const sidebarEventName = $("#admin-sidebar-event-name");
+  
+  if (sidebarTodayEventWrap && sidebarEventIcon && sidebarEventName) {
+    if (typeof getIndianEventsForDate === "function") {
+      const todayEvents = getIndianEventsForDate(year, monthIdx, dayNum);
+      if (todayEvents && todayEvents.length > 0) {
+        const topEvent = todayEvents[0];
+        sidebarEventIcon.textContent = topEvent.icon;
+        sidebarEventName.textContent = topEvent.name;
+        sidebarTodayEventWrap.hidden = false;
+        if (topEvent.type === "holiday") {
+          sidebarTodayEventWrap.classList.add("is-holiday");
+          sidebarTodayEventWrap.classList.remove("is-observance");
+        } else {
+          sidebarTodayEventWrap.classList.add("is-observance");
+          sidebarTodayEventWrap.classList.remove("is-holiday");
+        }
+        sidebarTodayEventWrap.title = `Today's Occasion: ${topEvent.name} - ${topEvent.desc}`;
+      } else {
+        sidebarTodayEventWrap.hidden = true;
+      }
+    }
+  }
+
   // Update Modal Clock Elements
   const modalClock = $("#cal-modal-live-clock");
   const modalDate = $("#cal-modal-live-date");
@@ -6208,6 +6301,379 @@ function updateRealtimeClock() {
 function initRealtimeClock() {
   updateRealtimeClock();
   setInterval(updateRealtimeClock, 1000);
+}
+
+/* ==========================================================================
+   Comprehensive Indian Holidays & Important Observance Days Dataset
+   ========================================================================== */
+const INDIAN_FIXED_EVENTS = [
+  // January
+  { month: 0, day: 1, name: "New Year's Day / Global Family Day", type: "observance", icon: "🎉", desc: "Celebration of the first day of the Gregorian year and global peace." },
+  { month: 0, day: 9, name: "Pravasi Bharatiya Divas (NRI Day)", type: "observance", icon: "🌐", desc: "Commemorates the return of Mahatma Gandhi from South Africa to Mumbai in 1915." },
+  { month: 0, day: 12, name: "National Youth Day (Swami Vivekananda Jayanti)", type: "observance", icon: "🇮🇳", desc: "Birth anniversary of Swami Vivekananda, celebrating youth energy and character building." },
+  { month: 0, day: 15, name: "Indian Army Day", type: "observance", icon: "🎖️", desc: "Honors Field Marshal K. M. Cariappa taking command as the first Indian Commander-in-Chief in 1949." },
+  { month: 0, day: 23, name: "Netaji Subhas Chandra Bose Jayanti (Parakram Diwas)", type: "observance", icon: "⚔️", desc: "Celebrates the courage, resilience, and monumental legacy of Netaji Subhas Chandra Bose." },
+  { month: 0, day: 24, name: "National Girl Child Day", type: "observance", icon: "👧", desc: "Promotes awareness on gender equality, education, healthcare, and nutrition for girls." },
+  { month: 0, day: 25, name: "National Voters' Day & National Tourism Day", type: "observance", icon: "🗳️", desc: "Encourages democratic voter participation and showcases India's rich cultural heritage." },
+  { month: 0, day: 26, name: "Republic Day of India", type: "holiday", icon: "🇮🇳", desc: "Gazetted National Holiday honoring the enforcement of the Constitution of India in 1950." },
+  { month: 0, day: 30, name: "Martyrs' Day (Shaheed Diwas)", type: "observance", icon: "🕊️", desc: "Remembrance of Mahatma Gandhi and all freedom fighters who sacrificed their lives for India." },
+
+  // February
+  { month: 1, day: 4, name: "World Cancer Day", type: "observance", icon: "🎗️", desc: "Global awareness campaign for cancer prevention, detection, and patient support." },
+  { month: 1, day: 13, name: "National Women's Day (Sarojini Naidu Jayanti) & World Radio Day", type: "observance", icon: "📻", desc: "Birth anniversary of the 'Nightingale of India' Sarojini Naidu and celebration of radio." },
+  { month: 1, day: 21, name: "International Mother Language Day", type: "observance", icon: "🗣️", desc: "Promotes linguistic diversity, multilingualism, and mother tongue preservation." },
+  { month: 1, day: 28, name: "National Science Day", type: "observance", icon: "🔬", desc: "Marks the discovery of the Raman Effect by Sir C. V. Raman in 1928, for which he won the Nobel Prize." },
+
+  // March
+  { month: 2, day: 3, name: "World Wildlife Day & National Defence Day", type: "observance", icon: "🦁", desc: "Celebrates flora and fauna biodiversity and India's defence forces." },
+  { month: 2, day: 8, name: "International Women's Day", type: "observance", icon: "👩", desc: "Global celebration of social, economic, cultural, and political empowerment of women." },
+  { month: 2, day: 15, name: "World Consumer Rights Day", type: "observance", icon: "🛍️", desc: "Raises global awareness about consumer rights, protections, and market fairness." },
+  { month: 2, day: 21, name: "World Forestry Day & World Poetry Day", type: "observance", icon: "🌲", desc: "Promotes conservation of forests and the linguistic beauty of poetry." },
+  { month: 2, day: 22, name: "World Water Day", type: "observance", icon: "💧", desc: "Focuses on the critical importance of freshwater and sustainable water management." },
+  { month: 2, day: 23, name: "Shaheed Diwas (Bhagat Singh, Sukhdev & Rajguru)", type: "observance", icon: "🇮🇳", desc: "Honors the supreme martyrdom of Bhagat Singh, Rajguru, and Sukhdev in 1931." },
+
+  // April
+  { month: 3, day: 7, name: "World Health Day", type: "observance", icon: "🩺", desc: "Marks the founding of the WHO and advocates for global health equality." },
+  { month: 3, day: 14, name: "Dr. B. R. Ambedkar Jayanti", type: "holiday", icon: "⚖️", desc: "Gazetted Holiday honoring Dr. Babasaheb Ambedkar, Chief Architect of the Indian Constitution." },
+  { month: 3, day: 21, name: "National Civil Services Day", type: "observance", icon: "🏛️", desc: "Celebrates civil servants dedicated to the service of citizens and governance." },
+  { month: 3, day: 22, name: "Earth Day", type: "observance", icon: "🌍", desc: "International event promoting environmental protection, sustainability, and climate action." },
+  { month: 3, day: 24, name: "National Panchayati Raj Day", type: "observance", icon: "🌾", desc: "Marks the institutionalization of local self-government and grassroots democracy." },
+
+  // May
+  { month: 4, day: 1, name: "International Labour Day (May Day) / Maharashtra & Gujarat Day", type: "holiday", icon: "⚒️", desc: "Honors the labor movement, workers' rights, and states' formation day." },
+  { month: 4, day: 7, name: "World Athletics Day & Rabindranath Tagore Jayanti", type: "observance", icon: "🏃", desc: "Promotes youth athletics and honors Nobel laureate Rabindranath Tagore." },
+  { month: 4, day: 8, name: "World Red Cross & Red Crescent Day", type: "observance", icon: "⛑️", desc: "Honors humanitarian volunteers and emergency relief workers worldwide." },
+  { month: 4, day: 11, name: "National Technology Day", type: "observance", icon: "🚀", desc: "Commemorates the successful Pokhran-II nuclear tests and Indian technological achievements." },
+  { month: 4, day: 21, name: "National Anti-Terrorism Day", type: "observance", icon: "🕊️", desc: "Fosters national harmony, peace, and solidarity against all forms of terrorism." },
+  { month: 4, day: 31, name: "World No Tobacco Day", type: "observance", icon: "🚭", desc: "WHO initiative highlighting health risks associated with tobacco consumption." },
+
+  // June
+  { month: 5, day: 5, name: "World Environment Day", type: "observance", icon: "🌿", desc: "Global flagship platform for inspiring environmental awareness and action." },
+  { month: 5, day: 7, name: "World Food Safety Day", type: "observance", icon: "🥗", desc: "Promotes awareness on preventing, detecting, and managing foodborne risks." },
+  { month: 5, day: 14, name: "World Blood Donor Day", type: "observance", icon: "🩸", desc: "Celebrates voluntary, unpaid blood donors who save lives every day." },
+  { month: 5, day: 21, name: "International Yoga Day & World Music Day", type: "observance", icon: "🧘", desc: "Global celebration of holistic health through Yoga and universal music harmony." },
+  { month: 5, day: 23, name: "International Olympic Day & United Nations Public Service Day", type: "observance", icon: "🏅", desc: "Promotes sports participation and honors public service contributions." },
+  { month: 5, day: 29, name: "National Statistics Day (Prof. P. C. Mahalanobis Jayanti)", type: "observance", icon: "📊", desc: "Commemorates the founder of the Indian Statistical Institute and economic planning." },
+
+  // July
+  { month: 6, day: 1, name: "National Doctors' Day & Chartered Accountants' Day", type: "observance", icon: "🩺", desc: "Honors Dr. B. C. Roy, healthcare professionals, and ICAI financial pillars." },
+  { month: 6, day: 11, name: "World Population Day", type: "observance", icon: "👨‍👩‍👧‍👦", desc: "Focuses on global population trends, reproductive health, and sustainable development." },
+  { month: 6, day: 15, name: "World Youth Skills Day", type: "observance", icon: "🛠️", desc: "Empowers youth with technical, vocational, and entrepreneurship skills." },
+  { month: 6, day: 26, name: "Kargil Vijay Diwas", type: "observance", icon: "🇮🇳", desc: "Commemorates India's victory in Operation Vijay (1999) and the martyrs of Kargil." },
+  { month: 6, day: 29, name: "International Tiger Day", type: "observance", icon: "🐅", desc: "Promotes the preservation of wild tigers and natural forest habitats." },
+
+  // August
+  { month: 7, day: 6, name: "Hiroshima Day & National Handloom Day (Aug 7)", type: "observance", icon: "🧵", desc: "Promotes global nuclear peace and honors India's master handloom weavers." },
+  { month: 7, day: 9, name: "Quit India Movement Day & World Tribal Day", type: "observance", icon: "✊", desc: "Anniversary of the 1942 Quit India call and indigenous peoples' rights." },
+  { month: 7, day: 15, name: "Independence Day of India", type: "holiday", icon: "🇮🇳", desc: "Gazetted National Holiday celebrating freedom from colonial rule on August 15, 1947." },
+  { month: 7, day: 19, name: "World Photography Day & World Humanitarian Day", type: "observance", icon: "📷", desc: "Celebrates visual storytelling and courageous humanitarian aid workers." },
+  { month: 7, day: 20, name: "Sadbhavana Diwas (Harmony Day)", type: "observance", icon: "🤝", desc: "Birth anniversary of Rajiv Gandhi promoting communal harmony and national goodwill." },
+  { month: 7, day: 23, name: "National Space Day (Chandrayaan-3 Moon Landing)", type: "observance", icon: "🚀", desc: "Commemorates the historic touchdown of Chandrayaan-3 near the lunar south pole in 2023." },
+  { month: 7, day: 29, name: "National Sports Day (Major Dhyan Chand Jayanti)", type: "observance", icon: "🏆", desc: "Honors the 'Wizard of Hockey' Major Dhyan Chand and fosters sportsmanship." },
+
+  // September
+  { month: 8, day: 5, name: "National Teachers' Day (Dr. S. Radhakrishnan Jayanti)", type: "observance", icon: "👨‍🏫", desc: "Honors the visionary philosopher-President and celebrates all educators across India." },
+  { month: 8, day: 8, name: "International Literacy Day", type: "observance", icon: "📚", desc: "Highlights literacy as a fundamental human right and basis for inclusive societies." },
+  { month: 8, day: 14, name: "Hindi Diwas", type: "observance", icon: "🇮🇳", desc: "Celebrates the adoption of Hindi as an official language of the Union in 1949." },
+  { month: 8, day: 15, name: "National Engineers' Day & International Day of Democracy", type: "observance", icon: "⚙️", desc: "Tribute to Sir M. Visvesvaraya for engineering excellence and innovation." },
+  { month: 8, day: 16, name: "World Ozone Day", type: "observance", icon: "🛡️", desc: "Promotes international efforts to protect the fragile ozone layer." },
+  { month: 8, day: 21, name: "International Day of Peace & World Alzheimer's Day", type: "observance", icon: "🕊️", desc: "Promotes non-violence, global ceasefire, and mental health awareness." },
+  { month: 8, day: 27, name: "World Tourism Day", type: "observance", icon: "✈️", desc: "Fosters awareness on tourism's economic, cultural, and environmental impacts." },
+
+  // October
+  { month: 9, day: 2, name: "Mahatma Gandhi Jayanti & Lal Bahadur Shastri Jayanti", type: "holiday", icon: "🕊️", desc: "Gazetted National Holiday and UN International Day of Non-Violence." },
+  { month: 9, day: 5, name: "World Teachers' Day", type: "observance", icon: "📖", desc: "UNESCO observance celebrating educators worldwide and modern teaching methods." },
+  { month: 9, day: 8, name: "Indian Air Force Day", type: "observance", icon: "✈️", desc: "Commemorates the official establishment and sky prowess of the IAF in 1932." },
+  { month: 9, day: 9, name: "World Post Day & National Postal Day (Oct 10)", type: "observance", icon: "📮", desc: "Celebrates the historical and modern connectivity role of postal networks." },
+  { month: 9, day: 11, name: "International Day of the Girl Child", type: "observance", icon: "🌟", desc: "Focuses on girl child leadership, rights, and equal opportunities worldwide." },
+  { month: 9, day: 15, name: "World Students' Day (Dr. A. P. J. Abdul Kalam Jayanti)", type: "observance", icon: "🚀", desc: "Honors the 'Missile Man' & former President for his inspiring passion for students." },
+  { month: 9, day: 16, name: "World Food Day", type: "observance", icon: "🌾", desc: "UN FAO day dedicated to ending global hunger and ensuring food security for all." },
+  { month: 9, day: 24, name: "United Nations Day & World Polio Day", type: "observance", icon: "🌐", desc: "Marks the UN Charter entry into force in 1945 and polio eradication efforts." },
+  { month: 9, day: 31, name: "National Unity Day (Rashtriya Ekta Diwas - Sardar Patel Jayanti)", type: "observance", icon: "🇮🇳", desc: "Honors the 'Iron Man of India' Sardar Vallabhbhai Patel for integrating the nation." },
+
+  // November
+  { month: 10, day: 11, name: "National Education Day (Maulana Abul Kalam Azad Jayanti)", type: "observance", icon: "🎓", desc: "Birth anniversary of India's first Education Minister, pioneering higher education." },
+  { month: 10, day: 14, name: "Children's Day (Bal Diwas - Pt. Jawaharlal Nehru Jayanti) & World Diabetes Day", type: "observance", icon: "🎈", desc: "Celebrates childhood, education, and children's welfare across India." },
+  { month: 10, day: 15, name: "Janjatiya Gaurav Divas (Bhagwan Birsa Munda Jayanti)", type: "observance", icon: "🏹", desc: "Honors the valor and contributions of tribal freedom fighters and indigenous heritage." },
+  { month: 10, day: 19, name: "National Integration Day (Indira Gandhi Jayanti) & World Toilet Day", type: "observance", icon: "🤝", desc: "Promotes national solidarity, communal harmony, and global sanitation access." },
+  { month: 10, day: 26, name: "Constitution Day (Samvidhan Divas) & National Milk Day", type: "observance", icon: "📜", desc: "Marks the historic adoption of the Indian Constitution on Nov 26, 1949, and Dr. Verghese Kurien Jayanti." },
+
+  // December
+  { month: 11, day: 1, name: "World AIDS Day", type: "observance", icon: "🎗️", desc: "Unites global communities in HIV prevention, support, and destigmatization." },
+  { month: 11, day: 4, name: "Indian Navy Day", type: "observance", icon: "⚓", desc: "Celebrates Operation Trident (1971) and maritime security guardian achievements." },
+  { month: 11, day: 7, name: "Armed Forces Flag Day", type: "observance", icon: "🎖️", desc: "Honors the brave soldiers, sailors, and airmen who defend our motherland." },
+  { month: 11, day: 10, name: "Human Rights Day", type: "observance", icon: "🕊️", desc: "Commemorates the Universal Declaration of Human Rights adopted in 1948." },
+  { month: 11, day: 16, name: "Vijay Diwas", type: "observance", icon: "🇮🇳", desc: "Marks India's decisive historic victory in the 1971 Indo-Pak war." },
+  { month: 11, day: 22, name: "National Mathematics Day (Srinivasa Ramanujan Jayanti)", type: "observance", icon: "📐", desc: "Birth anniversary of mathematical genius Srinivasa Ramanujan, celebrating pure math." },
+  { month: 11, day: 23, name: "National Farmers' Day (Kisan Diwas - Chaudhary Charan Singh Jayanti)", type: "observance", icon: "🚜", desc: "Honors the tireless contributions of Indian farmers feeding the nation." },
+  { month: 11, day: 24, name: "National Consumer Day", type: "observance", icon: "🛡️", desc: "Marks the enactment of the Consumer Protection Act of 1986." },
+  { month: 11, day: 25, name: "Christmas & Good Governance Day (Atal Bihari Vajpayee Jayanti)", type: "holiday", icon: "🎄", desc: "Gazetted Holiday for Christmas and Good Governance Day honoring former PM Vajpayee." }
+];
+
+// Dynamic Multi-Year Major Festivals and Lunar Observances (2025 - 2027)
+const INDIAN_DYNAMIC_YEARLY_EVENTS = {
+  2025: [
+    { month: 0, day: 14, name: "Makar Sankranti / Pongal / Magh Bihu", type: "holiday", icon: "🪁", desc: "Harvest festival celebrating the sun's transition into Capricorn (Uttarayana)." },
+    { month: 1, day: 26, name: "Maha Shivratri", type: "holiday", icon: "🔱", desc: "Sacred night festival celebrating Lord Shiva's divine cosmic dance (Tandava)." },
+    { month: 2, day: 14, name: "Holi (Festival of Colors)", type: "holiday", icon: "🎨", desc: "Vibrant festival celebrating the triumph of good over evil and arrival of spring." },
+    { month: 2, day: 31, name: "Eid-ul-Fitr (Ramzan Eid)", type: "holiday", icon: "🌙", desc: "Major Islamic festival concluding the holy month of fasting (Ramadan)." },
+    { month: 3, day: 6, name: "Ram Navami", type: "holiday", icon: "🏹", desc: "Celebrates the birth anniversary of Lord Rama, the seventh avatar of Vishnu." },
+    { month: 3, day: 10, name: "Mahavir Jayanti", type: "holiday", icon: "🪷", desc: "Celebrates the birth anniversary of Lord Mahavira, the 24th Tirthankara of Jainism." },
+    { month: 3, day: 18, name: "Good Friday", type: "holiday", icon: "✝️", desc: "Christian holiday commemorating the crucifixion of Jesus Christ." },
+    { month: 4, day: 12, name: "Buddha Purnima (Vesak)", type: "holiday", icon: "🧘", desc: "Commemorates the birth, enlightenment, and Mahaparinirvana of Gautama Buddha." },
+    { month: 5, day: 7, name: "Bakrid / Eid-al-Adha (Feast of Sacrifice)", type: "holiday", icon: "🐑", desc: "Islamic holiday honoring Ibrahim's willingness to sacrifice his son in obedience." },
+    { month: 6, day: 6, name: "Muharram (Ashura)", type: "holiday", icon: "🕌", desc: "First month of Islamic calendar; day of mourning remembering Imam Hussain." },
+    { month: 7, day: 9, name: "Raksha Bandhan", type: "observance", icon: "🪢", desc: "Celebrates the sacred protective bond between brothers and sisters." },
+    { month: 7, day: 16, name: "Janmashtami (Krishna Jayanti)", type: "holiday", icon: "🦚", desc: "Celebrates the birth anniversary of Lord Krishna with fasting and bhajans." },
+    { month: 7, day: 27, name: "Ganesh Chaturthi (Vinayaka Chavithi)", type: "holiday", icon: "🐘", desc: "Grand 10-day festival celebrating the arrival of Lord Ganesha on Earth." },
+    { month: 9, day: 1, name: "Maha Navami / Ayudha Puja", type: "holiday", icon: "🗡️", desc: "Ninth day of Navratri honoring Goddess Durga and sanctifying craft tools." },
+    { month: 9, day: 2, name: "Vijaya Dashami (Dussehra)", type: "holiday", icon: "🏹", desc: "Celebrates the victory of Lord Rama over Ravana and Goddess Durga over Mahishasura." },
+    { month: 9, day: 20, name: "Diwali (Deepavali / Lakshmi Puja)", type: "holiday", icon: "🪔", desc: "The grand Festival of Lights symbolizing victory of light over darkness." },
+    { month: 9, day: 22, name: "Bhai Dooj / Govardhan Puja", type: "observance", icon: "✨", desc: "Traditional rituals honoring the bond between brothers and sisters." },
+    { month: 10, day: 5, name: "Guru Nanak Jayanti (Gurpurab)", type: "holiday", icon: "🕯️", desc: "Birth anniversary of Guru Nanak Dev Ji, founder of Sikhism." }
+  ],
+  2026: [
+    { month: 0, day: 14, name: "Makar Sankranti / Pongal / Magh Bihu", type: "holiday", icon: "🪁", desc: "Harvest festival celebrating the sun's transition into Capricorn (Uttarayana)." },
+    { month: 1, day: 15, name: "Maha Shivratri", type: "holiday", icon: "🔱", desc: "Sacred night festival celebrating Lord Shiva's divine cosmic dance (Tandava)." },
+    { month: 2, day: 4, name: "Holi (Festival of Colors)", type: "holiday", icon: "🎨", desc: "Vibrant festival celebrating the triumph of good over evil and arrival of spring." },
+    { month: 2, day: 20, name: "Eid-ul-Fitr (Ramzan Eid)", type: "holiday", icon: "🌙", desc: "Major Islamic festival concluding the holy month of fasting (Ramadan)." },
+    { month: 2, day: 26, name: "Ram Navami", type: "holiday", icon: "🏹", desc: "Celebrates the birth anniversary of Lord Rama, the seventh avatar of Vishnu." },
+    { month: 2, day: 31, name: "Mahavir Jayanti", type: "holiday", icon: "🪷", desc: "Celebrates the birth anniversary of Lord Mahavira, the 24th Tirthankara of Jainism." },
+    { month: 3, day: 3, name: "Good Friday", type: "holiday", icon: "✝️", desc: "Christian holiday commemorating the crucifixion of Jesus Christ." },
+    { month: 4, day: 1, name: "Buddha Purnima (Vesak)", type: "holiday", icon: "🧘", desc: "Commemorates the birth, enlightenment, and Mahaparinirvana of Gautama Buddha." },
+    { month: 4, day: 27, name: "Bakrid / Eid-al-Adha (Feast of Sacrifice)", type: "holiday", icon: "🐑", desc: "Islamic holiday honoring Ibrahim's devotion and faith." },
+    { month: 5, day: 26, name: "Muharram (Ashura)", type: "holiday", icon: "🕌", desc: "Solemn Islamic remembrance of Imam Hussain at Karbala." },
+    { month: 7, day: 28, name: "Raksha Bandhan", type: "observance", icon: "🪢", desc: "Celebrates the cherished protective bond between brothers and sisters." },
+    { month: 8, day: 4, name: "Janmashtami (Krishna Jayanti)", type: "holiday", icon: "🦚", desc: "Celebrates the divine birth anniversary of Lord Krishna." },
+    { month: 8, day: 14, name: "Ganesh Chaturthi (Vinayaka Chavithi)", type: "holiday", icon: "🐘", desc: "Grand 10-day celebration honoring Lord Ganesha." },
+    { month: 9, day: 19, name: "Maha Navami / Ayudha Puja", type: "holiday", icon: "🗡️", desc: "Ninth day of Navratri worshipping divine knowledge and instruments of work." },
+    { month: 9, day: 20, name: "Vijaya Dashami (Dussehra)", type: "holiday", icon: "🏹", desc: "Triumph of righteousness over evil (Rama defeating Ravana)." },
+    { month: 10, day: 8, name: "Diwali (Deepavali / Lakshmi Puja)", type: "holiday", icon: "🪔", desc: "The grand Festival of Lights symbolizing illumination and prosperity." },
+    { month: 10, day: 10, name: "Bhai Dooj / Govardhan Puja", type: "observance", icon: "✨", desc: "Festive tribute celebrating affection and protection between siblings." },
+    { month: 10, day: 24, name: "Guru Nanak Jayanti (Gurpurab)", type: "holiday", icon: "🕯️", desc: "Birth anniversary of Guru Nanak Dev Ji with prabhat pheris and langar." }
+  ],
+  2027: [
+    { month: 0, day: 14, name: "Makar Sankranti / Pongal / Magh Bihu", type: "holiday", icon: "🪁", desc: "Solar harvest festival celebrating abundance and agricultural heritage." },
+    { month: 2, day: 6, name: "Maha Shivratri", type: "holiday", icon: "🔱", desc: "Night of spiritual awakening dedicated to Lord Shiva." },
+    { month: 2, day: 23, name: "Holi (Festival of Colors)", type: "holiday", icon: "🎨", desc: "Joyous celebration of colors, harmony, and love." },
+    { month: 2, day: 26, name: "Good Friday", type: "holiday", icon: "✝️", desc: "Commemoration of the passion and crucifixion of Jesus Christ." },
+    { month: 3, day: 9, name: "Eid-ul-Fitr (Ramzan Eid)", type: "holiday", icon: "🌙", desc: "Celebration marking the conclusion of Ramzan fasting." },
+    { month: 3, day: 15, name: "Ram Navami", type: "holiday", icon: "🏹", desc: "Auspicious celebration of Lord Rama's incarnation." },
+    { month: 3, day: 19, name: "Mahavir Jayanti", type: "holiday", icon: "🪷", desc: "Celebration of non-violence (Ahimsa) and Lord Mahavira's teachings." },
+    { month: 4, day: 20, name: "Buddha Purnima (Vesak)", type: "holiday", icon: "🧘", desc: "Celebration of Gautama Buddha's Enlightenment and Peace message." },
+    { month: 5, day: 16, name: "Bakrid / Eid-al-Adha", type: "holiday", icon: "🐑", desc: "Feast of faith, sharing, and charity in Islam." },
+    { month: 6, day: 15, name: "Muharram (Ashura)", type: "holiday", icon: "🕌", desc: "Islamic holy month remembrance." },
+    { month: 7, day: 17, name: "Raksha Bandhan", type: "observance", icon: "🪢", desc: "Traditional sister-brother bond ceremony." },
+    { month: 7, day: 25, name: "Janmashtami (Krishna Jayanti)", type: "holiday", icon: "🦚", desc: "Birth celebration of Lord Krishna." },
+    { month: 8, day: 4, name: "Ganesh Chaturthi", type: "holiday", icon: "🐘", desc: "Festival welcoming Lord Ganesha." },
+    { month: 9, day: 9, name: "Vijaya Dashami (Dussehra)", type: "holiday", icon: "🏹", desc: "Victory of truth and righteousness." },
+    { month: 9, day: 29, name: "Diwali (Deepavali / Lakshmi Puja)", type: "holiday", icon: "🪔", desc: "Grand illumination and prosperity festival." },
+    { month: 10, day: 14, name: "Guru Nanak Jayanti (Gurpurab)", type: "holiday", icon: "🕯️", desc: "Gurpurab commemorating Guru Nanak Dev Ji." }
+  ]
+};
+
+// Calculate dynamic Nth Sunday events (Mother's Day: 2nd Sun of May, Father's Day: 3rd Sun of June)
+function getCalculatedFloatingEvents(year, month) {
+  const events = [];
+  
+  // Mother's Day: 2nd Sunday in May (month index 4)
+  if (month === 4) {
+    let sundayCount = 0;
+    for (let d = 1; d <= 31; d++) {
+      if (new Date(year, 4, d).getDay() === 0) {
+        sundayCount++;
+        if (sundayCount === 2) {
+          events.push({
+            month: 4,
+            day: d,
+            name: "Mother's Day",
+            type: "observance",
+            icon: "💐",
+            desc: "Celebrates mothers, motherhood, maternal bonds, and their unconditional love."
+          });
+          break;
+        }
+      }
+    }
+  }
+
+  // Father's Day: 3rd Sunday in June (month index 5)
+  if (month === 5) {
+    let sundayCount = 0;
+    for (let d = 1; d <= 30; d++) {
+      if (new Date(year, 5, d).getDay() === 0) {
+        sundayCount++;
+        if (sundayCount === 3) {
+          events.push({
+            month: 5,
+            day: d,
+            name: "Father's Day",
+            type: "observance",
+            icon: "👔",
+            desc: "Celebrates fathers, paternal bonds, mentorship, and their dedication to families."
+          });
+          break;
+        }
+      }
+    }
+  }
+
+  return events;
+}
+
+// Retrieve all Indian events for a given year & month
+function getIndianEventsForMonth(year, month) {
+  const fixed = INDIAN_FIXED_EVENTS.filter(e => e.month === month);
+  const dynamic = (INDIAN_DYNAMIC_YEARLY_EVENTS[year] || []).filter(e => e.month === month);
+  const floating = getCalculatedFloatingEvents(year, month);
+  
+  // Combine and de-duplicate by day + name
+  const combined = [...fixed, ...dynamic, ...floating];
+  const unique = [];
+  const map = new Set();
+  
+  combined.forEach(ev => {
+    const key = `${ev.day}_${ev.name}`;
+    if (!map.has(key)) {
+      map.add(key);
+      unique.push(ev);
+    }
+  });
+
+  return unique.sort((a, b) => a.day - b.day);
+}
+
+// Retrieve events for a specific date
+function getIndianEventsForDate(year, month, day) {
+  const monthEvents = getIndianEventsForMonth(year, month);
+  return monthEvents.filter(e => e.day === day);
+}
+
+// Active Calendar Filter state
+let calActiveFilter = "all"; // 'all' | 'holiday' | 'observance'
+let calSelectedDate = null;
+
+function renderSelectedDayCard(year, month, day) {
+  const cardEl = $("#cal-selected-day-card");
+  if (!cardEl) return;
+
+  const dateObj = new Date(year, month, day);
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  
+  const dayOfWeekStr = dayNames[dateObj.getDay()];
+  const formattedDateStr = `${day} ${monthNames[month]} ${year} (${dayOfWeekStr})`;
+  const events = getIndianEventsForDate(year, month, day);
+
+  if (!events || events.length === 0) {
+    cardEl.innerHTML = `
+      <div class="cal-day-details-empty">
+        <span class="cal-day-detail-date">📅 ${formattedDateStr}</span>
+        <p class="cal-day-detail-note">No gazetted holidays or major national observance days recorded on this date.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const eventsHtml = events.map(ev => {
+    const isHoliday = ev.type === "holiday";
+    const badgeLabel = isHoliday ? "National / Gazetted Holiday" : "Important Observance Day";
+    const badgeClass = isHoliday ? "cal-badge-holiday" : "cal-badge-observance";
+
+    return `
+      <div class="cal-occasion-item ${ev.type}">
+        <div class="cal-occasion-top">
+          <span class="cal-occasion-icon">${ev.icon}</span>
+          <div class="cal-occasion-meta">
+            <h4 class="cal-occasion-name">${ev.name}</h4>
+            <span class="cal-occasion-tag ${badgeClass}">${badgeLabel}</span>
+          </div>
+        </div>
+        <p class="cal-occasion-desc">${ev.desc}</p>
+      </div>
+    `;
+  }).join("");
+
+  cardEl.innerHTML = `
+    <div class="cal-day-details-active">
+      <div class="cal-day-detail-date-bar">
+        <span class="cal-day-detail-date">📅 ${formattedDateStr}</span>
+        <span class="cal-day-events-pill">${events.length} occasion${events.length > 1 ? 's' : ''}</span>
+      </div>
+      <div class="cal-occasions-container">
+        ${eventsHtml}
+      </div>
+    </div>
+  `;
+}
+
+function renderMonthlyEventsList(year, month) {
+  const listEl = $("#cal-month-events-list");
+  const countBadge = $("#cal-events-count-badge");
+  const monthLabel = $("#cal-events-month-label");
+  if (!listEl) return;
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  if (monthLabel) monthLabel.textContent = `${monthNames[month]} ${year}`;
+
+  let events = getIndianEventsForMonth(year, month);
+  if (calActiveFilter === "holiday") {
+    events = events.filter(e => e.type === "holiday");
+  } else if (calActiveFilter === "observance") {
+    events = events.filter(e => e.type === "observance");
+  }
+
+  if (countBadge) {
+    countBadge.textContent = `${events.length} event${events.length === 1 ? '' : 's'}`;
+  }
+
+  if (events.length === 0) {
+    listEl.innerHTML = `<div class="cal-no-month-events">No ${calActiveFilter === "holiday" ? "holidays" : calActiveFilter === "observance" ? "observances" : "events"} in this month for selected filter.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = events.map(ev => {
+    const isHoliday = ev.type === "holiday";
+    const typeLabel = isHoliday ? "Holiday" : "Important Day";
+    const tagClass = isHoliday ? "tag-holiday" : "tag-observance";
+
+    return `
+      <div class="cal-month-event-row" data-cal-jump-day="${ev.day}">
+        <div class="cal-month-event-date-chip">
+          <span class="chip-day">${String(ev.day).padStart(2, "0")}</span>
+          <span class="chip-icon">${ev.icon}</span>
+        </div>
+        <div class="cal-month-event-info">
+          <div class="cal-month-event-title-line">
+            <span class="cal-month-event-name">${ev.name}</span>
+            <span class="cal-month-event-type ${tagClass}">${typeLabel}</span>
+          </div>
+          <span class="cal-month-event-summary">${ev.desc}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // Clicking an event in the list jumps to that day in the calendar
+  listEl.querySelectorAll(".cal-month-event-row").forEach(row => {
+    row.addEventListener("click", () => {
+      const day = Number(row.dataset.calJumpDay);
+      if (!day) return;
+      const dayBtn = $(`#calendar-days-grid .cal-day-cell[data-cal-day="${day}"]`);
+      if (dayBtn) {
+        $("#calendar-days-grid").querySelectorAll(".cal-day-cell").forEach(c => c.classList.remove("selected"));
+        dayBtn.classList.add("selected");
+        renderSelectedDayCard(year, month, day);
+        dayBtn.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    });
+  });
 }
 
 function renderFullCalendar(year, month) {
@@ -6235,12 +6701,19 @@ function renderFullCalendar(year, month) {
   // Total days in previous month
   const daysInPrevMonth = new Date(year, month, 0).getDate();
 
+  const monthEvents = getIndianEventsForMonth(year, month);
+  const eventsByDay = {};
+  monthEvents.forEach(ev => {
+    if (!eventsByDay[ev.day]) eventsByDay[ev.day] = [];
+    eventsByDay[ev.day].push(ev);
+  });
+
   let daysHtml = "";
 
   // 1. Trailing days from previous month
   for (let i = firstDay - 1; i >= 0; i--) {
     const d = daysInPrevMonth - i;
-    daysHtml += `<button type="button" class="cal-day-cell other-month" disabled>${d}</button>`;
+    daysHtml += `<button type="button" class="cal-day-cell other-month" disabled tabindex="-1"><span class="cal-day-num">${d}</span></button>`;
   }
 
   // 2. Days of current month
@@ -6249,16 +6722,45 @@ function renderFullCalendar(year, month) {
     const dayOfWeek = cellDate.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     const isToday = isCurrentMonth && d === todayDate;
+    const dayEvents = eventsByDay[d] || [];
     
+    const hasHoliday = dayEvents.some(e => e.type === "holiday");
+    const hasObservance = dayEvents.some(e => e.type === "observance");
+
+    let isDimmed = false;
+    if (calActiveFilter === "holiday" && !hasHoliday) isDimmed = true;
+    if (calActiveFilter === "observance" && !hasObservance) isDimmed = true;
+
     const classes = [
       "cal-day-cell",
       isToday ? "today" : "",
-      isWeekend ? "weekend" : ""
+      isWeekend ? "weekend" : "",
+      hasHoliday ? "has-holiday" : "",
+      hasObservance ? "has-observance" : "",
+      isDimmed ? "cal-dimmed-filter" : ""
     ].filter(Boolean).join(" ");
 
+    // Badges / markers inside cell
+    let markerHtml = "";
+    if (dayEvents.length > 0) {
+      const topEvent = dayEvents[0];
+      const countPill = dayEvents.length > 1 ? `<span class="cal-day-badge-count">+${dayEvents.length - 1}</span>` : "";
+      markerHtml = `
+        <div class="cal-day-marker-row">
+          <span class="cal-day-emoji-icon" title="${escapeHtml(dayEvents.map(e => e.name).join(', '))}">${topEvent.icon}</span>
+          ${countPill}
+        </div>
+      `;
+    }
+
+    const eventSummaryTooltip = dayEvents.length > 0
+      ? ` • ${dayEvents.map(e => e.name).join(' | ')}`
+      : "";
+
     daysHtml += `
-      <button type="button" class="${classes}" data-cal-day="${d}" data-cal-month="${month}" data-cal-year="${year}" title="${monthNames[month]} ${d}, ${year}${isToday ? ' (Today)' : ''}">
-        ${d}
+      <button type="button" class="${classes}" data-cal-day="${d}" data-cal-month="${month}" data-cal-year="${year}" title="${monthNames[month]} ${d}, ${year}${isToday ? ' (Today)' : ''}${eventSummaryTooltip}">
+        <span class="cal-day-num">${d}</span>
+        ${markerHtml}
       </button>
     `;
   }
@@ -6268,21 +6770,36 @@ function renderFullCalendar(year, month) {
   const targetTotal = totalCellsSoFar > 35 ? 42 : 35;
   const remaining = targetTotal - totalCellsSoFar;
   for (let d = 1; d <= remaining; d++) {
-    daysHtml += `<button type="button" class="cal-day-cell other-month" disabled>${d}</button>`;
+    daysHtml += `<button type="button" class="cal-day-cell other-month" disabled tabindex="-1"><span class="cal-day-num">${d}</span></button>`;
   }
 
   gridEl.innerHTML = daysHtml;
+
+  // Render month events list
+  renderMonthlyEventsList(year, month);
+
+  // Selected Day resolution
+  const defaultDayToSelect = isCurrentMonth ? todayDate : (monthEvents.length > 0 ? monthEvents[0].day : 1);
+  const activeSelectedCell = gridEl.querySelector(`.cal-day-cell[data-cal-day="${defaultDayToSelect}"]`);
+  if (activeSelectedCell) {
+    activeSelectedCell.classList.add("selected");
+  }
+  renderSelectedDayCard(year, month, defaultDayToSelect);
 
   // Add click handler to days
   gridEl.querySelectorAll(".cal-day-cell:not(.other-month)").forEach(btn => {
     btn.addEventListener("click", () => {
       gridEl.querySelectorAll(".cal-day-cell").forEach(c => c.classList.remove("selected"));
       btn.classList.add("selected");
-      const d = btn.dataset.calDay;
-      const m = Number(btn.dataset.calMonth) + 1;
-      const y = btn.dataset.calYear;
-      const dateStr = `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
-      showToast(`Selected date: ${dateStr}`, "info");
+      const d = Number(btn.dataset.calDay);
+      const m = Number(btn.dataset.calMonth);
+      const y = Number(btn.dataset.calYear);
+      renderSelectedDayCard(y, m, d);
+      
+      const dayEvents = getIndianEventsForDate(y, m, d);
+      if (dayEvents && dayEvents.length > 0) {
+        showToast(`Selected: ${dayEvents[0].name}`, "info");
+      }
     });
   });
 }
@@ -6294,6 +6811,17 @@ function setupCalendarEvents() {
   const prevMonthBtn = $("#cal-prev-month-btn");
   const nextMonthBtn = $("#cal-next-month-btn");
   const jumpTodayBtn = $("#cal-jump-today-btn");
+
+  // Filter chips handler
+  const filterChips = document.querySelectorAll(".cal-filter-chip");
+  filterChips.forEach(chip => {
+    chip.addEventListener("click", () => {
+      filterChips.forEach(c => c.classList.remove("active"));
+      chip.classList.add("active");
+      calActiveFilter = chip.dataset.calFilter || "all";
+      renderFullCalendar(calViewYear, calViewMonth);
+    });
+  });
 
   clockTrigger?.addEventListener("click", () => {
     calViewYear = new Date().getFullYear();

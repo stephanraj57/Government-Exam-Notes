@@ -2736,11 +2736,14 @@ Guidelines:
       ? body.quickTags.map(t => String(t).trim()).filter(Boolean).slice(0, 10)
       : [];
 
+    const picture = String(studentUser.picture || "").trim();
+
     const newFeedback = {
       id: "fb_" + crypto.randomBytes(6).toString("hex"),
       userId,
       name,
       email,
+      picture,
       rating,
       category,
       targetExam,
@@ -2771,8 +2774,34 @@ Guidelines:
     let feedbackList = await readJson(FEEDBACK_FILE).catch(() => []);
     if (!Array.isArray(feedbackList)) feedbackList = [];
 
+    const users = await readJson(USERS_FILE).catch(() => []);
+    const userMap = new Map();
+    if (Array.isArray(users)) {
+      users.forEach(u => {
+        if (u && u.id) userMap.set(u.id, u);
+        if (u && u.email) userMap.set(u.email.toLowerCase().trim(), u);
+      });
+    }
+
+    const enrichedFeedbackList = feedbackList.map(fb => {
+      let picture = fb.picture || "";
+      if (!picture && fb.userId && userMap.has(fb.userId)) {
+        picture = userMap.get(fb.userId).picture || "";
+      }
+      if (!picture && fb.email && userMap.has(fb.email.toLowerCase().trim())) {
+        picture = userMap.get(fb.email.toLowerCase().trim()).picture || "";
+      }
+      if (!picture) {
+        picture = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(fb.name || fb.email || "student")}`;
+      }
+      return {
+        ...fb,
+        picture
+      };
+    });
+
     // Calculate Analytics
-    const totalCount = feedbackList.length;
+    const totalCount = enrichedFeedbackList.length;
     let unreadCount = 0;
     let starredCount = 0;
     let totalRatingSum = 0;
@@ -2787,7 +2816,7 @@ Guidelines:
     };
     const examCounts = {};
 
-    feedbackList.forEach(fb => {
+    enrichedFeedbackList.forEach(fb => {
       if (fb.status === "unread") unreadCount++;
       if (fb.starred) starredCount++;
 
@@ -2804,7 +2833,7 @@ Guidelines:
     });
 
     // Compute Top Content Demand Name
-    const topicRequests = feedbackList.filter(f => f.category === "topic_request");
+    const topicRequests = enrichedFeedbackList.filter(f => f.category === "topic_request");
     const demandMap = {};
     topicRequests.forEach(f => {
       const key = (f.targetExam || f.message || "").trim();
@@ -2834,7 +2863,7 @@ Guidelines:
 
     sendJson(response, 200, {
       success: true,
-      feedback: feedbackList,
+      feedback: enrichedFeedbackList,
       metrics: {
         totalCount,
         unreadCount,

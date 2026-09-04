@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=154.0">
+  <link rel="stylesheet" href="styles.css?v=164.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -184,6 +184,11 @@
             <span class="clock-cal-icon">📅</span>
             <span id="admin-live-date" class="admin-live-date">--/--/----</span>
             <span id="admin-live-day" class="admin-live-day">Today</span>
+          </div>
+          <!-- Today's Occasion / Holiday Tag in Sidebar -->
+          <div id="admin-sidebar-today-event" class="admin-sidebar-today-event" hidden>
+            <span id="admin-sidebar-event-icon" class="sidebar-event-icon">🌟</span>
+            <span id="admin-sidebar-event-name" class="sidebar-event-name">--</span>
           </div>
         </div>
         <span class="clock-widget-action" title="Open Calendar">
@@ -2590,8 +2595,8 @@
         <div class="calendar-header-left">
           <span class="calendar-header-icon calendar-badge-icon">📅</span>
           <div>
-            <h3 id="cal-modal-title" class="calendar-modal-title edit-modal-title">Interactive Live Calendar</h3>
-            <span id="cal-modal-subtitle" class="calendar-modal-subtitle edit-modal-sub">System Realtime Clock & Month View</span>
+            <h3 id="cal-modal-title" class="calendar-modal-title edit-modal-title">Interactive Calendar & Holidays</h3>
+            <span id="cal-modal-subtitle" class="calendar-modal-subtitle edit-modal-sub">National Holidays & Important Observance Days</span>
           </div>
         </div>
         <div class="calendar-header-actions">
@@ -2602,6 +2607,13 @@
             ✕
           </button>
         </div>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div class="calendar-filter-bar" role="tablist" aria-label="Calendar Event Filters">
+        <button type="button" class="cal-filter-chip active" data-cal-filter="all">✨ All (Holidays & Days)</button>
+        <button type="button" class="cal-filter-chip" data-cal-filter="holiday">🇮🇳 National Holidays</button>
+        <button type="button" class="cal-filter-chip" data-cal-filter="observance">🌟 Important Days</button>
       </div>
 
       <!-- Month & Year Navigation Bar -->
@@ -2631,6 +2643,22 @@
         </div>
         <div id="calendar-days-grid" class="calendar-days-grid">
           <!-- Dynamically populated day cells -->
+        </div>
+      </div>
+
+      <!-- Selected Day Event Highlight Card -->
+      <div id="cal-selected-day-card" class="cal-selected-day-card">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Monthly Important Days & Holidays Accordion/List -->
+      <div class="cal-month-events-wrapper">
+        <div class="cal-month-events-header">
+          <span class="cal-events-title">📌 Events in <span id="cal-events-month-label">This Month</span></span>
+          <span id="cal-events-count-badge" class="cal-events-count-badge">0 events</span>
+        </div>
+        <div id="cal-month-events-list" class="cal-month-events-list">
+          <!-- Populated dynamically -->
         </div>
       </div>
 
@@ -3670,6 +3698,6 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=114.0"></script>
+  <script src="admin.js?v=119.0"></script>
 </body>
 </html>
