@@ -17,7 +17,13 @@
   <link rel="icon" type="image/png" sizes="192x192" href="favicon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=164.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AI notes">
+  <link rel="stylesheet" href="styles.css?v=170.0">
   <script>
     fetch("/api/auth/google/config")
       .then(r => r.json())
@@ -391,6 +397,85 @@
               <strong class="creator-ig-text">@smart_ai_notes</strong>
             </a>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2B. Official Android Mobile App Section (Direct PWA Installation) -->
+    <section class="about-app-section" id="install-app-section" aria-label="AI Notes Mobile App">
+      <div class="about-section-header">
+        <span class="about-section-badge" style="background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.15)); color: #10b981; border-color: rgba(16,185,129,0.3);">
+          📲 Android Mobile Application
+        </span>
+        <h2 class="about-section-title">Install "AI Notes" App</h2>
+        <p class="about-section-sub">Add directly to your Android device for instant 1-tap revision & offline reading.</p>
+      </div>
+
+      <div class="about-app-card">
+        <div class="app-card-left">
+          <div class="app-avatar-wrap">
+            <img src="assets/ailogo.png" alt="AI Notes App Icon" class="app-avatar-img" width="76" height="76" onerror="this.src='favicon.png'">
+            <span class="app-verified-badge" title="Official Android App">✓</span>
+          </div>
+          <div class="app-content-wrap">
+            <div class="app-header-row">
+              <h3 class="app-card-title">AI notes</h3>
+              <div class="app-capsule-badge">
+                <span class="role-sparkle">✦</span>
+                <span class="app-badge-text">Android WebAPK • Free</span>
+                <span class="role-sparkle">✦</span>
+              </div>
+            </div>
+            <p class="app-card-desc">
+              Experience the full power of <strong>AI Notes</strong> right from your Android home screen with our official Progressive Web App. Fast, zero-distraction, and lightweight.
+            </p>
+
+            <div class="app-features-grid">
+              <div class="app-feature-pill">
+                <span class="feat-icon">⚡</span>
+                <div class="feat-text">
+                  <strong>1-Tap Home Screen Launch</strong>
+                  <span>Opens instantly like any Play Store app with your custom logo.</span>
+                </div>
+              </div>
+              <div class="app-feature-pill">
+                <span class="feat-icon">📶</span>
+                <div class="feat-text">
+                  <strong>Full Offline Reading Mode</strong>
+                  <span>Study your cached notes & revision flashcards even without internet.</span>
+                </div>
+              </div>
+              <div class="app-feature-pill">
+                <span class="feat-icon">📱</span>
+                <div class="feat-text">
+                  <strong>Distraction-Free Full-Screen</strong>
+                  <span>Zero browser URL address bar or navigation tabs while revising.</span>
+                </div>
+              </div>
+              <div class="app-feature-pill">
+                <span class="feat-icon">🔒</span>
+                <div class="feat-text">
+                  <strong>100% Free & Secure</strong>
+                  <span>Takes virtually 0MB storage; automatically receives fresh notes.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="app-card-right">
+          <button id="pwa-install-btn" class="app-install-btn" type="button" aria-label="Install AI Notes Android App">
+            <span class="install-btn-icon">📲</span>
+            <div class="install-btn-labels">
+              <span class="install-btn-primary">Install "AI Notes" App</span>
+              <span class="install-btn-secondary">Instant 1-Tap Android Install</span>
+            </div>
+          </button>
+          <div id="pwa-installed-msg" class="app-installed-status" style="display:none;">
+            <span class="status-icon">✅</span>
+            <span>App is installed on this device!</span>
+          </div>
+          <p class="install-guide-hint">Compatible with Chrome, Samsung Internet, Edge & Brave on Android.</p>
         </div>
       </div>
     </section>
@@ -1207,6 +1292,6 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="app.js?v=93.0"></script>
+  <script src="app.js?v=96.0"></script>
 </body>
 </html>

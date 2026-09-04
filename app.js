@@ -1078,7 +1078,6 @@ function toggleBookmark(noteId, e) {
   if (isCurrentlyLiked) {
     bookmarks.delete(noteId);
     trackInteraction("unlike", { noteId });
-    sendStudentTelemetry("unlike", { noteId });
     showToast("Removed from Saved notes.", "info");
 
     localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
@@ -1108,7 +1107,6 @@ function toggleBookmark(noteId, e) {
   } else {
     bookmarks.add(noteId);
     trackInteraction("like", { noteId });
-    sendStudentTelemetry("like", { noteId });
     showToast("Saved to your Liked Notes! ❤️", "success");
 
     localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
@@ -3265,13 +3263,22 @@ async function handleStudentGoogleLogin(responsePayload) {
       if (pendingLikeNoteId) {
         const noteToLike = pendingLikeNoteId;
         pendingLikeNoteId = null;
+
+        // Check if user already liked this note previously
+        const wasAlreadyLiked = (data.user.likes || []).some(l => (typeof l === "object" ? l?.noteId : l) === noteToLike) ||
+                                (data.user.bookmarks || []).includes(noteToLike);
+
         bookmarks.add(noteToLike);
         localStorage.setItem("exam_notes_bookmarks", JSON.stringify([...bookmarks]));
-        trackInteraction("like", { noteId: noteToLike });
-        sendStudentTelemetry("like", { noteId: noteToLike });
         updateBookmarkBadges(bookmarks.size);
         updateBookmarkButtonsInPlace(noteToLike);
-        showToast("Note saved to your account! ❤️", "success");
+
+        if (wasAlreadyLiked) {
+          showToast("Note is already in your Liked notes! ❤️", "info");
+        } else {
+          trackInteraction("like", { noteId: noteToLike });
+          showToast("Note saved to your account! ❤️", "success");
+        }
       }
 
       if (pendingDownloadNote) {
@@ -3901,12 +3908,13 @@ function initAboutScrollReveal() {
 
   // 2. Section Headers
   container.querySelectorAll(".about-section-header").forEach(hdr => {
-    if (!hdr.classList.contains("about-reveal")) targets.push({ el: hdr });
+    if (!hdr.classList.contains("is-revealed")) targets.push({ el: hdr });
   });
 
   // 3. Standalone Large Box Panels
   const panelSelectors = [
     ".about-creator-card",
+    ".about-app-card",
     ".about-instagram-card",
     ".study-experience-card",
     ".feedback-card-container",
@@ -3914,7 +3922,7 @@ function initAboutScrollReveal() {
   ];
   panelSelectors.forEach(sel => {
     const card = container.querySelector(sel);
-    if (card && !card.classList.contains("about-reveal")) targets.push({ el: card });
+    if (card && !card.classList.contains("is-revealed")) targets.push({ el: card });
   });
 
   // 4. Staggered Cascading Grids (Key Features, Exams Covered, Workflow Steps)
@@ -3926,7 +3934,7 @@ function initAboutScrollReveal() {
 
   gridGroups.forEach(nodeList => {
     nodeList.forEach((card, idx) => {
-      if (!card.classList.contains("about-reveal")) {
+      if (!card.classList.contains("is-revealed")) {
         const stagger = (idx % 6) + 1;
         targets.push({ el: card, stagger });
       }
@@ -3950,8 +3958,8 @@ function initAboutScrollReveal() {
     });
   }, {
     root: null,
-    rootMargin: "0px 0px -40px 0px",
-    threshold: 0.1
+    rootMargin: "60px 0px 60px 0px",
+    threshold: 0.05
   });
 
   targets.forEach(({ el, stagger }) => {
@@ -3959,7 +3967,14 @@ function initAboutScrollReveal() {
     if (stagger) {
       el.classList.add(`stagger-${stagger}`);
     }
-    observer.observe(el);
+    // If element is already within or near viewport, reveal immediately
+    const rect = el.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    if (rect.top < viewportHeight + 120 && rect.bottom > -120) {
+      el.classList.add("is-revealed");
+    } else {
+      observer.observe(el);
+    }
   });
 }
 
@@ -3975,5 +3990,94 @@ if (document.readyState === "loading") {
 } else {
   runPublicFeedbackInits();
 }
+
+// ==========================================
+// Progressive Web App (PWA) & Offline Sync
+// ==========================================
+(function initPwa() {
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js")
+        .then(reg => console.log("[PWA] ServiceWorker registered:", reg.scope))
+        .catch(err => console.warn("[PWA] ServiceWorker registration skipped:", err));
+    });
+  }
+
+  window.addEventListener("offline", () => {
+    showToast("📶 Offline Mode active. Reading from cached AI notes.", "info");
+  });
+
+  window.addEventListener("online", () => {
+    showToast("🌐 Internet reconnected. Cloud sync active.", "success");
+  });
+
+  let deferredPrompt = null;
+
+  function isRunningStandalone() {
+    return window.matchMedia("(display-mode: standalone)").matches ||
+           window.navigator.standalone === true ||
+           document.referrer.includes("android-app://");
+  }
+
+  function updateInstallButtons() {
+    const installBtns = document.querySelectorAll("#pwa-install-btn, .app-install-btn");
+    const statusBadges = document.querySelectorAll("#pwa-installed-msg, .app-installed-status");
+
+    if (isRunningStandalone()) {
+      installBtns.forEach(btn => { btn.style.display = "none"; });
+      statusBadges.forEach(msg => { msg.style.display = "flex"; });
+    } else if (deferredPrompt) {
+      installBtns.forEach(btn => {
+        btn.classList.add("is-ready");
+        const sub = btn.querySelector(".install-btn-secondary");
+        if (sub) sub.textContent = "1-Tap Android Install Ready 🚀";
+      });
+    }
+  }
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    updateInstallButtons();
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredPrompt = null;
+    updateInstallButtons();
+    showToast('🎉 "AI Notes" installed successfully! Check your home screen.', "success");
+  });
+
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest("#pwa-install-btn, .app-install-btn");
+    if (!btn) return;
+    e.preventDefault();
+
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        showToast('Installing "AI Notes" App to your Home Screen...', "info");
+      }
+      deferredPrompt = null;
+      updateInstallButtons();
+    } else if (isRunningStandalone()) {
+      showToast('✓ "AI Notes" is already installed on this device!', "info");
+    } else {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      if (isIOS) {
+        showToast('📲 On iPhone: Tap Share (⬆️) at the bottom, then tap "Add to Home Screen"!', "info");
+      } else {
+        showToast('📲 Tap Chrome menu (⋮) at top-right, then select "Install app" or "Add to Home screen"!', "info");
+      }
+    }
+  });
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", updateInstallButtons);
+  } else {
+    updateInstallButtons();
+  }
+})();
+
 
 

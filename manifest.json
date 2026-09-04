@@ -1,0 +1,69 @@
+{
+  "name": "AI Notes - Free AI Govt Exam Notes",
+  "short_name": "AI notes",
+  "description": "Free AI Govt Exam Revision Notes - High-yield visual concept notes for competitive exams.",
+  "start_url": "/index.html",
+  "scope": "/",
+  "id": "/index.html",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0d14",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "assets/ailogo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": [
+    "education",
+    "books",
+    "productivity"
+  ],
+  "shortcuts": [
+    {
+      "name": "Revision Notes",
+      "short_name": "Notes",
+      "description": "Explore all high-yield revision notes",
+      "url": "/index.html#top",
+      "icons": [
+        {
+          "src": "favicon.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Saved Notes",
+      "short_name": "Saved",
+      "description": "View your bookmarked revision notes",
+      "url": "/index.html#bookmarks",
+      "icons": [
+        {
+          "src": "favicon.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "About Creator",
+      "short_name": "About",
+      "description": "Learn about the creator and platform",
+      "url": "/about.html",
+      "icons": [
+        {
+          "src": "favicon.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}
