@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=179.0">
+  <link rel="stylesheet" href="styles.css?v=180.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -1805,172 +1805,279 @@
     </section>
   </main>
 
-  <!-- Edit Note Modal Dialog (Ultra-Glassmorphic Studio Modal) -->
+  <!-- Edit Note Modal Dialog (Ultra-Glassmorphic Studio Modal - Synchronized with Publish Layout) -->
   <dialog id="admin-edit-dialog" class="dialog edit-note-dialog edit-note-glass-dialog">
     <!-- Close button OUTSIDE the form so form events never interfere -->
     <button id="admin-edit-modal-close-btn" class="edit-modal-close" type="button"
       title="Close (Esc)" aria-label="Close Edit Modal" data-close-edit-dialog>×</button>
 
-    <form id="admin-edit-form" class="edit-dialog-form edit-glass-form">
-      
-      <div class="edit-dialog-header edit-glass-header">
+    <div class="admin-card upload-studio-card edit-studio-card">
+      <div class="card-header edit-dialog-header">
         <div class="edit-header-left">
           <div class="edit-badge-icon">✏️</div>
           <div>
-            <h3 class="edit-modal-title">Edit Revision Note</h3>
-            <p class="edit-modal-sub">Update topic title, academic subject, and search keywords</p>
+            <p class="eyebrow">Editing Studio</p>
+            <h2 class="edit-modal-title">Edit Revision Note</h2>
           </div>
+        </div>
+        <div class="publish-header-meta">
+          <button id="edit-header-preview-btn" type="button" class="publish-action-button publish-header-action-btn">
+            <span class="pub-btn-icon">👁️</span>
+            <span class="pub-btn-text">Preview Note</span>
+          </button>
         </div>
       </div>
-      
-      <input id="edit-note-id" type="hidden">
 
-      <div class="edit-fields-grid edit-glass-fields-grid">
-        <div class="edit-field-card">
-          <div class="edit-field-label-row">
-            <label class="form-label-title" for="edit-note-title">
-              <span class="label-icon">✍️</span> Topic Title <span class="req-star" style="color: #ef4444;">*</span>
-            </label>
-            <span class="char-count" id="edit-title-char-count">0/80</span>
-          </div>
-          <div class="publish-input-wrap">
-            <input id="edit-note-title" class="form-control edit-glass-input" type="text" maxlength="80" placeholder="e.g. Fundamental Rights (Articles 12–35)" required spellcheck="true" lang="en">
-          </div>
-          <div id="edit-title-spell-alert" class="spelling-alert-container" hidden></div>
-        </div>
+      <form id="admin-edit-form" class="studio-form">
+        <input id="edit-note-id" type="hidden">
 
-        <div class="edit-field-card">
-          <label class="form-label-title" for="edit-note-subject">
-            <span class="label-icon">📚</span> Subject & Category <span class="req-star" style="color: #ef4444;">*</span>
-          </label>
-          <div class="publish-input-wrap">
-            <select id="edit-note-subject" class="form-control edit-glass-select" required>
-              <option value="History">📜 History</option>
-              <option value="Polity">⚖️ Polity</option>
-              <option value="Economy">📈 Economy</option>
-              <option value="Geography">🌍 Geography</option>
-              <option value="Art and Culture">🎨 Art and Culture</option>
-              <option value="Maths">📐 Maths</option>
-              <option value="Science">🔬 Science</option>
-              <option value="Others">📁 Others</option>
-            </select>
-          </div>
-        </div>
+        <div class="publish-studio-layout">
+          
+          <!-- Left Column: Note Metadata & Tagging -->
+          <div class="publish-meta-pane">
 
-        <div class="edit-field-card">
-          <label class="form-label-title" for="edit-note-tags">
-            <span class="label-icon">🏷️</span> Multiple Tags (Comma-separated)
-          </label>
-          <div class="publish-input-wrap">
-            <input id="edit-note-tags" class="form-control edit-glass-input" type="text" placeholder="e.g. UPSC, Constitution, Articles, Prelims 2025" spellcheck="true" lang="en">
-          </div>
-          <div id="edit-tags-spell-alert" class="spelling-alert-container" hidden></div>
-        </div>
+            <!-- Cloudinary Image URL Input Box & Live Preview -->
+            <div class="publish-url-card cloudinary-only-card">
+              <!-- Header: Field Label & Hosted Badge -->
+              <div class="publish-url-card-header">
+                <div class="url-label-wrap">
+                  <label for="edit-note-image-url" class="publish-field-label">
+                    <span class="label-icon">☁️</span> Cloudinary Image URL <span class="req-star" title="Mandatory Field">*</span>
+                  </label>
+                  <span class="cloudinary-badge">⚡ Cloudinary Hosted</span>
+                </div>
 
-        <div class="edit-field-card edit-field-full">
-          <div class="edit-field-label-row">
-            <label class="form-label-title" for="edit-note-image-url">
-              <span class="label-icon">🔗</span> Cloudinary / Image URL
-            </label>
-            <span class="cloudinary-badge-mini">⚡ Cloudinary</span>
-          </div>
-          <div class="publish-input-wrap">
-            <input id="edit-note-image-url" class="form-control edit-glass-input" type="url" placeholder="https://res.cloudinary.com/.../image.jpg" spellcheck="false">
-          </div>
-          <div id="edit-image-preview-box" class="edit-image-preview-box" hidden>
-            <img id="edit-img-preview" src="" alt="Note Preview" class="edit-thumb-img">
-            <span id="edit-img-preview-label" class="edit-thumb-label">Image Preview</span>
-          </div>
-        </div>
-
-        <div class="edit-field-card edit-field-full">
-          <div class="edit-field-label-row">
-            <label class="form-label-title" for="edit-note-overview-editor">
-              <span class="label-icon">📖</span> Note Overview & Key Points
-            </label>
-            <span class="char-count" id="edit-overview-char-count">0/2000</span>
-          </div>
-
-          <div class="rte-wrapper rte-wrapper-modal" id="edit-rte-wrapper">
-            <!-- Rich Formatting Toolbar -->
-            <div class="rte-toolbar" role="toolbar" aria-label="Text formatting toolbar">
-              <div class="rte-btn-group">
-                <button type="button" class="rte-btn" data-command="bold" title="Bold (Ctrl+B)"><strong>B</strong></button>
-                <button type="button" class="rte-btn" data-command="italic" title="Italic (Ctrl+I)"><em>I</em></button>
-                <button type="button" class="rte-btn rte-btn-underline" data-command="red-underline" title="Red Underline">
-                  <span class="rte-u-preview">U</span>
-                  <span class="rte-red-bar"></span>
-                </button>
+                <!-- AI Actions Toolbar (Multi-Provider Pills + Auto-Fill + Settings) -->
+                <div class="url-card-ai-actions">
+                  <div class="ai-provider-pill-group" id="edit-ai-provider-pills" role="radiogroup" aria-label="Select AI Engine">
+                    <button type="button" class="ai-provider-pill active" data-provider="gemini" title="Google Gemini AI (Fast & Free)">
+                      <span>✨ Gemini</span>
+                    </button>
+                    <button type="button" class="ai-provider-pill" data-provider="openai" title="OpenAI ChatGPT (GPT-4o Vision)">
+                      <span>🤖 ChatGPT</span>
+                    </button>
+                    <button type="button" class="ai-provider-pill" data-provider="auto" title="Auto Smart Fallback">
+                      <span>🔄 Auto</span>
+                    </button>
+                  </div>
+                  <div class="ai-action-btn-group">
+                    <button id="edit-ai-autofill-btn" type="button" class="publish-action-button ai-autofill-header-btn" title="Auto-Fill Note Details from Diagram with AI">
+                      <span class="pub-btn-icon">⚡</span>
+                      <span class="pub-btn-text">AI Auto-Fill</span>
+                    </button>
+                    <button id="edit-ai-config-btn" type="button" class="publish-action-button ai-config-header-btn" title="Configure AI API Keys (Gemini & ChatGPT)" aria-label="Configure AI Keys">
+                      <span class="pub-btn-icon">⚙️</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <div class="rte-divider"></div>
+              <!-- Input Row with Prefix Icon and Clear Button -->
+              <div class="publish-input-wrap url-input-wrap">
+                <span class="url-input-prefix-icon" aria-hidden="true">🔗</span>
+                <input id="edit-note-image-url" class="publish-input url-input-with-prefix" type="url" placeholder="https://res.cloudinary.com/.../image.jpg" autocomplete="off" spellcheck="false" required>
+                <button type="button" id="edit-url-clear-btn" class="url-clear-btn" title="Clear URL" hidden>×</button>
+              </div>
+              <div id="edit-url-status" class="url-status-msg" hidden></div>
 
-              <!-- Text Alignment -->
-              <div class="rte-btn-group rte-align-group">
-                <button type="button" class="rte-btn" data-command="justifyLeft" title="Align Left">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="15" y2="12"></line><line x1="3" y1="18" x2="19" y2="18"></line></svg>
-                </button>
-                <button type="button" class="rte-btn" data-command="justifyCenter" title="Align Center">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="6" y1="12" x2="18" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
-                </button>
-                <button type="button" class="rte-btn" data-command="justifyRight" title="Align Right">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="9" y1="12" x2="21" y2="12"></line><line x1="5" y1="18" x2="21" y2="18"></line></svg>
-                </button>
-                <button type="button" class="rte-btn" data-command="justifyFull" title="Justify Text">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-                </button>
+              <!-- Live AI Auto-Fill Status Banner -->
+              <div id="edit-ai-banner" class="studio-ai-banner" hidden>
+                <div class="ai-banner-spinner"></div>
+                <div class="ai-banner-content">
+                  <strong id="edit-ai-banner-title">✨ AI is analyzing diagram...</strong>
+                  <p id="edit-ai-banner-sub">Reading diagram, extracting high-yield exam points, identifying subject, and generating search tags.</p>
+                </div>
               </div>
 
-              <div class="rte-divider"></div>
-
-              <!-- Text Color Selector -->
-              <div class="rte-btn-group rte-color-group">
-                <span class="rte-label-hint">Color:</span>
-                <button type="button" class="rte-color-btn active" data-color="default" title="Default Text Color" style="background:#0f172a;"></button>
-                <button type="button" class="rte-color-btn" data-color="#dc2626" title="Red Text" style="background:#dc2626;"></button>
-                <button type="button" class="rte-color-btn" data-color="#2563eb" title="Blue Text" style="background:#2563eb;"></button>
-                <button type="button" class="rte-color-btn" data-color="#16a34a" title="Green Text" style="background:#16a34a;"></button>
-                <button type="button" class="rte-color-btn" data-color="#d97706" title="Amber Text" style="background:#d97706;"></button>
-                <button type="button" class="rte-color-btn" data-color="#7c3aed" title="Purple Text" style="background:#7c3aed;"></button>
+              <!-- Live Cloudinary Preview Overlay Bar -->
+              <div id="edit-dropzone-preview-wrap" class="dropzone-preview-wrap" hidden>
+                <div class="preview-img-container">
+                  <img id="edit-img-preview" class="preview-img" alt="Cloudinary preview">
+                </div>
+                <div class="preview-details">
+                  <div class="preview-details-left">
+                    <span id="edit-preview-file-name" class="preview-name">Cloudinary Note Image</span>
+                    <span id="edit-preview-file-size" class="preview-size">Ready</span>
+                  </div>
+                  <button id="edit-remove-preview-btn" type="button" class="preview-clear-btn" title="Remove URL">
+                    <span>🗑️ Clear</span>
+                  </button>
+                </div>
               </div>
-
-              <div class="rte-divider"></div>
-
-              <!-- Marker Highlighter -->
-              <div class="rte-btn-group rte-highlight-group">
-                <span class="rte-label-hint">Highlight:</span>
-                <button type="button" class="rte-highlight-btn" data-highlight="yellow" title="Yellow Exam Highlight" style="background:#fef08a; border: 1px solid #ca8a04;">🟡</button>
-                <button type="button" class="rte-highlight-btn" data-highlight="green" title="Green Exam Highlight" style="background:#bbf7d0; border: 1px solid #16a34a;">🟢</button>
-                <button type="button" class="rte-highlight-btn" data-highlight="blue" title="Blue Exam Highlight" style="background:#bfdbfe; border: 1px solid #2563eb;">🔵</button>
-                <button type="button" class="rte-highlight-btn rte-highlight-clear" data-highlight="clear" title="Clear Highlight">✕</button>
+            </div>
+            
+            <!-- Topic Title -->
+            <div class="publish-field-group">
+              <div class="publish-label-row">
+                <label for="edit-note-title" class="publish-field-label">
+                  <span class="label-icon">✍️</span> Topic Title <span class="req-star" title="Mandatory Field">*</span>
+                </label>
+                <span class="char-count" id="edit-title-char-count">0/80</span>
               </div>
+              <div class="publish-input-wrap title-input-wrap-relative">
+                <input id="edit-note-title" class="publish-input" type="text" maxlength="80" placeholder="e.g. Fundamental Rights (Articles 12–35)" required autocomplete="off" spellcheck="true" lang="en">
+                
+                <!-- Google Search Style Existing Title Duplicate Matching Dropdown -->
+                <div id="edit-title-suggestions-dropdown" class="title-suggestions-dropdown" hidden>
+                  <div class="suggestions-header">
+                    <span class="suggestions-title">🔍 Existing Matching Titles in Library:</span>
+                    <span id="edit-suggestions-match-count" class="suggestions-count-badge">0 matches</span>
+                  </div>
+                  <div id="edit-title-suggestions-list" class="title-suggestions-list" role="listbox">
+                    <!-- Dynamically populated matched titles -->
+                  </div>
+                </div>
+              </div>
+              <div id="edit-title-duplicate-alert" class="title-duplicate-alert" hidden></div>
+              <div id="edit-title-spell-alert" class="spelling-alert-container" hidden></div>
+            </div>
 
-              <div class="rte-divider"></div>
+            <!-- Subject Category Pill Selector -->
+            <div class="publish-field-group">
+              <label class="publish-field-label">
+                <span class="label-icon">📚</span> Subject & Category <span class="req-star" title="Mandatory Field">*</span>
+              </label>
+              
+              <select id="edit-note-subject" class="studio-subject-hidden-select" required>
+                <option value="History">📜 History</option>
+                <option value="Polity" selected>⚖️ Polity</option>
+                <option value="Economy">📈 Economy</option>
+                <option value="Geography">🌍 Geography</option>
+                <option value="Art and Culture">🎨 Art and Culture</option>
+                <option value="Maths">📐 Maths</option>
+                <option value="Science">🔬 Science</option>
+                <option value="Others">📁 Others</option>
+              </select>
 
-              <div class="rte-btn-group">
-                <button type="button" class="rte-btn" data-command="insertUnorderedList" title="Bullet List (•)">• List</button>
-                <button type="button" class="rte-btn" data-command="insertOrderedList" title="Numbered List (1.)">1. List</button>
-                <button type="button" class="rte-btn rte-btn-clear" data-command="removeFormat" title="Clear Formatting">🧹</button>
+              <div class="publish-category-pill-grid" id="edit-category-pill-grid">
+                <button type="button" class="pub-cat-pill" data-cat-val="History"><span class="pill-emoji">📜</span> History</button>
+                <button type="button" class="pub-cat-pill active" data-cat-val="Polity"><span class="pill-emoji">⚖️</span> Polity</button>
+                <button type="button" class="pub-cat-pill" data-cat-val="Economy"><span class="pill-emoji">📈</span> Economy</button>
+                <button type="button" class="pub-cat-pill" data-cat-val="Geography"><span class="pill-emoji">🌍</span> Geography</button>
+                <button type="button" class="pub-cat-pill" data-cat-val="Art and Culture"><span class="pill-emoji">🎨</span> Art & Cult.</button>
+                <button type="button" class="pub-cat-pill" data-cat-val="Maths"><span class="pill-emoji">📐</span> Maths</button>
+                <button type="button" class="pub-cat-pill" data-cat-val="Science"><span class="pill-emoji">🔬</span> Science</button>
+                <button type="button" class="pub-cat-pill" data-cat-val="Others"><span class="pill-emoji">📁</span> Others</button>
               </div>
             </div>
 
-            <!-- WYSIWYG Editable Area -->
-            <div id="edit-note-overview-editor" class="rte-editor edit-glass-input edit-glass-textarea" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true" data-placeholder="Enter key study points, explanations, bullet points, or visual mnemonics..."></div>
-            <textarea id="edit-note-overview" hidden></textarea>
+            <!-- Tags Input & Quick Suggestion Chips with Live Counts & Filter -->
+            <div class="publish-field-group">
+              <label for="edit-note-tags" class="publish-field-label">
+                <span class="label-icon">🏷️</span> Multiple Tags (Comma-separated) <span class="req-star" title="Mandatory Field">*</span>
+              </label>
+              <div class="publish-input-wrap">
+                <input id="edit-note-tags" class="publish-input" type="text" placeholder="e.g. UPSC, Constitution, Articles, Prelims 2025" required autocomplete="off" spellcheck="true" lang="en">
+              </div>
+              <div id="edit-tags-spell-alert" class="spelling-alert-container" hidden></div>
+              
+              <!-- Dynamic Quick Tag Suggestion Chips with Counts -->
+              <div class="quick-tag-suggestions">
+                <span class="quick-tag-label">Quick Add Existing Tags:</span>
+                <div id="edit-quick-tags-container" class="quick-tags-flex-wrap">
+                  <!-- Dynamically populated existing tags with counts -->
+                </div>
+              </div>
+            </div>
+
           </div>
+
+          <!-- Right Column: Note Overview & Key Points (Full Vertical Match) -->
+          <div class="publish-overview-pane">
+            
+            <!-- Study Overview & Key Points with Rich Text Formatting Toolbar -->
+            <div class="publish-field-group publish-overview-group">
+              <div class="publish-label-row">
+                <label for="edit-note-overview-editor" class="publish-field-label">
+                  <span class="label-icon">📖</span> Note Overview & Key Points
+                </label>
+                <span class="char-count" id="edit-overview-char-count">0/2000</span>
+              </div>
+
+              <div class="rte-wrapper" id="edit-rte-wrapper">
+                <!-- Rich Formatting Toolbar -->
+                <div class="rte-toolbar" role="toolbar" aria-label="Text formatting toolbar">
+                  <div class="rte-btn-group">
+                    <button type="button" class="rte-btn" data-command="bold" title="Bold (Ctrl+B)"><strong>B</strong></button>
+                    <button type="button" class="rte-btn" data-command="italic" title="Italic (Ctrl+I)"><em>I</em></button>
+                    <button type="button" class="rte-btn rte-btn-underline" data-command="red-underline" title="Red Underline">
+                      <span class="rte-u-preview">U</span>
+                      <span class="rte-red-bar"></span>
+                    </button>
+                  </div>
+
+                  <div class="rte-divider"></div>
+
+                  <!-- Text Alignment -->
+                  <div class="rte-btn-group rte-align-group">
+                    <button type="button" class="rte-btn" data-command="justifyLeft" title="Align Left">
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="15" y2="12"></line><line x1="3" y1="18" x2="19" y2="18"></line></svg>
+                    </button>
+                    <button type="button" class="rte-btn" data-command="justifyCenter" title="Align Center">
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="6" y1="12" x2="18" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
+                    </button>
+                    <button type="button" class="rte-btn" data-command="justifyRight" title="Align Right">
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="9" y1="12" x2="21" y2="12"></line><line x1="5" y1="18" x2="21" y2="18"></line></svg>
+                    </button>
+                    <button type="button" class="rte-btn" data-command="justifyFull" title="Justify Text">
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                    </button>
+                  </div>
+
+                  <div class="rte-divider"></div>
+
+                  <!-- Text Color Selector -->
+                  <div class="rte-btn-group rte-color-group">
+                    <span class="rte-label-hint">Color:</span>
+                    <button type="button" class="rte-color-btn active" data-color="default" title="Default Text Color" style="background:#0f172a;"></button>
+                    <button type="button" class="rte-color-btn" data-color="#dc2626" title="Red Text" style="background:#dc2626;"></button>
+                    <button type="button" class="rte-color-btn" data-color="#2563eb" title="Blue Text" style="background:#2563eb;"></button>
+                    <button type="button" class="rte-color-btn" data-color="#16a34a" title="Green Text" style="background:#16a34a;"></button>
+                    <button type="button" class="rte-color-btn" data-color="#d97706" title="Amber Text" style="background:#d97706;"></button>
+                    <button type="button" class="rte-color-btn" data-color="#7c3aed" title="Purple Text" style="background:#7c3aed;"></button>
+                  </div>
+
+                  <div class="rte-divider"></div>
+
+                  <!-- Marker Highlighter -->
+                  <div class="rte-btn-group rte-highlight-group">
+                    <span class="rte-label-hint">Highlight:</span>
+                    <button type="button" class="rte-highlight-btn" data-highlight="yellow" title="Yellow Exam Highlight" style="background:#fef08a; border: 1px solid #ca8a04;">🟡</button>
+                    <button type="button" class="rte-highlight-btn" data-highlight="green" title="Green Exam Highlight" style="background:#bbf7d0; border: 1px solid #16a34a;">🟢</button>
+                    <button type="button" class="rte-highlight-btn" data-highlight="blue" title="Blue Exam Highlight" style="background:#bfdbfe; border: 1px solid #2563eb;">🔵</button>
+                    <button type="button" class="rte-highlight-btn rte-highlight-clear" data-highlight="clear" title="Clear Highlight">✕</button>
+                  </div>
+
+                  <div class="rte-divider"></div>
+
+                  <div class="rte-btn-group">
+                    <button type="button" class="rte-btn" data-command="insertUnorderedList" title="Bullet List (•)">• List</button>
+                    <button type="button" class="rte-btn" data-command="insertOrderedList" title="Numbered List (1.)">1. List</button>
+                    <button type="button" class="rte-btn rte-btn-clear" data-command="removeFormat" title="Clear Formatting">🧹</button>
+                  </div>
+                </div>
+
+                <!-- WYSIWYG Editable Area -->
+                <div id="edit-note-overview-editor" class="rte-editor publish-input publish-textarea" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true" data-placeholder="Enter key study points, explanations, bullet points, or visual mnemonics... (e.g. • Key Articles covered...)"></div>
+                <textarea id="edit-note-overview" hidden></textarea>
+              </div>
+            </div>
+          </div>
+
         </div>
-      </div>
 
-      <p id="edit-form-msg" class="form-message"></p>
+        <p id="edit-form-msg" class="form-message"></p>
 
-      <div class="modal-btn-row edit-modal-btn-row">
-        <button id="admin-edit-cancel-btn" class="outline-button edit-glass-cancel-btn" type="button"
-          data-close-edit-dialog>Cancel</button>
-        <button id="edit-submit-btn" class="upload-button edit-glass-submit-btn" type="submit">
-          <span>✓</span> Save Changes
-        </button>
-      </div>
-    </form>
+        <div class="modal-btn-row edit-modal-btn-row" style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px;">
+          <button id="admin-edit-cancel-btn" class="outline-button" type="button" data-close-edit-dialog>
+            Cancel
+          </button>
+          <button id="edit-submit-btn" class="upload-button" type="submit">
+            <span>✓</span> Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
   </dialog>
   <script>
     /* Keep the edit modal dismissible even if a later admin script has an error. */
@@ -3707,6 +3814,6 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=125.0"></script>
+  <script src="admin.js?v=126.0"></script>
 </body>
 </html>

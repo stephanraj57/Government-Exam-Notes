@@ -4662,9 +4662,9 @@ function getExistingTagsWithCounts() {
     .sort((a, b) => b.count - a.count);
 }
 
-function renderPublishTagSuggestions(filterQuery = "") {
-  const container = $("#publish-quick-tags-container");
-  const tagsInput = $("#studio-note-tags");
+function renderTagSuggestions(containerSelector, tagsInputSelector, filterQuery = "") {
+  const container = $(containerSelector);
+  const tagsInput = $(tagsInputSelector);
   if (!container) return;
 
   const allTagCounts = getExistingTagsWithCounts();
@@ -4715,31 +4715,53 @@ function renderPublishTagSuggestions(filterQuery = "") {
         }
       }
 
-      // Update simulator tags
-      const simTagsRow = $("#sim-tags-row");
-      const updatedTags = tagsInput.value.split(",").map(t => t.trim().replace(/^#/, "")).filter(Boolean);
-      if (simTagsRow) {
-        if (updatedTags.length === 0) {
-          simTagsRow.innerHTML = `<span class="sim-tag">#UPSC</span><span class="sim-tag">#Constitution</span>`;
-        } else {
-          simTagsRow.innerHTML = updatedTags.map(t => `<span class="sim-tag">#${escapeHtml(t)}</span>`).join("");
+      if (tagsInputSelector === "#studio-note-tags") {
+        // Update simulator tags
+        const simTagsRow = $("#sim-tags-row");
+        const updatedTags = tagsInput.value.split(",").map(t => t.trim().replace(/^#/, "")).filter(Boolean);
+        if (simTagsRow) {
+          if (updatedTags.length === 0) {
+            simTagsRow.innerHTML = `<span class="sim-tag">#UPSC</span><span class="sim-tag">#Constitution</span>`;
+          } else {
+            simTagsRow.innerHTML = updatedTags.map(t => `<span class="sim-tag">#${escapeHtml(t)}</span>`).join("");
+          }
         }
+        updateLivePopupPreview();
       }
 
-      renderPublishTagSuggestions("");
+      renderTagSuggestions(containerSelector, tagsInputSelector, "");
       tagsInput.focus();
     });
   });
 }
 
+function renderPublishTagSuggestions(filterQuery = "") {
+  renderTagSuggestions("#publish-quick-tags-container", "#studio-note-tags", filterQuery);
+}
+
+function renderEditTagSuggestions(filterQuery = "") {
+  renderTagSuggestions("#edit-quick-tags-container", "#edit-note-tags", filterQuery);
+}
+
 // ==========================================
 // 5.15 Google Search-Style Real-Time Title Duplicate Detector
 // ==========================================
-function renderPublishTitleSuggestions(rawQuery) {
-  const dropdown = $("#studio-title-suggestions-dropdown");
-  const list = $("#studio-title-suggestions-list");
-  const countBadge = $("#suggestions-match-count");
-  const duplicateAlert = $("#studio-title-duplicate-alert");
+function renderTitleSuggestions({
+  dropdownSelector,
+  listSelector,
+  countBadgeSelector,
+  duplicateAlertSelector,
+  titleInputSelector,
+  charCountSelector,
+  excludeNoteId = null,
+  rawQuery = ""
+}) {
+  const dropdown = $(dropdownSelector);
+  const list = $(listSelector);
+  const countBadge = $(countBadgeSelector);
+  const duplicateAlert = $(duplicateAlertSelector);
+  const titleInput = $(titleInputSelector);
+  const charCount = $(charCountSelector);
   if (!dropdown || !list) return;
 
   const query = (rawQuery || "").trim().toLowerCase();
@@ -4762,6 +4784,7 @@ function renderPublishTitleSuggestions(rawQuery) {
   const matches = [];
 
   allNotes.forEach(note => {
+    if (excludeNoteId && note.id === excludeNoteId) return; // Skip own note in Edit mode
     const noteTitleNorm = norm(note.title);
     if (!noteTitleNorm) return;
 
@@ -4874,15 +4897,42 @@ function renderPublishTitleSuggestions(rawQuery) {
   list.querySelectorAll(".suggestion-item").forEach(item => {
     item.addEventListener("click", () => {
       const noteTitle = item.dataset.noteTitle;
-      const titleInput = $("#studio-note-title");
       if (titleInput && noteTitle) {
         titleInput.value = noteTitle;
-        const charCount = $("#studio-title-char-count");
         if (charCount) charCount.textContent = `${noteTitle.length}/80`;
-        updateLivePopupPreview();
+        if (titleInputSelector === "#studio-note-title") {
+          updateLivePopupPreview();
+        }
       }
       dropdown.hidden = true;
     });
+  });
+}
+
+function renderPublishTitleSuggestions(rawQuery) {
+  renderTitleSuggestions({
+    dropdownSelector: "#studio-title-suggestions-dropdown",
+    listSelector: "#studio-title-suggestions-list",
+    countBadgeSelector: "#suggestions-match-count",
+    duplicateAlertSelector: "#studio-title-duplicate-alert",
+    titleInputSelector: "#studio-note-title",
+    charCountSelector: "#studio-title-char-count",
+    excludeNoteId: null,
+    rawQuery
+  });
+}
+
+function renderEditTitleSuggestions(rawQuery) {
+  const currentNoteId = $("#edit-note-id")?.value || null;
+  renderTitleSuggestions({
+    dropdownSelector: "#edit-title-suggestions-dropdown",
+    listSelector: "#edit-title-suggestions-list",
+    countBadgeSelector: "#edit-suggestions-match-count",
+    duplicateAlertSelector: "#edit-title-duplicate-alert",
+    titleInputSelector: "#edit-note-title",
+    charCountSelector: "#edit-title-char-count",
+    excludeNoteId: currentNoteId,
+    rawQuery
   });
 }
 
@@ -4970,8 +5020,14 @@ function setupPublishStudio() {
   const titleInput = $("#studio-note-title");
   const charCount = $("#studio-title-char-count");
   const subjectSelect = $("#studio-note-subject");
-  const categoryPills = $$(".pub-cat-pill");
+  const categoryPills = $$("#publish-category-pill-grid .pub-cat-pill");
   const tagsInput = $("#studio-note-tags");
+  const urlInput = $("#studio-image-url");
+  const urlClearBtn = $("#studio-url-clear-btn");
+  const previewWrap = $("#dropzone-preview-wrap");
+  const imgPreview = $("#dropzone-img-preview");
+  const removePreviewBtn = $("#remove-preview-btn");
+  const previewFileName = $("#preview-file-name");
 
   // 1. Live Title input, duplicate suggestion detector & character counter
   titleInput?.addEventListener("input", () => {
@@ -4987,7 +5043,7 @@ function setupPublishStudio() {
 
   // Close dropdown on click outside
   document.addEventListener("click", e => {
-    if (!e.target.closest(".title-input-wrap-relative")) {
+    if (!e.target.closest("#admin-view-publish .title-input-wrap-relative")) {
       const dropdown = $("#studio-title-suggestions-dropdown");
       if (dropdown) dropdown.hidden = true;
     }
@@ -5039,6 +5095,42 @@ function setupPublishStudio() {
     renderPublishTagSuggestions(currentToken);
   });
 
+  // 3.5 Cloudinary Image URL Input & Preview
+  const handlePublishUrlChange = () => {
+    const val = (urlInput?.value || "").trim();
+    if (urlClearBtn) urlClearBtn.hidden = !val;
+    if (val && (val.startsWith("http://") || val.startsWith("https://") || val.startsWith("/uploads/") || val.startsWith("data:image/"))) {
+      if (imgPreview) imgPreview.src = val;
+      if (previewFileName) previewFileName.textContent = titleInput?.value || "Cloudinary Note Image";
+      if (previewWrap) previewWrap.hidden = false;
+      selectedImageUrl = val;
+    } else {
+      if (previewWrap) previewWrap.hidden = true;
+      selectedImageUrl = null;
+    }
+    updateLivePopupPreview();
+  };
+
+  urlInput?.addEventListener("input", handlePublishUrlChange);
+  urlInput?.addEventListener("paste", () => setTimeout(handlePublishUrlChange, 50));
+
+  const clearPublishUrl = () => {
+    if (urlInput) urlInput.value = "";
+    if (urlClearBtn) urlClearBtn.hidden = true;
+    if (previewWrap) previewWrap.hidden = true;
+    if (imgPreview) imgPreview.src = "";
+    selectedImageUrl = null;
+    const statusMsg = $("#studio-url-status");
+    if (statusMsg) {
+      statusMsg.hidden = true;
+      statusMsg.textContent = "";
+    }
+    updateLivePopupPreview();
+  };
+
+  urlClearBtn?.addEventListener("click", clearPublishUrl);
+  removePreviewBtn?.addEventListener("click", clearPublishUrl);
+
   // Initial tag render & preview initialization
   renderPublishTagSuggestions("");
   updateLivePopupPreview();
@@ -5079,6 +5171,181 @@ function setupPublishStudio() {
   // Verification Confirm Publish Button
   $("#verify-confirm-btn")?.addEventListener("click", async () => {
     await executePublishNote();
+  });
+}
+
+function setupEditStudio() {
+  const titleInput = $("#edit-note-title");
+  const charCount = $("#edit-title-char-count");
+  const subjectSelect = $("#edit-note-subject");
+  const categoryPills = $$("#edit-category-pill-grid .pub-cat-pill");
+  const tagsInput = $("#edit-note-tags");
+  const urlInput = $("#edit-note-image-url");
+  const urlClearBtn = $("#edit-url-clear-btn");
+  const previewWrap = $("#edit-dropzone-preview-wrap");
+  const imgPreview = $("#edit-img-preview");
+  const removePreviewBtn = $("#edit-remove-preview-btn");
+  const previewFileName = $("#edit-preview-file-name");
+
+  // 1. Live Title input & duplicate suggestion detector
+  titleInput?.addEventListener("input", () => {
+    const val = titleInput.value;
+    if (charCount) charCount.textContent = `${val.length}/80`;
+    renderEditTitleSuggestions(val);
+  });
+
+  titleInput?.addEventListener("focus", () => {
+    renderEditTitleSuggestions(titleInput.value);
+  });
+
+  document.addEventListener("click", e => {
+    if (!e.target.closest("#admin-edit-dialog .title-input-wrap-relative")) {
+      const dropdown = $("#edit-title-suggestions-dropdown");
+      if (dropdown) dropdown.hidden = true;
+    }
+  });
+
+  titleInput?.addEventListener("keydown", e => {
+    if (e.key === "Escape") {
+      const dropdown = $("#edit-title-suggestions-dropdown");
+      if (dropdown) dropdown.hidden = true;
+    }
+  });
+
+  // 1.5 Live Overview character counter
+  const overviewInput = $("#edit-note-overview");
+  const overviewCharCount = $("#edit-overview-char-count");
+  overviewInput?.addEventListener("input", () => {
+    if (overviewCharCount) overviewCharCount.textContent = `${overviewInput.value.length}/2000`;
+  });
+
+  // 2. Category Pill click handler
+  categoryPills.forEach(pill => {
+    pill.addEventListener("click", () => {
+      categoryPills.forEach(p => p.classList.remove("active"));
+      pill.classList.add("active");
+      const catVal = pill.dataset.catVal;
+      if (subjectSelect) {
+        subjectSelect.value = catVal;
+      }
+    });
+  });
+
+  // 3. Live Tags & Dynamic Quick Tag Filtering
+  const handleEditTagsInput = () => {
+    if (!tagsInput) return;
+    const currentToken = (tagsInput.value || "").split(",").pop().trim().replace(/^#/, "");
+    renderEditTagSuggestions(currentToken);
+  };
+
+  tagsInput?.addEventListener("input", handleEditTagsInput);
+  tagsInput?.addEventListener("focus", () => {
+    const currentToken = (tagsInput.value || "").split(",").pop().trim().replace(/^#/, "");
+    renderEditTagSuggestions(currentToken);
+  });
+
+  // 4. Cloudinary Image URL Input & Preview
+  const handleEditUrlChange = () => {
+    const val = (urlInput?.value || "").trim();
+    if (urlClearBtn) urlClearBtn.hidden = !val;
+    if (val && (val.startsWith("http://") || val.startsWith("https://") || val.startsWith("/uploads/") || val.startsWith("data:image/"))) {
+      if (imgPreview) imgPreview.src = val;
+      if (previewFileName) previewFileName.textContent = titleInput?.value || "Cloudinary Note Image";
+      if (previewWrap) previewWrap.hidden = false;
+    } else {
+      if (previewWrap) previewWrap.hidden = true;
+    }
+  };
+
+  urlInput?.addEventListener("input", handleEditUrlChange);
+  urlInput?.addEventListener("paste", () => setTimeout(handleEditUrlChange, 50));
+
+  const clearEditUrl = () => {
+    if (urlInput) urlInput.value = "";
+    if (urlClearBtn) urlClearBtn.hidden = true;
+    if (previewWrap) previewWrap.hidden = true;
+    if (imgPreview) imgPreview.src = "";
+    const statusMsg = $("#edit-url-status");
+    if (statusMsg) {
+      statusMsg.hidden = true;
+      statusMsg.textContent = "";
+    }
+  };
+
+  urlClearBtn?.addEventListener("click", clearEditUrl);
+  removePreviewBtn?.addEventListener("click", clearEditUrl);
+
+  // 5. AI Provider selection pills for Edit Studio
+  const editProviderPills = $$("#edit-ai-provider-pills .ai-provider-pill");
+  const savedProvider = localStorage.getItem("exam_admin_ai_provider") || "gemini";
+  editProviderPills.forEach(pill => {
+    pill.classList.toggle("active", pill.dataset.provider === savedProvider);
+    pill.addEventListener("click", () => {
+      editProviderPills.forEach(p => p.classList.remove("active"));
+      pill.classList.add("active");
+      const chosen = pill.dataset.provider || "gemini";
+      localStorage.setItem("exam_admin_ai_provider", chosen);
+      // Sync with publish pills
+      $$("#studio-ai-provider-pills .ai-provider-pill").forEach(p => {
+        p.classList.toggle("active", p.dataset.provider === chosen);
+      });
+    });
+  });
+
+  $("#edit-ai-autofill-btn")?.addEventListener("click", () => {
+    triggerGeminiAutoFill("edit");
+  });
+
+  $("#edit-ai-config-btn")?.addEventListener("click", () => {
+    const activeProvider = localStorage.getItem("exam_admin_ai_provider") || "gemini";
+    openGeminiConfigModal(null, activeProvider === "openai" ? "openai" : "gemini");
+  });
+
+  // 6. Header Preview Note Button in Edit Dialog
+  $("#edit-header-preview-btn")?.addEventListener("click", () => {
+    const activeImage = (urlInput?.value || "").trim();
+    const title = (titleInput?.value || "").trim();
+    const subject = subjectSelect?.value || "Polity";
+    const rawTags = tagsInput ? tagsInput.value : "";
+    const parsedTags = rawTags.split(",").map(s => s.trim().replace(/^#/, "")).filter(Boolean);
+    const overviewEditor = $("#edit-note-overview-editor");
+    const overview = overviewEditor ? overviewEditor.innerHTML.trim() : ($("#edit-note-overview")?.value || "").trim();
+
+    if (!activeImage) {
+      showToast("Please enter a Cloudinary image URL to preview.", "info");
+      return;
+    }
+    if (!title) {
+      showToast("Please enter a topic title to preview.", "info");
+      return;
+    }
+
+    // Populate and open verification dialog
+    const modalImg = $("#verify-modal-img");
+    const modalTitle = $("#verify-meta-title");
+    const modalSubj = $("#verify-meta-subject");
+    const modalTagsText = $("#verify-meta-tags-text");
+    const modalOverview = $("#verify-modal-overview-text");
+    const verifyDialog = $("#admin-publish-verify-dialog");
+
+    if (modalImg) {
+      modalImg.src = activeImage;
+      modalImg.style.display = "block";
+    }
+    if (modalTitle) modalTitle.textContent = title;
+    if (modalSubj) {
+      modalSubj.textContent = subject;
+      const chipKey = getSubjectKey(subject);
+      modalSubj.className = `verify-subject-pill ${chipKey}`;
+    }
+    if (modalTagsText) {
+      modalTagsText.textContent = parsedTags.map(t => `#${t}`).join(" ");
+    }
+    if (modalOverview) {
+      modalOverview.innerHTML = formatAiOverviewHtml(overview);
+    }
+
+    verifyDialog?.showModal();
   });
 }
 
@@ -5171,9 +5438,10 @@ function openGeminiConfigModal(optionalMsg, targetTab = "gemini") {
     .catch(() => {});
 }
 
-async function triggerGeminiAutoFill() {
-  const urlInput = $("#studio-image-url");
-  const titleInput = $("#studio-note-title");
+async function triggerGeminiAutoFill(target = "publish") {
+  const isEdit = (target === "edit");
+  const urlInput = isEdit ? $("#edit-note-image-url") : $("#studio-image-url");
+  const titleInput = isEdit ? $("#edit-note-title") : $("#studio-note-title");
   const imageUrl = (urlInput?.value || "").trim();
   const currentTitle = (titleInput?.value || "").trim();
 
@@ -5206,11 +5474,11 @@ async function triggerGeminiAutoFill() {
   } catch {}
 
   // 2. Set UI loading state & banner text
-  const autofillBtn = $("#studio-ai-autofill-btn");
+  const autofillBtn = isEdit ? $("#edit-ai-autofill-btn") : $("#studio-ai-autofill-btn");
   const urlAiBtn = $("#studio-url-ai-btn");
-  const banner = $("#studio-ai-banner");
-  const bannerTitle = $("#studio-ai-banner-title");
-  const bannerSub = $("#studio-ai-banner-sub");
+  const banner = isEdit ? $("#edit-ai-banner") : $("#studio-ai-banner");
+  const bannerTitle = isEdit ? $("#edit-ai-banner-title") : $("#studio-ai-banner-title");
+  const bannerSub = isEdit ? $("#edit-ai-banner-sub") : $("#studio-ai-banner-sub");
 
   if (bannerTitle) {
     if (currentProvider === "openai") {
@@ -5226,7 +5494,7 @@ async function triggerGeminiAutoFill() {
   }
 
   if (autofillBtn) autofillBtn.disabled = true;
-  if (urlAiBtn) urlAiBtn.disabled = true;
+  if (urlAiBtn && !isEdit) urlAiBtn.disabled = true;
   if (banner) banner.hidden = false;
 
   try {
@@ -5251,15 +5519,19 @@ async function triggerGeminiAutoFill() {
     // A. Auto-populate Title
     if (title && titleInput) {
       titleInput.value = title;
-      const charCount = $("#studio-title-char-count");
+      const charCount = isEdit ? $("#edit-title-char-count") : $("#studio-title-char-count");
       if (charCount) charCount.textContent = `${title.length}/80`;
-      renderPublishTitleSuggestions(title);
+      if (isEdit) {
+        renderEditTitleSuggestions(title);
+      } else {
+        renderPublishTitleSuggestions(title);
+      }
     }
 
     // B. Auto-select Subject & Category Pill
     if (subject) {
-      const categoryPills = $$(".pub-cat-pill");
-      const subjectSelect = $("#studio-note-subject");
+      const categoryPills = isEdit ? $$("#edit-category-pill-grid .pub-cat-pill") : $$("#publish-category-pill-grid .pub-cat-pill");
+      const subjectSelect = isEdit ? $("#edit-note-subject") : $("#studio-note-subject");
       categoryPills.forEach(pill => {
         const match = pill.dataset.catVal.toLowerCase() === subject.toLowerCase();
         pill.classList.toggle("active", match);
@@ -5269,18 +5541,22 @@ async function triggerGeminiAutoFill() {
 
     // C. Auto-populate Tags
     if (Array.isArray(tags) && tags.length > 0) {
-      const tagsInput = $("#studio-note-tags");
+      const tagsInput = isEdit ? $("#edit-note-tags") : $("#studio-note-tags");
       if (tagsInput) {
         tagsInput.value = tags.join(", ");
-        renderPublishTagSuggestions("");
+        if (isEdit) {
+          renderEditTagSuggestions("");
+        } else {
+          renderPublishTagSuggestions("");
+        }
       }
     }
 
     // D. Auto-populate Overview in Rich Text Editor
     if (overview) {
-      const overviewEditor = $("#studio-note-overview-editor");
-      const hiddenOverview = $("#studio-note-overview");
-      const overviewCharCount = $("#studio-overview-char-count");
+      const overviewEditor = isEdit ? $("#edit-note-overview-editor") : $("#studio-note-overview-editor");
+      const hiddenOverview = isEdit ? $("#edit-note-overview") : $("#studio-note-overview");
+      const overviewCharCount = isEdit ? $("#edit-overview-char-count") : $("#studio-overview-char-count");
       const formattedHtml = formatAiOverviewHtml(overview);
       if (overviewEditor) {
         overviewEditor.innerHTML = formattedHtml;
@@ -5290,13 +5566,15 @@ async function triggerGeminiAutoFill() {
       }
     }
 
-    updateLivePopupPreview();
+    if (!isEdit) {
+      updateLivePopupPreview();
+    }
     showToast(`✨ Note auto-filled by ${data.provider || "AI"}! Review and preview when ready.`, "success");
   } catch (err) {
     showToast(err.message || "Failed to connect to AI engine.", "error");
   } finally {
     if (autofillBtn) autofillBtn.disabled = false;
-    if (urlAiBtn) urlAiBtn.disabled = false;
+    if (urlAiBtn && !isEdit) urlAiBtn.disabled = false;
     if (banner) banner.hidden = true;
   }
 }
@@ -5312,6 +5590,10 @@ function setupGeminiAiAutofill() {
       pill.classList.add("active");
       const chosen = pill.dataset.provider || "gemini";
       localStorage.setItem("exam_admin_ai_provider", chosen);
+      // Sync with edit pills
+      $$("#edit-ai-provider-pills .ai-provider-pill").forEach(p => {
+        p.classList.toggle("active", p.dataset.provider === chosen);
+      });
     });
   });
 
@@ -5321,10 +5603,10 @@ function setupGeminiAiAutofill() {
 
   // Triggers
   $("#studio-ai-autofill-btn")?.addEventListener("click", () => {
-    triggerGeminiAutoFill();
+    triggerGeminiAutoFill("publish");
   });
   $("#studio-url-ai-btn")?.addEventListener("click", () => {
-    triggerGeminiAutoFill();
+    triggerGeminiAutoFill("publish");
   });
   $("#studio-ai-config-btn")?.addEventListener("click", () => {
     const activeProvider = localStorage.getItem("exam_admin_ai_provider") || "gemini";
@@ -5398,6 +5680,7 @@ function setupGeminiAiAutofill() {
         statusText.textContent = `🔴 ${err.message}`;
         statusText.style.color = "#ef4444";
       }
+      showToast(err.message, "error");
     }
   });
 
@@ -5426,7 +5709,7 @@ function setupGeminiAiAutofill() {
           statusText.textContent = "🟢 Connection successful! Valid OpenAI API Key.";
           statusText.style.color = "#10b981";
         }
-        showToast("OpenAI ChatGPT API key is valid and connected! 🤖", "success");
+        showToast("OpenAI API key is valid and connected! 🤖", "success");
       } else {
         if (statusText) {
           statusText.textContent = `🔴 ${data.error || "Connection failed"}`;
@@ -5439,68 +5722,36 @@ function setupGeminiAiAutofill() {
         statusText.textContent = `🔴 ${err.message}`;
         statusText.style.color = "#ef4444";
       }
+      showToast(err.message, "error");
     }
   });
 
-  // Save Gemini Key Form Submit
-  $("#gemini-key-form")?.addEventListener("submit", async e => {
+  // Save AI Keys
+  $("#admin-gemini-key-form")?.addEventListener("submit", async e => {
     e.preventDefault();
-    const key = (geminiKeyInput?.value || "").trim();
-    const statusText = $("#gemini-current-status");
-    if (!key) return;
+    const geminiKey = (geminiKeyInput?.value || "").trim();
+    const openaiKey = (openaiKeyInput?.value || "").trim();
+    const saveBtn = $("#gemini-key-save-btn");
+
+    if (saveBtn) saveBtn.disabled = true;
 
     try {
-      const res = await fetch("/api/admin/ai/config", {
+      const res = await fetch("/api/admin/ai/configure", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: "gemini", apiKey: key })
+        body: JSON.stringify({ geminiKey, openaiKey })
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast("Google Gemini API Key saved successfully! ✨", "success");
-        if (statusText) {
-          statusText.textContent = `🟢 Connected`;
-          statusText.style.color = "#10b981";
-        }
-        setTimeout(() => {
-          dialog?.close();
-        }, 600);
+        showToast("AI API Keys saved and securely configured! ✨", "success");
+        dialog?.close();
       } else {
-        showToast(data.error || "Failed to save API key.", "error");
+        showToast(data.error || "Failed to save AI keys.", "error");
       }
     } catch (err) {
-      showToast(err.message || "Failed to save API key.", "error");
-    }
-  });
-
-  // Save OpenAI Key Form Submit
-  $("#openai-key-form")?.addEventListener("submit", async e => {
-    e.preventDefault();
-    const key = (openaiKeyInput?.value || "").trim();
-    const statusText = $("#openai-current-status");
-    if (!key) return;
-
-    try {
-      const res = await fetch("/api/admin/ai/config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: "openai", apiKey: key })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        showToast("OpenAI ChatGPT API Key saved successfully! 🤖", "success");
-        if (statusText) {
-          statusText.textContent = `🟢 Connected`;
-          statusText.style.color = "#10b981";
-        }
-        setTimeout(() => {
-          dialog?.close();
-        }, 600);
-      } else {
-        showToast(data.error || "Failed to save API key.", "error");
-      }
-    } catch (err) {
-      showToast(err.message || "Failed to save API key.", "error");
+      showToast(err.message || "Failed to save keys.", "error");
+    } finally {
+      if (saveBtn) saveBtn.disabled = false;
     }
   });
 }
@@ -5743,30 +5994,48 @@ function openEditModal(noteId) {
 
   $("#edit-note-id").value = note.id;
   const titleInput = $("#edit-note-title");
+  const titleCharCount = $("#edit-title-char-count");
   if (titleInput) {
     titleInput.value = note.title || "";
-    titleInput.dispatchEvent(new Event("input", { bubbles: true }));
+    if (titleCharCount) titleCharCount.textContent = `${(note.title || "").length}/80`;
   }
-  $("#edit-note-subject").value = note.subject;
-  
+
+  const subjectSelect = $("#edit-note-subject");
+  if (subjectSelect) subjectSelect.value = note.subject || "Polity";
+  $$("#edit-category-pill-grid .pub-cat-pill").forEach(p => {
+    p.classList.toggle("active", p.dataset.catVal.toLowerCase() === (note.subject || "Polity").toLowerCase());
+  });
+
   const tagsInput = $("#edit-note-tags");
   if (tagsInput) {
     tagsInput.value = (note.tags || []).join(", ");
-    tagsInput.dispatchEvent(new Event("input", { bubbles: true }));
   }
+  renderEditTagSuggestions("");
 
   const imgUrlInput = $("#edit-note-image-url");
   const imgPreview = $("#edit-img-preview");
-  const previewBox = $("#edit-image-preview-box");
+  const previewWrap = $("#edit-dropzone-preview-wrap");
+  const urlClearBtn = $("#edit-url-clear-btn");
+  const previewFileName = $("#edit-preview-file-name");
+
   if (imgUrlInput) {
     imgUrlInput.value = note.imageUrl || "";
     if (note.imageUrl) {
       if (imgPreview) imgPreview.src = note.imageUrl;
-      if (previewBox) previewBox.hidden = false;
+      if (previewWrap) previewWrap.hidden = false;
+      if (urlClearBtn) urlClearBtn.hidden = false;
+      if (previewFileName) previewFileName.textContent = note.title || "Cloudinary Note Image";
     } else {
-      if (previewBox) previewBox.hidden = true;
+      if (previewWrap) previewWrap.hidden = true;
+      if (urlClearBtn) urlClearBtn.hidden = true;
     }
   }
+
+  // Provider pills sync
+  const savedProvider = localStorage.getItem("exam_admin_ai_provider") || "gemini";
+  $$("#edit-ai-provider-pills .ai-provider-pill").forEach(p => {
+    p.classList.toggle("active", p.dataset.provider === savedProvider);
+  });
 
   const rawOverview = note.overview || note.description || "";
   const overviewInput = $("#edit-note-overview");
@@ -5774,7 +6043,7 @@ function openEditModal(noteId) {
   const overviewCharCount = $("#edit-overview-char-count");
 
   if (overviewEditor) {
-    if (rawOverview.includes("<p>") || rawOverview.includes("<ul>") || rawOverview.includes("<div>")) {
+    if (rawOverview.includes("<p>") || rawOverview.includes("<ul>") || rawOverview.includes("<div>") || rawOverview.includes("<li>")) {
       overviewEditor.innerHTML = rawOverview;
     } else {
       overviewEditor.innerHTML = formatAiOverviewHtml(rawOverview);
@@ -5788,11 +6057,25 @@ function openEditModal(noteId) {
     overviewCharCount.textContent = `${textLen}/2000`;
   }
 
+  // Reset alerts and messages
   const msg = $("#edit-form-msg");
   if (msg) {
     msg.textContent = "";
     msg.className = "form-message";
   }
+  const titleDropdown = $("#edit-title-suggestions-dropdown");
+  if (titleDropdown) titleDropdown.hidden = true;
+  const titleDupAlert = $("#edit-title-duplicate-alert");
+  if (titleDupAlert) {
+    titleDupAlert.hidden = true;
+    titleDupAlert.innerHTML = "";
+  }
+  const titleSpell = $("#edit-title-spell-alert");
+  if (titleSpell) titleSpell.hidden = true;
+  const tagsSpell = $("#edit-tags-spell-alert");
+  if (tagsSpell) tagsSpell.hidden = true;
+  const aiBanner = $("#edit-ai-banner");
+  if (aiBanner) aiBanner.hidden = true;
 
   const dialog = $("#admin-edit-dialog");
   if (dialog && !dialog.open) {
@@ -7062,6 +7345,7 @@ function setupEventListeners() {
   setupCalendarEvents();
   setupFileDrop();
   setupPublishStudio();
+  setupEditStudio();
   setupGeminiAiAutofill();
   setupRichTextEditor("#studio-rte-wrapper", "#studio-note-overview-editor", "#studio-note-overview", "#studio-overview-char-count");
   setupRichTextEditor("#edit-rte-wrapper", "#edit-note-overview-editor", "#edit-note-overview", "#edit-overview-char-count");
@@ -8972,24 +9256,7 @@ function setupEventListeners() {
     openPublishVerificationModal();
   });
 
-  // Edit Note Form Submit & Image URL Preview Listener
-  $("#edit-note-image-url")?.addEventListener("input", e => {
-    const val = (e.target.value || "").trim();
-    const previewBox = $("#edit-image-preview-box");
-    const imgPreview = $("#edit-img-preview");
-    if (val && (val.startsWith("http://") || val.startsWith("https://") || val.startsWith("/uploads/") || val.startsWith("data:image/"))) {
-      if (imgPreview) imgPreview.src = val;
-      if (previewBox) previewBox.hidden = false;
-    } else {
-      if (previewBox) previewBox.hidden = true;
-    }
-  });
-
-  $("#edit-note-overview")?.addEventListener("input", e => {
-    const charCount = $("#edit-overview-char-count");
-    if (charCount) charCount.textContent = `${e.target.value.length}/2000`;
-  });
-
+  // Edit Note Form Submit
   $("#admin-edit-form")?.addEventListener("submit", async e => {
     e.preventDefault();
     const id = $("#edit-note-id").value;

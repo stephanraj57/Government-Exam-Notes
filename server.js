@@ -724,14 +724,35 @@ async function handleApi(request, response, url) {
 
     const notes = await readJson(NOTES_FILE).catch(() => []);
     const activeNoteIds = new Set(notes.map(n => n.id));
+    const users = await readJson(USERS_FILE).catch(() => []);
+
+    // Build strictly verified likes per note from authenticated Google users
+    const verifiedLikesPerNote = {};
+    for (const u of users) {
+      const userLikedIds = getUniqueLikedNoteIds(u);
+      for (const noteId of userLikedIds) {
+        if (activeNoteIds.has(noteId)) {
+          verifiedLikesPerNote[noteId] = (verifiedLikesPerNote[noteId] || 0) + 1;
+        }
+      }
+    }
 
     let syncedLikes = 0;
     let syncedDownloads = 0;
     let syncedImpressions = 0;
 
+    // Ensure all notes with verified user likes exist in interactions.notes
+    for (const noteId of Object.keys(verifiedLikesPerNote)) {
+      if (!interactions.notes[noteId]) {
+        interactions.notes[noteId] = { likes: 0, downloads: 0, impressions: 0 };
+      }
+    }
+
     for (const [id, data] of Object.entries(interactions.notes)) {
       if (activeNoteIds.has(id) || id.startsWith("sample-")) {
-        syncedLikes += (Number(data.likes) || 0);
+        const verifiedCount = verifiedLikesPerNote[id] || 0;
+        data.likes = verifiedCount;
+        syncedLikes += verifiedCount;
         syncedDownloads += (Number(data.downloads) || 0);
         syncedImpressions += (Number(data.impressions) || 0);
       } else {
