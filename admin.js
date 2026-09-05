@@ -5107,26 +5107,64 @@ function formatAiOverviewHtml(raw) {
   return html;
 }
 
-function openGeminiConfigModal(optionalMsg) {
+function switchAiTab(tab) {
+  const tabGemini = $("#ai-tab-gemini");
+  const tabOpenai = $("#ai-tab-openai");
+  const panelGemini = $("#ai-panel-gemini");
+  const panelOpenai = $("#ai-panel-openai");
+
+  if (tab === "openai") {
+    tabOpenai?.classList.add("active");
+    tabGemini?.classList.remove("active");
+    if (panelOpenai) { panelOpenai.hidden = false; panelOpenai.classList.add("active"); }
+    if (panelGemini) { panelGemini.hidden = true; panelGemini.classList.remove("active"); }
+  } else {
+    tabGemini?.classList.add("active");
+    tabOpenai?.classList.remove("active");
+    if (panelGemini) { panelGemini.hidden = false; panelGemini.classList.add("active"); }
+    if (panelOpenai) { panelOpenai.hidden = true; panelOpenai.classList.remove("active"); }
+  }
+}
+
+function openGeminiConfigModal(optionalMsg, targetTab = "gemini") {
   const dialog = $("#admin-gemini-key-dialog");
   if (!dialog) return;
-  const statusText = $("#gemini-current-status");
-  if (statusText) {
-    statusText.textContent = optionalMsg || "Checking saved key...";
-    statusText.style.color = "var(--ink-muted)";
+
+  switchAiTab(targetTab);
+
+  const geminiStatusText = $("#gemini-current-status");
+  const openaiStatusText = $("#openai-current-status");
+
+  if (geminiStatusText) {
+    geminiStatusText.textContent = targetTab === "gemini" && optionalMsg ? optionalMsg : "Checking saved key...";
+    geminiStatusText.style.color = "var(--ink-muted)";
   }
+  if (openaiStatusText) {
+    openaiStatusText.textContent = targetTab === "openai" && optionalMsg ? optionalMsg : "Checking saved key...";
+    openaiStatusText.style.color = "var(--ink-muted)";
+  }
+
   dialog.showModal();
 
   fetch("/api/admin/ai/status")
     .then(r => r.ok ? r.json() : { configured: false })
     .then(data => {
-      if (statusText) {
-        if (data.configured) {
-          statusText.textContent = `🟢 Key Connected (${data.maskedKey})`;
-          statusText.style.color = "#10b981";
+      if (geminiStatusText) {
+        if (data.geminiConfigured) {
+          geminiStatusText.textContent = `🟢 Key Connected (${data.geminiMasked})`;
+          geminiStatusText.style.color = "#10b981";
         } else {
-          statusText.textContent = optionalMsg || "⚪ No API key configured yet. Free key from Google AI Studio works instantly.";
-          statusText.style.color = "#f59e0b";
+          geminiStatusText.textContent = targetTab === "gemini" && optionalMsg ? optionalMsg : "⚪ No Gemini key configured yet. Free key from Google AI Studio works instantly.";
+          geminiStatusText.style.color = "#f59e0b";
+        }
+      }
+      if (openaiStatusText) {
+        if (data.openaiConfigured) {
+          openaiStatusText.textContent = `🟢 Key Connected (${data.openaiMasked})`;
+          openaiStatusText.style.color = "#10b981";
+        } else {
+          openaiStatusText.textContent = targetTab === "openai" && optionalMsg ? optionalMsg : "⚪ No OpenAI API key configured yet. Enter your OpenAI platform key (sk-...).";
+          openaiStatusText.style.color = "#f59e0b";
         }
       }
     })
@@ -5145,22 +5183,47 @@ async function triggerGeminiAutoFill() {
     return;
   }
 
+  const currentProvider = localStorage.getItem("exam_admin_ai_provider") || "gemini";
+
   // 1. Check API Key status
   try {
     const statusRes = await fetch("/api/admin/ai/status");
     if (statusRes.ok) {
       const statusData = await statusRes.json();
-      if (!statusData.configured) {
-        openGeminiConfigModal("Please configure your free Gemini API Key first to enable 1-click Auto-Fill.");
+      if (currentProvider === "gemini" && !statusData.geminiConfigured) {
+        openGeminiConfigModal("Please configure your Google Gemini API Key (Free) first.", "gemini");
+        return;
+      }
+      if (currentProvider === "openai" && !statusData.openaiConfigured) {
+        openGeminiConfigModal("Please configure your OpenAI ChatGPT API Key first.", "openai");
+        return;
+      }
+      if (currentProvider === "auto" && !statusData.geminiConfigured && !statusData.openaiConfigured) {
+        openGeminiConfigModal("Please configure either Google Gemini or OpenAI ChatGPT API Key first.");
         return;
       }
     }
   } catch {}
 
-  // 2. Set UI loading state
+  // 2. Set UI loading state & banner text
   const autofillBtn = $("#studio-ai-autofill-btn");
   const urlAiBtn = $("#studio-url-ai-btn");
   const banner = $("#studio-ai-banner");
+  const bannerTitle = $("#studio-ai-banner-title");
+  const bannerSub = $("#studio-ai-banner-sub");
+
+  if (bannerTitle) {
+    if (currentProvider === "openai") {
+      bannerTitle.textContent = "🤖 ChatGPT (GPT-4o Vision) is analyzing diagram...";
+    } else if (currentProvider === "gemini") {
+      bannerTitle.textContent = "✨ Google Gemini is analyzing diagram...";
+    } else {
+      bannerTitle.textContent = "⚡ AI is analyzing diagram...";
+    }
+  }
+  if (bannerSub) {
+    bannerSub.textContent = "Reading visual concepts, extracting high-yield exam points, identifying subject, and generating tags.";
+  }
 
   if (autofillBtn) autofillBtn.disabled = true;
   if (urlAiBtn) urlAiBtn.disabled = true;
@@ -5170,16 +5233,16 @@ async function triggerGeminiAutoFill() {
     const res = await fetch("/api/admin/ai/auto-fill", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageUrl, currentTitle })
+      body: JSON.stringify({ imageUrl, currentTitle, provider: currentProvider })
     });
 
     const data = await res.json();
     if (!res.ok) {
       if (data.needsKey) {
-        openGeminiConfigModal("Please enter your free Google Gemini API Key.");
+        openGeminiConfigModal("Please enter your AI API Key.", currentProvider === "openai" ? "openai" : "gemini");
         return;
       }
-      showToast(data.error || "Failed to analyze diagram with Gemini AI.", "error");
+      showToast(data.error || "Failed to analyze diagram with AI.", "error");
       return;
     }
 
@@ -5228,9 +5291,9 @@ async function triggerGeminiAutoFill() {
     }
 
     updateLivePopupPreview();
-    showToast("✨ Diagram analyzed & note auto-filled by Gemini AI! Review and preview when ready.", "success");
+    showToast(`✨ Note auto-filled by ${data.provider || "AI"}! Review and preview when ready.`, "success");
   } catch (err) {
-    showToast(err.message || "Failed to connect to Gemini AI.", "error");
+    showToast(err.message || "Failed to connect to AI engine.", "error");
   } finally {
     if (autofillBtn) autofillBtn.disabled = false;
     if (urlAiBtn) urlAiBtn.disabled = false;
@@ -5239,6 +5302,23 @@ async function triggerGeminiAutoFill() {
 }
 
 function setupGeminiAiAutofill() {
+  // Provider Selection Pills in Publish Studio
+  const providerPills = $$("#studio-ai-provider-pills .ai-provider-pill");
+  const savedProvider = localStorage.getItem("exam_admin_ai_provider") || "gemini";
+  providerPills.forEach(pill => {
+    pill.classList.toggle("active", pill.dataset.provider === savedProvider);
+    pill.addEventListener("click", () => {
+      providerPills.forEach(p => p.classList.remove("active"));
+      pill.classList.add("active");
+      const chosen = pill.dataset.provider || "gemini";
+      localStorage.setItem("exam_admin_ai_provider", chosen);
+    });
+  });
+
+  // Dialog Tab Switching
+  $("#ai-tab-gemini")?.addEventListener("click", () => switchAiTab("gemini"));
+  $("#ai-tab-openai")?.addEventListener("click", () => switchAiTab("openai"));
+
   // Triggers
   $("#studio-ai-autofill-btn")?.addEventListener("click", () => {
     triggerGeminiAutoFill();
@@ -5247,7 +5327,8 @@ function setupGeminiAiAutofill() {
     triggerGeminiAutoFill();
   });
   $("#studio-ai-config-btn")?.addEventListener("click", () => {
-    openGeminiConfigModal();
+    const activeProvider = localStorage.getItem("exam_admin_ai_provider") || "gemini";
+    openGeminiConfigModal(null, activeProvider === "openai" ? "openai" : "gemini");
   });
 
   // Modal close
@@ -5259,23 +5340,33 @@ function setupGeminiAiAutofill() {
     if (e.target === dialog) dialog.close();
   });
 
-  // Toggle key visibility
-  const toggleBtn = $("#gemini-key-toggle-vis");
-  const keyInput = $("#gemini-api-key-input");
-  toggleBtn?.addEventListener("click", () => {
-    if (keyInput) {
-      keyInput.type = keyInput.type === "password" ? "text" : "password";
-      toggleBtn.textContent = keyInput.type === "password" ? "👁️" : "🙈";
+  // Gemini visibility toggle
+  const geminiToggleBtn = $("#gemini-key-toggle-vis");
+  const geminiKeyInput = $("#gemini-api-key-input");
+  geminiToggleBtn?.addEventListener("click", () => {
+    if (geminiKeyInput) {
+      geminiKeyInput.type = geminiKeyInput.type === "password" ? "text" : "password";
+      geminiToggleBtn.textContent = geminiKeyInput.type === "password" ? "👁️" : "🙈";
     }
   });
 
-  // Test Key
+  // OpenAI visibility toggle
+  const openaiToggleBtn = $("#openai-key-toggle-vis");
+  const openaiKeyInput = $("#openai-api-key-input");
+  openaiToggleBtn?.addEventListener("click", () => {
+    if (openaiKeyInput) {
+      openaiKeyInput.type = openaiKeyInput.type === "password" ? "text" : "password";
+      openaiToggleBtn.textContent = openaiKeyInput.type === "password" ? "👁️" : "🙈";
+    }
+  });
+
+  // Test Gemini Key
   $("#gemini-test-key-btn")?.addEventListener("click", async () => {
-    const key = (keyInput?.value || "").trim();
+    const key = (geminiKeyInput?.value || "").trim();
     const statusText = $("#gemini-current-status");
     if (!key) {
-      showToast("Please enter an API key to test.", "info");
-      keyInput?.focus();
+      showToast("Please enter a Gemini API key to test.", "info");
+      geminiKeyInput?.focus();
       return;
     }
     if (statusText) {
@@ -5286,7 +5377,7 @@ function setupGeminiAiAutofill() {
       const res = await fetch("/api/admin/ai/test-key", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey: key })
+        body: JSON.stringify({ provider: "gemini", apiKey: key })
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -5294,7 +5385,7 @@ function setupGeminiAiAutofill() {
           statusText.textContent = "🟢 Connection successful! Valid Gemini API Key.";
           statusText.style.color = "#10b981";
         }
-        showToast("Gemini API key is valid and connected!", "success");
+        showToast("Gemini API key is valid and connected! ✨", "success");
       } else {
         if (statusText) {
           statusText.textContent = `🔴 ${data.error || "Connection failed"}`;
@@ -5310,10 +5401,51 @@ function setupGeminiAiAutofill() {
     }
   });
 
-  // Save Key Form Submit
+  // Test OpenAI Key
+  $("#openai-test-key-btn")?.addEventListener("click", async () => {
+    const key = (openaiKeyInput?.value || "").trim();
+    const statusText = $("#openai-current-status");
+    if (!key) {
+      showToast("Please enter an OpenAI API key to test.", "info");
+      openaiKeyInput?.focus();
+      return;
+    }
+    if (statusText) {
+      statusText.textContent = "⏳ Testing connection with OpenAI ChatGPT...";
+      statusText.style.color = "var(--ink-muted)";
+    }
+    try {
+      const res = await fetch("/api/admin/ai/test-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "openai", apiKey: key })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (statusText) {
+          statusText.textContent = "🟢 Connection successful! Valid OpenAI API Key.";
+          statusText.style.color = "#10b981";
+        }
+        showToast("OpenAI ChatGPT API key is valid and connected! 🤖", "success");
+      } else {
+        if (statusText) {
+          statusText.textContent = `🔴 ${data.error || "Connection failed"}`;
+          statusText.style.color = "#ef4444";
+        }
+        showToast(data.error || "Test connection failed.", "error");
+      }
+    } catch (err) {
+      if (statusText) {
+        statusText.textContent = `🔴 ${err.message}`;
+        statusText.style.color = "#ef4444";
+      }
+    }
+  });
+
+  // Save Gemini Key Form Submit
   $("#gemini-key-form")?.addEventListener("submit", async e => {
     e.preventDefault();
-    const key = (keyInput?.value || "").trim();
+    const key = (geminiKeyInput?.value || "").trim();
     const statusText = $("#gemini-current-status");
     if (!key) return;
 
@@ -5321,13 +5453,44 @@ function setupGeminiAiAutofill() {
       const res = await fetch("/api/admin/ai/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey: key })
+        body: JSON.stringify({ provider: "gemini", apiKey: key })
       });
       const data = await res.json();
       if (res.ok && data.success) {
         showToast("Google Gemini API Key saved successfully! ✨", "success");
         if (statusText) {
-          statusText.textContent = `🟢 Connected (${data.maskedKey})`;
+          statusText.textContent = `🟢 Connected`;
+          statusText.style.color = "#10b981";
+        }
+        setTimeout(() => {
+          dialog?.close();
+        }, 600);
+      } else {
+        showToast(data.error || "Failed to save API key.", "error");
+      }
+    } catch (err) {
+      showToast(err.message || "Failed to save API key.", "error");
+    }
+  });
+
+  // Save OpenAI Key Form Submit
+  $("#openai-key-form")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const key = (openaiKeyInput?.value || "").trim();
+    const statusText = $("#openai-current-status");
+    if (!key) return;
+
+    try {
+      const res = await fetch("/api/admin/ai/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "openai", apiKey: key })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast("OpenAI ChatGPT API Key saved successfully! 🤖", "success");
+        if (statusText) {
+          statusText.textContent = `🟢 Connected`;
           statusText.style.color = "#10b981";
         }
         setTimeout(() => {
@@ -9119,12 +9282,20 @@ function setupEventListeners() {
     let initialZoom = 1.0;
     let touchStartX = 0;
     let touchStartY = 0;
+    let swipeStartX = 0;
+    let swipeStartY = 0;
+    let swipeStartTime = 0;
 
     mediaBox.addEventListener("touchstart", e => {
-      if (e.touches.length === 1 && currentZoom > 1.05) {
-        isDragging = true;
-        touchStartX = e.touches[0].clientX - panX;
-        touchStartY = e.touches[0].clientY - panY;
+      if (e.touches.length === 1) {
+        swipeStartX = e.touches[0].clientX;
+        swipeStartY = e.touches[0].clientY;
+        swipeStartTime = Date.now();
+        if (currentZoom > 1.05) {
+          isDragging = true;
+          touchStartX = e.touches[0].clientX - panX;
+          touchStartY = e.touches[0].clientY - panY;
+        }
       } else if (e.touches.length === 2) {
         isDragging = false;
         touchStartDist = Math.hypot(
@@ -9152,9 +9323,26 @@ function setupEventListeners() {
       }
     }, { passive: false });
 
-    mediaBox.addEventListener("touchend", () => {
+    mediaBox.addEventListener("touchend", e => {
+      if (currentZoom <= 1.05 && swipeStartTime > 0 && e.changedTouches && e.changedTouches.length === 1) {
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        const diffX = touchEndX - swipeStartX;
+        const diffY = touchEndY - swipeStartY;
+        const elapsed = Date.now() - swipeStartTime;
+
+        // Quick horizontal swipe (within 500ms, > 45px horizontal movement, < 65px vertical movement)
+        if (elapsed < 500 && Math.abs(diffX) > 45 && Math.abs(diffY) < 65) {
+          if (diffX < 0) {
+            nextLightbox();
+          } else {
+            prevLightbox();
+          }
+        }
+      }
       isDragging = false;
       touchStartDist = 0;
+      swipeStartTime = 0;
     });
 
     // Double-click to toggle 200% zoom / reset

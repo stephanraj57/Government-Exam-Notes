@@ -2851,12 +2851,20 @@ function setupEventListeners() {
     let initialZoom = 1.0;
     let touchStartX = 0;
     let touchStartY = 0;
+    let swipeStartX = 0;
+    let swipeStartY = 0;
+    let swipeStartTime = 0;
 
     mediaBox.addEventListener("touchstart", e => {
-      if (e.touches.length === 1 && currentZoom > 1.05) {
-        isDragging = true;
-        touchStartX = e.touches[0].clientX - panX;
-        touchStartY = e.touches[0].clientY - panY;
+      if (e.touches.length === 1) {
+        swipeStartX = e.touches[0].clientX;
+        swipeStartY = e.touches[0].clientY;
+        swipeStartTime = Date.now();
+        if (currentZoom > 1.05) {
+          isDragging = true;
+          touchStartX = e.touches[0].clientX - panX;
+          touchStartY = e.touches[0].clientY - panY;
+        }
       } else if (e.touches.length === 2) {
         isDragging = false;
         touchStartDist = Math.hypot(
@@ -2884,9 +2892,26 @@ function setupEventListeners() {
       }
     }, { passive: false });
 
-    mediaBox.addEventListener("touchend", () => {
+    mediaBox.addEventListener("touchend", e => {
+      if (currentZoom <= 1.05 && swipeStartTime > 0 && e.changedTouches && e.changedTouches.length === 1) {
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        const diffX = touchEndX - swipeStartX;
+        const diffY = touchEndY - swipeStartY;
+        const elapsed = Date.now() - swipeStartTime;
+
+        // Quick horizontal swipe (within 500ms, > 45px horizontal movement, < 65px vertical movement)
+        if (elapsed < 500 && Math.abs(diffX) > 45 && Math.abs(diffY) < 65) {
+          if (diffX < 0) {
+            nextLightbox();
+          } else {
+            prevLightbox();
+          }
+        }
+      }
       isDragging = false;
       touchStartDist = 0;
+      swipeStartTime = 0;
     });
 
     // Double-click to toggle 200% zoom / reset

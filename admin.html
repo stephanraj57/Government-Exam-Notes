@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=174.0">
+  <link rel="stylesheet" href="styles.css?v=178.0">
 </head>
 <body class="admin-body">
   <!-- Admin Header -->
@@ -1099,25 +1099,44 @@
 
                 <!-- Cloudinary Image URL Input Box & Live Preview -->
                 <div class="publish-url-card cloudinary-only-card">
-                  <div class="publish-label-row">
+                  <!-- Header: Field Label & Hosted Badge -->
+                  <div class="publish-url-card-header">
                     <div class="url-label-wrap">
                       <label for="studio-image-url" class="publish-field-label">
                         <span class="label-icon">☁️</span> Cloudinary Image URL <span class="req-star" title="Mandatory Field">*</span>
                       </label>
                       <span class="cloudinary-badge">⚡ Cloudinary Hosted</span>
                     </div>
+
+                    <!-- AI Actions Toolbar (Multi-Provider Pills + Auto-Fill + Settings) -->
                     <div class="url-card-ai-actions">
-                      <button id="studio-ai-autofill-btn" type="button" class="publish-action-button ai-autofill-header-btn" title="Auto-Fill Note Details from Diagram with Google Gemini AI">
-                        <span class="pub-btn-icon">✨</span>
-                        <span class="pub-btn-text">AI Auto-Fill</span>
-                      </button>
-                      <button id="studio-ai-config-btn" type="button" class="publish-action-button ai-config-header-btn" title="Configure Google Gemini API Key">
-                        <span class="pub-btn-icon">⚙️</span>
-                      </button>
+                      <div class="ai-provider-pill-group" id="studio-ai-provider-pills" role="radiogroup" aria-label="Select AI Engine">
+                        <button type="button" class="ai-provider-pill active" data-provider="gemini" title="Google Gemini AI (Fast & Free)">
+                          <span>✨ Gemini</span>
+                        </button>
+                        <button type="button" class="ai-provider-pill" data-provider="openai" title="OpenAI ChatGPT (GPT-4o Vision)">
+                          <span>🤖 ChatGPT</span>
+                        </button>
+                        <button type="button" class="ai-provider-pill" data-provider="auto" title="Auto Smart Fallback">
+                          <span>🔄 Auto</span>
+                        </button>
+                      </div>
+                      <div class="ai-action-btn-group">
+                        <button id="studio-ai-autofill-btn" type="button" class="publish-action-button ai-autofill-header-btn" title="Auto-Fill Note Details from Diagram with AI">
+                          <span class="pub-btn-icon">⚡</span>
+                          <span class="pub-btn-text">AI Auto-Fill</span>
+                        </button>
+                        <button id="studio-ai-config-btn" type="button" class="publish-action-button ai-config-header-btn" title="Configure AI API Keys (Gemini & ChatGPT)" aria-label="Configure AI Keys">
+                          <span class="pub-btn-icon">⚙️</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
+
+                  <!-- Input Row with Prefix Icon and Clear Button -->
                   <div class="publish-input-wrap url-input-wrap">
-                    <input id="studio-image-url" class="publish-input" type="url" placeholder="Paste Cloudinary URL (https://res.cloudinary.com/.../image.jpg)" autocomplete="off" spellcheck="false" required>
+                    <span class="url-input-prefix-icon" aria-hidden="true">🔗</span>
+                    <input id="studio-image-url" class="publish-input url-input-with-prefix" type="url" placeholder="https://res.cloudinary.com/.../image.jpg" autocomplete="off" spellcheck="false" required>
                     <button type="button" id="studio-url-clear-btn" class="url-clear-btn" title="Clear URL" hidden>×</button>
                   </div>
                   <div id="studio-url-status" class="url-status-msg" hidden></div>
@@ -1126,20 +1145,24 @@
                   <div id="studio-ai-banner" class="studio-ai-banner" hidden>
                     <div class="ai-banner-spinner"></div>
                     <div class="ai-banner-content">
-                      <strong id="studio-ai-banner-title">✨ Gemini AI is analyzing diagram...</strong>
+                      <strong id="studio-ai-banner-title">✨ AI is analyzing diagram...</strong>
                       <p id="studio-ai-banner-sub">Reading diagram, extracting high-yield exam points, identifying subject, and generating search tags.</p>
                     </div>
                   </div>
 
                   <!-- Live Cloudinary Preview Overlay Bar -->
                   <div id="dropzone-preview-wrap" class="dropzone-preview-wrap" hidden>
-                    <img id="dropzone-img-preview" class="preview-img" alt="Cloudinary preview">
+                    <div class="preview-img-container">
+                      <img id="dropzone-img-preview" class="preview-img" alt="Cloudinary preview">
+                    </div>
                     <div class="preview-details">
                       <div class="preview-details-left">
                         <span id="preview-file-name" class="preview-name">Cloudinary Note Image</span>
                         <span id="preview-file-size" class="preview-size">Ready</span>
                       </div>
-                      <button id="remove-preview-btn" type="button" class="text-btn danger">Clear URL</button>
+                      <button id="remove-preview-btn" type="button" class="preview-clear-btn" title="Remove URL">
+                        <span>🗑️ Clear</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -2428,49 +2451,96 @@
     </form>
   </dialog>
 
-  <!-- Google Gemini AI Key Configuration Modal Dialog -->
+  <!-- Multi-AI Provider Configuration Modal Dialog (Gemini & OpenAI ChatGPT) -->
   <dialog id="admin-gemini-key-dialog" class="dialog edit-dialog gemini-config-dialog" aria-labelledby="gemini-modal-title">
     <div class="edit-dialog-content gemini-config-content">
       <div class="gemini-modal-header">
         <div class="gemini-header-brand">
-          <span class="gemini-sparkle-icon">✨</span>
+          <span class="gemini-sparkle-icon">🤖</span>
           <div>
-            <h2 id="gemini-modal-title">Google Gemini AI Configuration</h2>
-            <p>100% Free Multimodal AI for Auto-Filling Exam Notes</p>
+            <h2 id="gemini-modal-title">AI Engine & Vision Configuration</h2>
+            <p>Multimodal AI for Auto-Filling Exam Notes (Gemini & ChatGPT)</p>
           </div>
         </div>
         <button type="button" class="edit-modal-close" id="gemini-key-close-btn" aria-label="Close">✕</button>
       </div>
 
+      <!-- Provider Tabs Header -->
+      <div class="ai-dialog-tabs">
+        <button type="button" class="ai-tab-btn active" id="ai-tab-gemini" data-tab="gemini">
+          <span>✨ Google Gemini</span>
+          <small class="tab-pill-badge free-badge">Free Tier</small>
+        </button>
+        <button type="button" class="ai-tab-btn" id="ai-tab-openai" data-tab="openai">
+          <span>🤖 OpenAI ChatGPT</span>
+          <small class="tab-pill-badge vision-badge">GPT-4o Vision</small>
+        </button>
+      </div>
+
       <div class="gemini-modal-body">
-        <div class="gemini-info-callout">
-          <span class="callout-icon">💡</span>
-          <div>
-            <strong>Get your Free Gemini API Key (1,500 requests/day):</strong>
-            <p>Google AI Studio provides free Gemini 3.6 Flash keys without entering any credit card. Takes only 30 seconds.</p>
-            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" class="gemini-get-key-link">
-              <span>Get Free Key at Google AI Studio ↗</span>
-            </a>
+        <!-- Tab 1: Google Gemini Panel -->
+        <div id="ai-panel-gemini" class="ai-tab-panel active">
+          <div class="gemini-info-callout">
+            <span class="callout-icon">💡</span>
+            <div>
+              <strong>Get your Free Gemini API Key (1,500 free requests/day):</strong>
+              <p>Google AI Studio provides free Gemini 3.6 Flash keys without entering any credit card. Ready in 30 seconds.</p>
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" class="gemini-get-key-link">
+                <span>Get Free Key at Google AI Studio ↗</span>
+              </a>
+            </div>
           </div>
+
+          <form id="gemini-key-form" class="gemini-key-form">
+            <div class="form-group">
+              <label for="gemini-api-key-input" class="form-label-title">
+                <span>🔑</span> Google Gemini API Key <span class="req-star">*</span>
+              </label>
+              <div class="gemini-input-wrap">
+                <input type="password" id="gemini-api-key-input" class="form-control" placeholder="Paste Gemini API key (AIzaSy...)" autocomplete="off">
+                <button type="button" id="gemini-key-toggle-vis" class="pwd-toggle-btn" title="Toggle visibility">👁️</button>
+              </div>
+              <p id="gemini-current-status" class="gemini-status-text">Checking status...</p>
+            </div>
+
+            <div class="gemini-modal-actions">
+              <button type="button" id="gemini-test-key-btn" class="gemini-btn-secondary">🧪 Test Gemini</button>
+              <button type="submit" id="gemini-save-key-btn" class="gemini-btn-primary">💾 Save Gemini Key</button>
+            </div>
+          </form>
         </div>
 
-        <form id="gemini-key-form" class="gemini-key-form">
-          <div class="form-group">
-            <label for="gemini-api-key-input" class="form-label-title">
-              <span>🔑</span> Gemini API Key <span class="req-star">*</span>
-            </label>
-            <div class="gemini-input-wrap">
-              <input type="password" id="gemini-api-key-input" class="form-control" placeholder="Paste your API key here (AIzaSy...)" autocomplete="off" required>
-              <button type="button" id="gemini-key-toggle-vis" class="pwd-toggle-btn" title="Toggle visibility">👁️</button>
+        <!-- Tab 2: OpenAI ChatGPT Panel -->
+        <div id="ai-panel-openai" class="ai-tab-panel" hidden>
+          <div class="gemini-info-callout openai-callout">
+            <span class="callout-icon">🤖</span>
+            <div>
+              <strong>OpenAI ChatGPT Vision API Key (GPT-4o & GPT-4o-mini):</strong>
+              <p>State-of-the-art vision reasoning for reading handwritten concept charts, complex flowcharts, and diagrams.</p>
+              <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" class="gemini-get-key-link">
+                <span>Get OpenAI API Key at platform.openai.com ↗</span>
+              </a>
             </div>
-            <p id="gemini-current-status" class="gemini-status-text">Checking status...</p>
           </div>
 
-          <div class="gemini-modal-actions">
-            <button type="button" id="gemini-test-key-btn" class="gemini-btn-secondary">🧪 Test Connection</button>
-            <button type="submit" id="gemini-save-key-btn" class="gemini-btn-primary">💾 Save API Key</button>
-          </div>
-        </form>
+          <form id="openai-key-form" class="gemini-key-form">
+            <div class="form-group">
+              <label for="openai-api-key-input" class="form-label-title">
+                <span>🔑</span> OpenAI API Key <span class="req-star">*</span>
+              </label>
+              <div class="gemini-input-wrap">
+                <input type="password" id="openai-api-key-input" class="form-control" placeholder="Paste OpenAI API key (sk-...)" autocomplete="off">
+                <button type="button" id="openai-key-toggle-vis" class="pwd-toggle-btn" title="Toggle visibility">👁️</button>
+              </div>
+              <p id="openai-current-status" class="gemini-status-text">Checking status...</p>
+            </div>
+
+            <div class="gemini-modal-actions">
+              <button type="button" id="openai-test-key-btn" class="gemini-btn-secondary">🧪 Test ChatGPT</button>
+              <button type="submit" id="openai-save-key-btn" class="gemini-btn-primary">💾 Save ChatGPT Key</button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   </dialog>
@@ -3698,6 +3768,6 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="admin.js?v=122.0"></script>
+  <script src="admin.js?v=124.0"></script>
 </body>
 </html>

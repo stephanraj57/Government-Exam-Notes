@@ -2036,11 +2036,19 @@ ${rawHtml}`;
   const ALLOWED_EXAM_SUBJECTS = ["History", "Polity", "Economy", "Geography", "Art and Culture", "Maths", "Science", "Others"];
 
   async function getGeminiApiKey() {
-    if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim()) {
+    if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim().length > 5) {
       return process.env.GEMINI_API_KEY.trim();
     }
     const profile = await readJson(PROFILE_FILE).catch(() => ({}));
     return (profile.geminiApiKey || "").trim();
+  }
+
+  async function getOpenAIApiKey() {
+    if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim().length > 5) {
+      return process.env.OPENAI_API_KEY.trim();
+    }
+    const profile = await readJson(PROFILE_FILE).catch(() => ({}));
+    return (profile.openaiApiKey || "").trim();
   }
 
   function normalizeExamSubject(raw) {
@@ -2059,36 +2067,72 @@ ${rawHtml}`;
     return "Others";
   }
 
-  // GET /api/admin/ai/status - check if Gemini API key is configured
+  // GET /api/admin/ai/status - check Gemini and OpenAI API keys status
   if (request.method === "GET" && url.pathname === "/api/admin/ai/status") {
     if (!isAdmin(request)) return sendUnauthorized(response), true;
-    const apiKey = await getGeminiApiKey();
-    const isConfigured = Boolean(apiKey && apiKey.length > 5);
-    const maskedKey = isConfigured ? `${apiKey.slice(0, 4)}••••••••${apiKey.slice(-4)}` : "";
-    sendJson(response, 200, { configured: isConfigured, maskedKey });
+    const geminiKey = await getGeminiApiKey();
+    const openaiKey = await getOpenAIApiKey();
+    const profile = await readJson(PROFILE_FILE).catch(() => ({}));
+    const preferredProvider = profile.preferredAiProvider || "auto";
+
+    const geminiConfigured = Boolean(geminiKey && geminiKey.length > 5);
+    const geminiMasked = geminiConfigured ? `${geminiKey.slice(0, 4)}••••••••${geminiKey.slice(-4)}` : "";
+    
+    const openaiConfigured = Boolean(openaiKey && openaiKey.length > 5);
+    const openaiMasked = openaiConfigured ? `${openaiKey.slice(0, 4)}••••••••${openaiKey.slice(-4)}` : "";
+
+    sendJson(response, 200, {
+      configured: geminiConfigured || openaiConfigured,
+      geminiConfigured,
+      geminiMasked,
+      openaiConfigured,
+      openaiMasked,
+      preferredProvider,
+      maskedKey: geminiMasked || openaiMasked
+    });
     return true;
   }
 
-  // POST /api/admin/ai/config - Save or update Gemini API key
+  // POST /api/admin/ai/config - Save or update Gemini or OpenAI API key & preferences
   if (request.method === "POST" && url.pathname === "/api/admin/ai/config") {
     if (!isAdmin(request)) return sendUnauthorized(response), true;
     const body = await readBody(request).catch(() => ({}));
-    const newKey = String(body.apiKey || "").trim();
-    if (!newKey) {
-      sendJson(response, 400, { error: "API key cannot be empty." });
-      return true;
-    }
     let profile = await readJson(PROFILE_FILE).catch(() => ({ ...DEFAULT_PROFILE }));
     if (!profile) profile = { ...DEFAULT_PROFILE };
-    profile.geminiApiKey = newKey;
+
+    if (body.provider === "openai" || body.openaiApiKey !== undefined) {
+      const newOpenaiKey = String(body.apiKey || body.openaiApiKey || "").trim();
+      profile.openaiApiKey = newOpenaiKey;
+    }
+    if (body.provider === "gemini" || body.geminiApiKey !== undefined || (body.apiKey && !body.provider)) {
+      const newGeminiKey = String(body.apiKey || body.geminiApiKey || "").trim();
+      if (newGeminiKey) profile.geminiApiKey = newGeminiKey;
+    }
+    if (body.preferredProvider) {
+      profile.preferredAiProvider = body.preferredProvider;
+    }
+
     profile.updatedAt = new Date().toISOString();
     await writeJson(PROFILE_FILE, profile);
-    const maskedKey = `${newKey.slice(0, 4)}••••••••${newKey.slice(-4)}`;
-    sendJson(response, 200, { success: true, maskedKey, message: "Google Gemini API key saved successfully!" });
+
+    sendJson(response, 200, {
+      success: true,
+      message: "AI Configuration and API keys saved successfully!",
+      geminiConfigured: Boolean(profile.geminiApiKey && profile.geminiApiKey.length > 5),
+      openaiConfigured: Boolean(profile.openaiApiKey && profile.openaiApiKey.length > 5),
+      preferredProvider: profile.preferredAiProvider || "auto"
+    });
     return true;
   }
 
-  const GEMINI_MODELS = ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.5-flash"];
+  const GEMINI_MODELS = [
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-3.7-flash"
+  ];
+  const OPENAI_MODELS = ["gpt-4o-mini", "gpt-4o"];
 
   async function callGeminiGenerateContent(apiKey, payload) {
     let lastError = null;
@@ -2108,11 +2152,23 @@ ${rawHtml}`;
         const msg = data.error?.message || `Status ${res.status}`;
         lastStatus = res.status;
         lastError = msg;
-        // If error is model availability / deprecation / not found, fall back to next model
-        if (msg.includes("not found") || msg.includes("no longer available") || msg.includes("deprecated") || res.status === 404) {
+
+        // If error is 404 (model deprecated/not found) or 429 (rate limited / quota on this model), try next model!
+        if (
+          res.status === 404 ||
+          res.status === 429 ||
+          msg.includes("not found") ||
+          msg.includes("no longer available") ||
+          msg.includes("deprecated") ||
+          msg.includes("Quota exceeded") ||
+          msg.includes("RESOURCE_EXHAUSTED") ||
+          msg.includes("rate limit")
+        ) {
+          console.warn(`[Gemini Flash] Model ${model} encountered ${res.status} (${msg.slice(0, 80)}...). Trying next model...`);
           continue;
         }
-        // If it's invalid key or auth error, return immediately
+
+        // If it's invalid key or auth error (400, 401, 403), return immediately
         return { ok: false, error: msg, status: res.status };
       } catch (err) {
         lastError = err.message;
@@ -2121,10 +2177,67 @@ ${rawHtml}`;
     return { ok: false, error: lastError || "Failed to reach Gemini API.", status: lastStatus };
   }
 
-  // POST /api/admin/ai/test-key - Test a Gemini API key
+  async function callOpenAIChatCompletion(apiKey, payload) {
+    let lastError = null;
+    let lastStatus = 500;
+    for (const model of OPENAI_MODELS) {
+      try {
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model,
+            ...payload
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          return { ok: true, data, model };
+        }
+        const msg = data.error?.message || `Status ${res.status}`;
+        lastStatus = res.status;
+        lastError = msg;
+        if (res.status === 401 || res.status === 403) {
+          return { ok: false, error: msg, status: res.status };
+        }
+      } catch (err) {
+        lastError = err.message;
+      }
+    }
+    return { ok: false, error: lastError || "Failed to reach OpenAI API.", status: lastStatus };
+  }
+
+  // POST /api/admin/ai/test-key - Test a Gemini or OpenAI API key
   if (request.method === "POST" && url.pathname === "/api/admin/ai/test-key") {
     if (!isAdmin(request)) return sendUnauthorized(response), true;
     const body = await readBody(request).catch(() => ({}));
+    const provider = String(body.provider || "gemini").toLowerCase();
+    
+    if (provider === "openai" || provider === "chatgpt") {
+      const testKey = String(body.apiKey || "").trim() || (await getOpenAIApiKey());
+      if (!testKey) {
+        sendJson(response, 400, { error: "No OpenAI API key provided to test." });
+        return true;
+      }
+      const result = await callOpenAIChatCompletion(testKey, {
+        messages: [{ role: "user", content: "Respond with the single word: OK" }],
+        max_tokens: 10
+      });
+      if (!result.ok) {
+        sendJson(response, 400, { success: false, error: result.error });
+        return true;
+      }
+      sendJson(response, 200, {
+        success: true,
+        message: `Connected successfully with OpenAI ChatGPT (${result.model})! 🤖`
+      });
+      return true;
+    }
+
+    // Default: Gemini test
     const testKey = String(body.apiKey || "").trim() || (await getGeminiApiKey());
     if (!testKey) {
       sendJson(response, 400, { error: "No Gemini API key provided to test." });
@@ -2144,22 +2257,25 @@ ${rawHtml}`;
     return true;
   }
 
-  // POST /api/admin/ai/auto-fill - Analyze diagram and auto-generate Title, Subject, Tags, and Overview
+  // POST /api/admin/ai/auto-fill - Analyze diagram with Gemini or ChatGPT and auto-generate Title, Subject, Tags, and Overview
   if (request.method === "POST" && url.pathname === "/api/admin/ai/auto-fill") {
     if (!isAdmin(request)) return sendUnauthorized(response), true;
     const body = await readBody(request, 15 * 1024 * 1024).catch(() => ({}));
     const imageUrl = String(body.imageUrl || "").trim();
     const currentTitle = String(body.currentTitle || "").trim();
+    const requestedProvider = String(body.provider || "auto").toLowerCase();
 
     if (!imageUrl && !currentTitle) {
       sendJson(response, 400, { error: "Please provide an image URL or a topic title to analyze." });
       return true;
     }
 
-    const apiKey = await getGeminiApiKey();
-    if (!apiKey) {
+    const geminiKey = await getGeminiApiKey();
+    const openaiKey = await getOpenAIApiKey();
+
+    if (!geminiKey && !openaiKey) {
       sendJson(response, 400, {
-        error: "Google Gemini API key is not configured yet. Please configure your free Gemini key in Admin Settings.",
+        error: "No AI API key is configured yet. Please configure your Google Gemini key (Free) or OpenAI ChatGPT key in Admin Settings.",
         needsKey: true
       });
       return true;
@@ -2167,6 +2283,8 @@ ${rawHtml}`;
 
     try {
       let inlineData = null;
+      let directImageUrl = null;
+
       if (imageUrl) {
         if (imageUrl.startsWith("data:")) {
           const match = imageUrl.match(/^data:([^;]+);base64,(.+)$/);
@@ -2175,8 +2293,10 @@ ${rawHtml}`;
               mime_type: match[1],
               data: match[2].replace(/[\r\n\s]/g, "")
             };
+            directImageUrl = imageUrl;
           }
         } else if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+          directImageUrl = imageUrl;
           const imgFetch = await fetch(imageUrl);
           if (imgFetch.ok) {
             const mimeType = (imgFetch.headers.get("content-type") || "image/jpeg").split(";")[0].trim();
@@ -2211,33 +2331,88 @@ Return ONLY a valid JSON object matching this schema:
   "overview": string
 }`;
 
-      const contentsParts = [{ text: promptText }];
-      if (inlineData) {
-        contentsParts.push({ inline_data: inlineData });
-      }
+      let parsed = null;
+      let usedProvider = "";
 
-      const geminiResult = await callGeminiGenerateContent(apiKey, {
-        contents: [{ parts: contentsParts }],
-        generationConfig: {
-          response_mime_type: "application/json",
-          temperature: 0.2
+      // Provider resolution
+      const shouldTryOpenAI = (requestedProvider === "openai" || (requestedProvider === "auto" && openaiKey && !geminiKey)) && Boolean(openaiKey);
+      const shouldTryGemini = (requestedProvider === "gemini" || (requestedProvider === "auto" && geminiKey)) && Boolean(geminiKey);
+
+      // 1. Try OpenAI ChatGPT if requested or fallback
+      if (shouldTryOpenAI || (requestedProvider === "auto" && openaiKey && !shouldTryGemini)) {
+        try {
+          const userContent = [{ type: "text", text: promptText }];
+          if (inlineData) {
+            userContent.push({
+              type: "image_url",
+              image_url: {
+                url: `data:${inlineData.mime_type};base64,${inlineData.data}`,
+                detail: "high"
+              }
+            });
+          } else if (directImageUrl) {
+            userContent.push({
+              type: "image_url",
+              image_url: { url: directImageUrl, detail: "high" }
+            });
+          }
+
+          const openAiRes = await callOpenAIChatCompletion(openaiKey, {
+            messages: [{ role: "user", content: userContent }],
+            response_format: { type: "json_object" },
+            temperature: 0.2
+          });
+
+          if (openAiRes.ok) {
+            const rawContent = openAiRes.data.choices?.[0]?.message?.content || "{}";
+            try { parsed = JSON.parse(rawContent); } catch {}
+            usedProvider = `OpenAI ChatGPT (${openAiRes.model})`;
+          } else if (requestedProvider === "openai") {
+            sendJson(response, 400, { error: openAiRes.error });
+            return true;
+          }
+        } catch (openaiErr) {
+          console.warn("[OpenAI Auto-Fill] Error:", openaiErr.message);
+          if (requestedProvider === "openai") {
+            sendJson(response, 500, { error: openaiErr.message });
+            return true;
+          }
         }
-      });
-
-      if (!geminiResult.ok) {
-        sendJson(response, 400, { error: geminiResult.error });
-        return true;
       }
 
-      const geminiData = geminiResult.data;
+      // 2. Try Gemini if not parsed yet
+      if (!parsed && geminiKey) {
+        const contentsParts = [{ text: promptText }];
+        if (inlineData) {
+          contentsParts.push({ inline_data: inlineData });
+        }
 
-      const rawContent = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-      let parsed = {};
-      try {
-        parsed = JSON.parse(rawContent);
-      } catch {
-        const match = rawContent.match(/\{[\s\S]*\}/);
-        if (match) parsed = JSON.parse(match[0]);
+        const geminiResult = await callGeminiGenerateContent(geminiKey, {
+          contents: [{ parts: contentsParts }],
+          generationConfig: {
+            response_mime_type: "application/json",
+            temperature: 0.2
+          }
+        });
+
+        if (geminiResult.ok) {
+          const rawContent = geminiResult.data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+          try {
+            parsed = JSON.parse(rawContent);
+          } catch {
+            const match = rawContent.match(/\{[\s\S]*\}/);
+            if (match) parsed = JSON.parse(match[0]);
+          }
+          usedProvider = `Google Gemini (${geminiResult.model})`;
+        } else if (!parsed) {
+          sendJson(response, 400, { error: geminiResult.error });
+          return true;
+        }
+      }
+
+      if (!parsed) {
+        sendJson(response, 500, { error: "Failed to extract text and details from the diagram using the configured AI engines." });
+        return true;
       }
 
       const finalSubject = normalizeExamSubject(parsed.subject);
@@ -2247,6 +2422,7 @@ Return ONLY a valid JSON object matching this schema:
 
       sendJson(response, 200, {
         success: true,
+        provider: usedProvider,
         data: {
           title: finalTitle,
           subject: finalSubject,
@@ -2256,7 +2432,7 @@ Return ONLY a valid JSON object matching this schema:
         }
       });
     } catch (err) {
-      sendJson(response, 500, { error: err.message || "Failed to analyze diagram with Gemini AI." });
+      sendJson(response, 500, { error: err.message || "Failed to analyze diagram with AI." });
     }
     return true;
   }
