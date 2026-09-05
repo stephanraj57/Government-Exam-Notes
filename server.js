@@ -2126,11 +2126,11 @@ ${rawHtml}`;
   }
 
   const GEMINI_MODELS = [
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-2.5-flash-lite",
-    "gemini-3.7-flash"
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-lite-latest"
   ];
   const OPENAI_MODELS = ["gpt-4o-mini", "gpt-4o"];
 
@@ -2153,18 +2153,20 @@ ${rawHtml}`;
         lastStatus = res.status;
         lastError = msg;
 
-        // If error is 404 (model deprecated/not found) or 429 (rate limited / quota on this model), try next model!
+        // If error is 404 (not found), 429 (rate limited / quota), or 503 (high demand), try next model!
         if (
           res.status === 404 ||
           res.status === 429 ||
+          res.status === 503 ||
           msg.includes("not found") ||
           msg.includes("no longer available") ||
           msg.includes("deprecated") ||
           msg.includes("Quota exceeded") ||
           msg.includes("RESOURCE_EXHAUSTED") ||
+          msg.includes("high demand") ||
           msg.includes("rate limit")
         ) {
-          console.warn(`[Gemini Flash] Model ${model} encountered ${res.status} (${msg.slice(0, 80)}...). Trying next model...`);
+          console.warn(`[Gemini Flash] Model ${model} returned ${res.status} (${msg.slice(0, 80)}...). Trying next model...`);
           continue;
         }
 
